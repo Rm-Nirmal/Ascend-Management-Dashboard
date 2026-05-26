@@ -37,6 +37,14 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: "AIzaSyCOe0IdafwQ2wsc_lSqxVqXlnz1US8NvbI"
+          VITE_FIREBASE_AUTH_DOMAIN: "fitcore-ascend-production.firebaseapp.com"
+          VITE_FIREBASE_PROJECT_ID: "fitcore-ascend-production"
+          VITE_FIREBASE_STORAGE_BUCKET: "fitcore-ascend-production.firebasestorage.app"
+          VITE_FIREBASE_MESSAGING_SENDER_ID: "1040835579325"
+          VITE_FIREBASE_APP_ID: "1:1040835579325:web:5b0967043371a4f9aa96d4"
+          VITE_FIREBASE_MEASUREMENT_ID: "G-5G5C5TKXG8"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
