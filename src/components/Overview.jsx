@@ -376,7 +376,7 @@ const Overview = () => {
                   padding: '0.4rem 1rem', 
                   fontSize: '0.75rem', 
                   background: timeframe === period ? 'var(--color-primary)' : 'transparent',
-                  color: timeframe === period ? '#fff' : 'var(--text-muted)',
+                  color: timeframe === period ? '#000000' : 'var(--text-muted)',
                   borderRadius: '8px'
                 }}
               >
