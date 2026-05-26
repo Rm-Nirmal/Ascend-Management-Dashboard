@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { uploadToCloudinary } from '../lib/cloudinary';
-import { Smartphone, Send, Camera, Loader2 } from 'lucide-react';
+import { Smartphone, Send, Camera, Loader2, Check } from 'lucide-react';
 
 const PublicRegistrationForm = ({ isStandalone = true }) => {
   const { plans, addRegistrationRequest, showToast } = useDashboard();
@@ -10,6 +10,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
   const [formErrors, setFormErrors] = useState({});
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const fileInputRef = useRef(null);
 
   const [publicForm, setPublicForm] = useState({
@@ -70,6 +71,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
     const res = await addRegistrationRequest(publicForm);
     if (res) {
       showToast('Registration request successfully submitted for approval!', 'success');
+      setIsSubmitted(true);
       
       // Reset Form
       setPublicForm({
@@ -96,6 +98,80 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
       showToast('System error submitting registration. Please try again.', 'error');
     }
   };
+
+  if (isSubmitted) {
+    const successContent = (
+      <div className="pub-form-card glass-card" style={{ textAlign: 'center', padding: '3.5rem 2rem' }}>
+        <div style={{
+          width: '72px',
+          height: '72px',
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '2px solid #ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 2rem',
+          boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
+        }}>
+          <Check size={36} style={{ color: '#ffffff' }} />
+        </div>
+        
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.85rem', fontWeight: 800, letterSpacing: '0.02em', color: '#ffffff', marginBottom: '0.75rem' }}>
+          REGISTRATION COMPLETE!
+        </h2>
+        
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6', marginBottom: '2rem' }}>
+          Your application has been successfully submitted to the Ascend Gym administration team. We will review your credentials and get back to you shortly.
+        </p>
+
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '12px',
+          padding: '1.25rem 1.5rem',
+          textAlign: 'left',
+          marginBottom: '2.5rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.75rem'
+        }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Next Steps
+          </span>
+          <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem' }}>
+            <span style={{ color: '#ffffff', fontWeight: 700 }}>1.</span>
+            <span style={{ color: 'var(--text-muted)' }}>Administrative approval of your registration details.</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem' }}>
+            <span style={{ color: '#ffffff', fontWeight: 700 }}>2.</span>
+            <span style={{ color: 'var(--text-muted)' }}>You will receive an email/SMS confirmation once approved.</span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem' }}>
+            <span style={{ color: '#ffffff', fontWeight: 700 }}>3.</span>
+            <span style={{ color: 'var(--text-muted)' }}>Check in at the reception desk to pick up your keytag and start training!</span>
+          </div>
+        </div>
+
+        <button 
+          onClick={() => setIsSubmitted(false)} 
+          className="btn btn-primary" 
+          style={{ width: '100%', padding: '0.75rem', background: '#ffffff', color: '#000000', fontWeight: 700 }}
+        >
+          Submit Another Registration
+        </button>
+      </div>
+    );
+
+    if (isStandalone) {
+      return (
+        <div className="pub-form-container">
+          {successContent}
+        </div>
+      );
+    }
+    return successContent;
+  }
 
   const formContent = (
     <div className="pub-form-card glass-card">
