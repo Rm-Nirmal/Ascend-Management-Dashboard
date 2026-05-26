@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useDashboard } from '../context/DashboardContext';
+import { uploadToCloudinary } from '../lib/cloudinary';
 import { 
-  Check, X, FileText, ClipboardCheck, Smartphone, Send, ShieldCheck, UserCheck 
+  Check, X, Smartphone, Send, ShieldCheck, Upload, Camera, Image, Loader2 
 } from 'lucide-react';
 
 const Registrations = () => {
@@ -26,6 +27,11 @@ const Registrations = () => {
   const [otpCode, setOtpCode] = useState('');
   const [sentOtp, setSentOtp] = useState('');
   const [formErrors, setFormErrors] = useState({});
+  
+  const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const [publicForm, setPublicForm] = useState({
     full_name: '',
     email: '',
@@ -37,8 +43,32 @@ const Registrations = () => {
     medical_conditions: '',
     fitness_goals: '',
     emergency_contact_name: '',
-    emergency_contact_phone: ''
+    emergency_contact_phone: '',
+    photo_url: '',
+    weight_kg: '',
+    height_cm: '',
+    body_fat_pct: '',
   });
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const data = await uploadToCloudinary(file, {
+        onProgress: (pct) => setUploadProgress(pct)
+      });
+      setPublicForm(prev => ({ ...prev, photo_url: data.secure_url }));
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      alert(`Photo upload failed: ${err.message || err}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Filter queue
   const pendingRequests = useMemo(() => {
@@ -95,7 +125,11 @@ const Registrations = () => {
       medical_conditions: '',
       fitness_goals: '',
       emergency_contact_name: '',
-      emergency_contact_phone: ''
+      emergency_contact_phone: '',
+      photo_url: '',
+      weight_kg: '',
+      height_cm: '',
+      body_fat_pct: '',
     });
     setFormStep(1);
     setOtpCode('');
@@ -287,8 +321,61 @@ const Registrations = () => {
               </p>
             </div>
 
-            {formStep === 1 ? (
+             {formStep === 1 ? (
               <form onSubmit={handleRequestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                
+                {/* Profile Photo Upload */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.5rem', gap: '0.5rem' }}>
+                  <div 
+                    onClick={() => !isUploading && fileInputRef.current?.click()}
+                    style={{
+                      width: '90px',
+                      height: '90px',
+                      borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '2px dashed rgba(255,255,255,0.15)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: isUploading ? 'not-allowed' : 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    {publicForm.photo_url ? (
+                      <img 
+                        src={publicForm.photo_url} 
+                        alt="Profile Preview" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    ) : isUploading ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                        <Loader2 size={20} style={{ color: 'var(--color-primary)', animation: 'spin 1s linear infinite' }} />
+                        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{uploadProgress}%</span>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', color: 'var(--text-dark)' }}>
+                        <Camera size={20} />
+                        <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Upload Photo</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handlePhotoUpload} 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                  />
+                  
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    {isUploading ? 'Uploading to Cloudinary...' : 'Upload profile photo (PNG, JPG)'}
+                  </span>
+                </div>
+
                 <div className="grid-2">
                   <div>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
@@ -354,6 +441,50 @@ const Registrations = () => {
                         style={{ marginTop: '0.25rem', padding: '0.5rem' }}
                       />
                       {formErrors.date_of_birth && <span style={{ fontSize: '0.7rem', color: 'var(--color-danger)' }}>{formErrors.date_of_birth}</span>}
+                    </div>
+                  </div>
+                  
+                  {/* Weight, Height, and Body Fat */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Weight (kg)</label>
+                      <input 
+                        type="number" 
+                        placeholder="e.g. 70"
+                        value={publicForm.weight_kg}
+                        onChange={(e) => setPublicForm({...publicForm, weight_kg: e.target.value})}
+                        className="glass-input"
+                        style={{ marginTop: '0.25rem' }}
+                        min="10"
+                        max="300"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Height (cm)</label>
+                      <input 
+                        type="number" 
+                        placeholder="e.g. 175"
+                        value={publicForm.height_cm}
+                        onChange={(e) => setPublicForm({...publicForm, height_cm: e.target.value})}
+                        className="glass-input"
+                        style={{ marginTop: '0.25rem' }}
+                        min="50"
+                        max="250"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Body Fat (%)</label>
+                      <input 
+                        type="number" 
+                        placeholder="e.g. 15"
+                        value={publicForm.body_fat_pct}
+                        onChange={(e) => setPublicForm({...publicForm, body_fat_pct: e.target.value})}
+                        className="glass-input"
+                        style={{ marginTop: '0.25rem' }}
+                        min="1"
+                        max="80"
+                        step="0.1"
+                      />
                     </div>
                   </div>
                 </div>
@@ -485,12 +616,29 @@ const Registrations = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto', maxHeight: '60vh' }}>
               
-              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Applicant Details</span>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginTop: '0.25rem' }}>{selectedReq.full_name}</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Email: {selectedReq.email}</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Phone: {selectedReq.phone}</div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Gender: {selectedReq.gender} | DOB: {selectedReq.date_of_birth}</div>
+              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                <div style={{
+                  width: '65px',
+                  height: '65px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid var(--border-color)',
+                  flexShrink: 0
+                }}>
+                  <img 
+                    src={selectedReq.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                    alt="Applicant Avatar" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                </div>
+                <div style={{ flexGrow: 1 }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Applicant Details</span>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginTop: '0.25rem' }}>{selectedReq.full_name}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Email: {selectedReq.email}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Phone: {selectedReq.phone}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Gender: {selectedReq.gender} | DOB: {selectedReq.date_of_birth}{selectedReq.weight_kg ? ` | Weight: ${selectedReq.weight_kg}kg` : ''}{selectedReq.height_cm ? ` | Height: ${selectedReq.height_cm}cm` : ''}{selectedReq.body_fat_pct ? ` | Body Fat: ${selectedReq.body_fat_pct}%` : ''}</div>
+                </div>
               </div>
 
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>

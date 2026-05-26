@@ -1,833 +1,839 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+// ─── Firebase Imports ────────────────────────────────────────────────
+import { db, auth, COLLECTIONS, DEFAULT_ORG_ID } from '../lib/firebase';
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  Timestamp,
+} from 'firebase/firestore';
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+} from 'firebase/auth';
 
 const DashboardContext = createContext();
 
-// Utility for generating UUIDs in mock data
-const generateUUID = () => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+// ─── Pure Helper Functions (no side effects) ─────────────────────────
+
+/**
+ * Build a new member data object suitable for writing to Firestore.
+ * Generates member_code, qr_token, and sets defaults.
+ */
+const helperCreateMemberObject = (memberData) => {
+  const memberCode = `ASC-${Math.floor(10000 + Math.random() * 90000)}`;
+  const now = new Date();
+  return {
+    organization_id: DEFAULT_ORG_ID,
+    member_code: memberCode,
+    joined_at: now.toISOString().split('T')[0],
+    status: 'active',
+    qr_token: `qr_token_${memberCode}_${Date.now()}`,
+    weight_kg: memberData.weight_kg ? parseFloat(memberData.weight_kg) : 75.0,
+    height_cm: memberData.height_cm ? parseInt(memberData.height_cm) : 175,
+    body_fat_pct: memberData.body_fat_pct ? parseFloat(memberData.body_fat_pct) : 18.0,
+    countdown_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    auto_renew: false,
+    trainer_id: null,
+    photo_url: '',
+    created_at: now.toISOString(),
+    ...memberData,
+  };
 };
 
-const INITIAL_PLANS = [
-  { id: 'p1', name: 'Basic Starter', price: 4500.00, billing_period: 'monthly', duration_days: 30, tax_rate: 8.5, allows_multi_branch: false, is_active: true },
-  { id: 'p2', name: 'Ascend Elite', price: 8500.00, billing_period: 'monthly', duration_days: 30, tax_rate: 8.5, allows_multi_branch: true, is_active: true },
-  { id: 'p3', name: 'VIP Platinum', price: 15000.00, billing_period: 'monthly', duration_days: 30, tax_rate: 8.5, allows_multi_branch: true, is_active: true }
-];
-
-const INITIAL_TRAINERS = [
-  { id: 't1', name: 'Alex Mercer', specialization: 'Strength & Conditioning', rating: 4.9, bio: 'Former competitive powerlifter with 8+ years coaching experience.' },
-  { id: 't2', name: 'Coach Brenda', specialization: 'HIIT & Weight Loss', rating: 4.8, bio: 'Specialist in metabolic conditioning and nutrition planning.' },
-  { id: 't3', name: 'Dmitri Vance', specialization: 'Mobility & Rehab', rating: 5.0, bio: 'Physical therapist and kinesiologist helping athletes recover.' }
-];
-
-// Helper to get dates relative to today's date
-const getRelativeDate = (daysAgo) => {
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().split('T')[0];
+/**
+ * Build an invoice object for a new member enrollment.
+ */
+const helperCreateInvoiceForMember = (memberId, memberName, plan) => {
+  const tax = plan.price * (plan.tax_rate / 100);
+  const total = plan.price + tax;
+  const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  return {
+    organization_id: DEFAULT_ORG_ID,
+    member_id: memberId,
+    member_name: memberName,
+    invoice_number: invNumber,
+    subtotal: plan.price,
+    tax_amount: tax,
+    discount_amount: 0.0,
+    total_amount: total,
+    status: 'open',
+    due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    issued_at: new Date().toISOString(),
+    paid_at: null,
+    plan_id: plan.id,
+    created_at: new Date().toISOString(),
+  };
 };
 
-const INITIAL_MEMBERS = [
-  {
-    id: 'm1',
-    member_code: 'ASC-10492',
-    full_name: 'Johnathan Doe',
-    email: 'john.doe@gmail.com',
-    phone: '+1 555-019-2834',
-    gender: 'male',
-    date_of_birth: '1990-05-14',
-    joined_at: getRelativeDate(120),
-    status: 'active',
-    plan_id: 'p2',
-    auto_renew: true,
-    emergency_contact_name: 'Jane Doe',
-    emergency_contact_phone: '+1 555-019-2835',
-    medical_notes: 'Mild asthma, carries inhaler. Knee surgery in 2023.',
-    fitness_goals: 'Build lean muscle mass and improve core endurance.',
-    rfid_card_id: 'RFID-990812',
-    photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 84.5,
-    height_cm: 182,
-    body_fat_pct: 16.4,
-    trainer_id: 't1',
-    qr_token: 'qr_token_johnathan_doe_active_2026'
-  },
-  {
-    id: 'm2',
-    member_code: 'ASC-10821',
-    full_name: 'Sophia Patel',
-    email: 'sophia.patel@outlook.com',
-    phone: '+1 555-021-9988',
-    gender: 'female',
-    date_of_birth: '1994-11-22',
-    joined_at: getRelativeDate(80),
-    status: 'active',
-    plan_id: 'p3',
-    auto_renew: true,
-    emergency_contact_name: 'Raj Patel',
-    emergency_contact_phone: '+1 555-021-9989',
-    medical_notes: 'None.',
-    fitness_goals: 'Cardio training for half-marathon, functional mobility.',
-    rfid_card_id: 'RFID-100293',
-    photo_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 62.1,
-    height_cm: 168,
-    body_fat_pct: 21.0,
-    trainer_id: 't2',
-    qr_token: 'qr_token_sophia_patel_active'
-  },
-  {
-    id: 'm3',
-    member_code: 'ASC-10943',
-    full_name: 'Marcus Brody',
-    email: 'brody_m@yahoo.com',
-    phone: '+1 555-088-1294',
-    gender: 'male',
-    date_of_birth: '1985-02-09',
-    joined_at: getRelativeDate(180),
-    status: 'frozen',
-    auto_renew: false,
-    frozen_from: getRelativeDate(11),
-    frozen_until: getRelativeDate(-20),
-    freeze_reason: 'Recovering from minor shoulder strain (doctor recommended rest).',
-    emergency_contact_name: 'Lisa Brody',
-    emergency_contact_phone: '+1 555-088-1295',
-    medical_notes: 'Rotator cuff irritation.',
-    fitness_goals: 'Rehabilitate shoulder strength, maintain lower body fitness.',
-    rfid_card_id: 'RFID-881944',
-    photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 91.2,
-    height_cm: 188,
-    body_fat_pct: 19.8,
-    trainer_id: 't3',
-    qr_token: 'qr_token_marcus_brody_frozen'
-  },
-  {
-    id: 'm4',
-    member_code: 'ASC-11002',
-    full_name: 'Emma Watson',
-    email: 'emma.watson@gmail.com',
-    phone: '+1 555-123-4567',
-    gender: 'female',
-    date_of_birth: '1992-04-15',
-    joined_at: getRelativeDate(300),
-    status: 'expired',
-    plan_id: 'p1',
-    auto_renew: false,
-    emergency_contact_name: 'Chris Watson',
-    emergency_contact_phone: '+1 555-123-4568',
-    medical_notes: 'None.',
-    fitness_goals: 'General health, flexibility and toning.',
-    rfid_card_id: 'RFID-110022',
-    photo_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 58.3,
-    height_cm: 165,
-    body_fat_pct: 23.5,
-    trainer_id: null,
-    qr_token: 'qr_token_emma_watson_expired'
-  },
-  {
-    id: 'm5',
-    member_code: 'ASC-11109',
-    full_name: 'David Beck',
-    email: 'dbeck.sport@gmail.com',
-    phone: '+1 555-098-7654',
-    gender: 'male',
-    date_of_birth: '1988-08-30',
-    joined_at: getRelativeDate(90),
-    status: 'active',
-    plan_id: 'p1',
-    auto_renew: true,
-    emergency_contact_name: 'Victoria Beck',
-    emergency_contact_phone: '+1 555-098-7655',
-    medical_notes: 'Lower back stiffness, avoids heavy deadlifts.',
-    fitness_goals: 'Fat loss, core stability and cardiovascular capacity.',
-    rfid_card_id: 'RFID-209384',
-    photo_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 79.8,
-    height_cm: 175,
-    body_fat_pct: 18.2,
-    trainer_id: 't1',
-    qr_token: 'qr_token_david_beck'
-  },
-  {
-    id: 'm6',
-    member_code: 'ASC-11221',
-    full_name: 'Li Na',
-    email: 'lina_ny@icloud.com',
-    phone: '+1 555-224-8899',
-    gender: 'female',
-    date_of_birth: '1996-03-08',
-    joined_at: getRelativeDate(45),
-    status: 'active',
-    plan_id: 'p2',
-    auto_renew: true,
-    emergency_contact_name: 'Na Wang',
-    emergency_contact_phone: '+1 555-224-8890',
-    medical_notes: 'None.',
-    fitness_goals: 'Yoga coordination, strength building, core training.',
-    rfid_card_id: 'RFID-112211',
-    photo_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 54.0,
-    height_cm: 162,
-    body_fat_pct: 19.5,
-    trainer_id: null,
-    qr_token: 'qr_token_lina'
-  },
-  {
-    id: 'm7',
-    member_code: 'ASC-11304',
-    full_name: 'Carlos Mendez',
-    email: 'carlos.mendez@outlook.com',
-    phone: '+1 555-771-0099',
-    gender: 'male',
-    date_of_birth: '1991-09-19',
-    joined_at: getRelativeDate(20),
-    status: 'active',
-    plan_id: 'p3',
-    auto_renew: true,
-    emergency_contact_name: 'Maria Mendez',
-    emergency_contact_phone: '+1 555-771-0090',
-    medical_notes: 'Slightly high blood pressure, monitored during workouts.',
-    fitness_goals: 'Functional strength, aerobic endurance, wellness.',
-    rfid_card_id: 'RFID-113044',
-    photo_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 88.4,
-    height_cm: 180,
-    body_fat_pct: 22.1,
-    trainer_id: 't2',
-    qr_token: 'qr_token_carlos'
-  },
-  // Adding 8 more members to exceed 10 members and showcase pagination
-  {
-    id: 'm8',
-    member_code: 'ASC-11402',
-    full_name: 'Olivia Martinez',
-    email: 'olivia.m@gmail.com',
-    phone: '+1 555-402-9911',
-    gender: 'female',
-    date_of_birth: '1995-07-12',
-    joined_at: getRelativeDate(10),
-    status: 'active',
-    plan_id: 'p1',
-    auto_renew: true,
-    emergency_contact_name: 'Jose Martinez',
-    emergency_contact_phone: '+1 555-402-9900',
-    medical_notes: 'None.',
-    fitness_goals: 'Core training, flexibility, active mobility.',
-    rfid_card_id: 'RFID-114022',
-    photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 59.5,
-    height_cm: 167,
-    body_fat_pct: 20.2,
-    trainer_id: 't2',
-    qr_token: 'qr_token_olivia'
-  },
-  {
-    id: 'm9',
-    member_code: 'ASC-11590',
-    full_name: 'William Taylor',
-    email: 'william.t@hotmail.com',
-    phone: '+1 555-709-3322',
-    gender: 'male',
-    date_of_birth: '1987-12-05',
-    joined_at: getRelativeDate(15),
-    status: 'active',
-    plan_id: 'p2',
-    auto_renew: true,
-    emergency_contact_name: 'Laura Taylor',
-    emergency_contact_phone: '+1 555-709-3311',
-    medical_notes: 'Tennis elbow in right arm.',
-    fitness_goals: 'Cardiovascular enhancement, stamina building.',
-    rfid_card_id: 'RFID-115900',
-    photo_url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 81.2,
-    height_cm: 179,
-    body_fat_pct: 17.5,
-    trainer_id: 't1',
-    qr_token: 'qr_token_william'
-  },
-  {
-    id: 'm10',
-    member_code: 'ASC-11654',
-    full_name: 'Sophia Loren',
-    email: 'sophia.loren@gmail.com',
-    phone: '+1 555-667-2288',
-    gender: 'female',
-    date_of_birth: '1993-01-25',
-    joined_at: getRelativeDate(100),
-    status: 'active',
-    plan_id: 'p2',
-    auto_renew: true,
-    emergency_contact_name: 'Carlo Loren',
-    emergency_contact_phone: '+1 555-667-2299',
-    medical_notes: 'None.',
-    fitness_goals: 'Endurance, muscle definition.',
-    rfid_card_id: 'RFID-116544',
-    photo_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 61.8,
-    height_cm: 170,
-    body_fat_pct: 21.3,
-    trainer_id: 't3',
-    qr_token: 'qr_token_loren'
-  },
-  {
-    id: 'm11',
-    member_code: 'ASC-11721',
-    full_name: 'James Anderson',
-    email: 'j.anderson@yahoo.com',
-    phone: '+1 555-901-4477',
-    gender: 'male',
-    date_of_birth: '1989-10-14',
-    joined_at: getRelativeDate(5),
-    status: 'active',
-    plan_id: 'p3',
-    auto_renew: true,
-    emergency_contact_name: 'Susan Anderson',
-    emergency_contact_phone: '+1 555-901-4488',
-    medical_notes: 'Mild hypertension.',
-    fitness_goals: 'Functional strength, full body mobility.',
-    rfid_card_id: 'RFID-117211',
-    photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 89.0,
-    height_cm: 183,
-    body_fat_pct: 23.0,
-    trainer_id: 't3',
-    qr_token: 'qr_token_james'
-  },
-  {
-    id: 'm12',
-    member_code: 'ASC-11843',
-    full_name: 'Zoe Kravitz',
-    email: 'zoe.k@gmail.com',
-    phone: '+1 555-403-1289',
-    gender: 'female',
-    date_of_birth: '1997-06-30',
-    joined_at: getRelativeDate(12),
-    status: 'active',
-    plan_id: 'p1',
-    auto_renew: false,
-    emergency_contact_name: 'Lenny Kravitz',
-    emergency_contact_phone: '+1 555-403-1290',
-    medical_notes: 'None.',
-    fitness_goals: 'Cardio endurance, high flexibility.',
-    rfid_card_id: 'RFID-118433',
-    photo_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 52.3,
-    height_cm: 159,
-    body_fat_pct: 18.7,
-    trainer_id: null,
-    qr_token: 'qr_token_zoe'
-  },
-  {
-    id: 'm13',
-    member_code: 'ASC-11999',
-    full_name: 'Michael Jordan',
-    email: 'mj.goat@gmail.com',
-    phone: '+1 555-023-4523',
-    gender: 'male',
-    date_of_birth: '1963-02-17',
-    joined_at: getRelativeDate(365),
-    status: 'active',
-    plan_id: 'p3',
-    auto_renew: true,
-    emergency_contact_name: 'Yvette Prieto',
-    emergency_contact_phone: '+1 555-023-4524',
-    medical_notes: 'Minor historical meniscus surgery.',
-    fitness_goals: 'Athletic maintenance, core stability, cardio.',
-    rfid_card_id: 'RFID-232323',
-    photo_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 98.0,
-    height_cm: 198,
-    body_fat_pct: 14.2,
-    trainer_id: 't1',
-    qr_token: 'qr_token_mj'
-  },
-  {
-    id: 'm14',
-    member_code: 'ASC-12001',
-    full_name: 'Natalie Portman',
-    email: 'natalie@portman.com',
-    phone: '+1 555-890-4321',
-    gender: 'female',
-    date_of_birth: '1981-06-09',
-    joined_at: getRelativeDate(250),
-    status: 'frozen',
-    frozen_from: getRelativeDate(5),
-    frozen_until: getRelativeDate(-25),
-    freeze_reason: 'Film shoot out of state.',
-    emergency_contact_name: 'Benjamin Millepied',
-    emergency_contact_phone: '+1 555-890-4322',
-    medical_notes: 'None.',
-    fitness_goals: 'Core strength, lean muscle development.',
-    rfid_card_id: 'RFID-981290',
-    photo_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 53.5,
-    height_cm: 160,
-    body_fat_pct: 17.8,
-    trainer_id: 't2',
-    qr_token: 'qr_token_natalie'
-  },
-  {
-    id: 'm15',
-    member_code: 'ASC-12099',
-    full_name: 'Robert Downey',
-    email: 'rdj@ironman.com',
-    phone: '+1 555-300-3000',
-    gender: 'male',
-    date_of_birth: '1965-04-04',
-    joined_at: getRelativeDate(110),
-    status: 'active',
-    plan_id: 'p2',
-    auto_renew: true,
-    emergency_contact_name: 'Susan Downey',
-    emergency_contact_phone: '+1 555-300-3001',
-    medical_notes: 'None.',
-    fitness_goals: 'Functional performance, martial arts conditioning.',
-    rfid_card_id: 'RFID-300000',
-    photo_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    weight_kg: 78.5,
-    height_cm: 174,
-    body_fat_pct: 16.0,
-    trainer_id: 't1',
-    qr_token: 'qr_token_rdj'
-  }
-];
-
-const INITIAL_REGISTRATIONS = [
-  {
-    id: 'r1',
-    full_name: 'Amara Walker',
-    email: 'amara.walker@gmail.com',
-    phone: '+1 555-492-1029',
-    gender: 'female',
-    date_of_birth: '1998-10-10',
-    plan_id: 'p2',
-    status: 'pending_approval',
-    medical_conditions: 'None.',
-    fitness_goals: 'General muscle building, weight loss.',
-    emergency_contact_name: 'Marcus Walker',
-    emergency_contact_phone: '+1 555-492-1020',
-    captcha_verified: true,
-    ip_address: '192.168.1.45',
-    created_at: '2026-05-20T14:30:00Z'
-  },
-  {
-    id: 'r2',
-    full_name: 'Tyler Durden',
-    email: 'fightclub@soap.com',
-    phone: '+1 555-666-0000',
-    gender: 'male',
-    date_of_birth: '1984-06-06',
-    plan_id: 'p1',
-    status: 'pending_approval',
-    medical_conditions: 'Bruises, insomnia.',
-    fitness_goals: 'Combat conditioning.',
-    emergency_contact_name: 'Marla Singer',
-    emergency_contact_phone: '+1 555-666-1111',
-    captcha_verified: true,
-    ip_address: '10.0.0.8',
-    created_at: '2026-05-21T08:15:00Z'
-  }
-];
-
-const INITIAL_ACCESS_EVENTS = [
-  { id: 'ae1', member_id: 'm1', member_name: 'Johnathan Doe', member_code: 'ASC-10492', source: 'qr', result: 'granted', occurred_at: new Date().toISOString() },
-  { id: 'ae2', member_id: 'm2', member_name: 'Sophia Patel', member_code: 'ASC-10821', source: 'fingerprint', result: 'granted', occurred_at: getRelativeDate(1) + 'T08:15:34Z' },
-  { id: 'ae3', member_id: 'm3', member_name: 'Marcus Brody', member_code: 'ASC-10943', source: 'qr', result: 'denied', deny_reason: 'frozen', occurred_at: getRelativeDate(1) + 'T08:45:00Z' },
-  { id: 'ae4', member_id: 'm4', member_name: 'Emma Watson', member_code: 'ASC-11002', source: 'qr', result: 'denied', deny_reason: 'expired', occurred_at: getRelativeDate(2) + 'T09:12:44Z' },
-  { id: 'ae5', member_id: 'm5', member_name: 'David Beck', member_code: 'ASC-11109', source: 'manual', result: 'granted', occurred_at: getRelativeDate(2) + 'T09:30:12Z' },
-  { id: 'ae6', member_id: 'm6', member_name: 'Li Na', member_code: 'ASC-11221', source: 'qr', result: 'granted', occurred_at: getRelativeDate(3) + 'T10:15:22Z' },
-  { id: 'ae7', member_id: 'm1', member_name: 'Johnathan Doe', member_code: 'ASC-10492', source: 'qr', result: 'granted', occurred_at: getRelativeDate(4) + 'T11:05:00Z' }
-];
-
-// Helper to formulate dates for payments simulation
-const today = new Date();
-const formatWithHour = (daysAgo, hour) => {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  d.setHours(hour, 0, 0, 0);
-  return d.toISOString();
+/**
+ * Calculate new countdown_end for a membership renewal.
+ * Extends from current countdown_end (if still in future) or from now.
+ */
+const helperCalculateRenewalCountdownEnd = (countdownEnd) => {
+  const baseDate = countdownEnd && new Date(countdownEnd).getTime() > Date.now()
+    ? new Date(countdownEnd)
+    : new Date();
+  baseDate.setDate(baseDate.getDate() + 30);
+  return baseDate.toISOString();
 };
 
-const INITIAL_INVOICES = [
-  // Payments received TODAY (for Daily tests)
-  { id: 'inv1', organization_id: 'org1', member_id: 'm1', member_name: 'Johnathan Doe', invoice_number: 'INV-2026-001', subtotal: 8500.00, tax_amount: 722.50, discount_amount: 0.00, total_amount: 9222.50, status: 'paid', due_date: getRelativeDate(0), issued_at: formatWithHour(0, 8), paid_at: formatWithHour(0, 9), payment_method: 'card', plan_id: 'p2' },
-  { id: 'inv2', organization_id: 'org1', member_id: 'm2', member_name: 'Sophia Patel', invoice_number: 'INV-2026-002', subtotal: 15000.00, tax_amount: 1275.00, discount_amount: 1500.00, total_amount: 14775.00, status: 'paid', due_date: getRelativeDate(0), issued_at: formatWithHour(0, 7), paid_at: formatWithHour(0, 10), payment_method: 'upi', plan_id: 'p3' },
-  
-  // Payments received THIS MONTH (excluding today)
-  { id: 'inv5', organization_id: 'org1', member_id: 'm5', member_name: 'David Beck', invoice_number: 'INV-2026-005', subtotal: 4500.00, tax_amount: 382.50, discount_amount: 0.00, total_amount: 4882.50, status: 'paid', due_date: getRelativeDate(4), issued_at: formatWithHour(6, 8), paid_at: formatWithHour(4, 18), payment_method: 'cash', plan_id: 'p1' },
-  { id: 'inv6', organization_id: 'org1', member_id: 'm6', member_name: 'Li Na', invoice_number: 'INV-2026-006', subtotal: 8500.00, tax_amount: 722.50, discount_amount: 1000.00, total_amount: 8222.50, status: 'paid', due_date: getRelativeDate(10), issued_at: formatWithHour(12, 8), paid_at: formatWithHour(10, 12), payment_method: 'bank_transfer', plan_id: 'p2' },
-  { id: 'inv8', organization_id: 'org1', member_id: 'm8', member_name: 'Olivia Martinez', invoice_number: 'INV-2026-008', subtotal: 4500.00, tax_amount: 382.50, discount_amount: 0.00, total_amount: 4882.50, status: 'paid', due_date: getRelativeDate(8), issued_at: formatWithHour(10, 9), paid_at: formatWithHour(8, 14), payment_method: 'card', plan_id: 'p1' },
-  { id: 'inv9', organization_id: 'org1', member_id: 'm9', member_name: 'William Taylor', invoice_number: 'INV-2026-009', subtotal: 8500.00, tax_amount: 722.50, discount_amount: 0.00, total_amount: 9222.50, status: 'paid', due_date: getRelativeDate(14), issued_at: formatWithHour(16, 9), paid_at: formatWithHour(14, 15), payment_method: 'card', plan_id: 'p2' },
+/**
+ * Build a renewal invoice object.
+ */
+const helperCreateRenewalInvoice = (memberId, memberName, plan, priceToCharge, tax, total, paymentMethod) => {
+  const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  return {
+    organization_id: DEFAULT_ORG_ID,
+    member_id: memberId,
+    member_name: memberName,
+    invoice_number: invNumber,
+    subtotal: priceToCharge,
+    tax_amount: tax,
+    discount_amount: 0.0,
+    total_amount: total,
+    status: 'paid',
+    due_date: new Date().toISOString().split('T')[0],
+    issued_at: new Date().toISOString(),
+    paid_at: new Date().toISOString(),
+    payment_method: paymentMethod,
+    plan_id: plan.id,
+    created_at: new Date().toISOString(),
+  };
+};
 
-  // Payments received EARLIER THIS YEAR (for Yearly tests)
-  { id: 'inv10', organization_id: 'org1', member_id: 'm10', member_name: 'Sophia Loren', invoice_number: 'INV-2026-010', subtotal: 8500.00, tax_amount: 722.50, discount_amount: 0.00, total_amount: 9222.50, status: 'paid', due_date: getRelativeDate(45), issued_at: formatWithHour(47, 9), paid_at: formatWithHour(45, 11), payment_method: 'upi', plan_id: 'p2' },
-  { id: 'inv11', organization_id: 'org1', member_id: 'm11', member_name: 'James Anderson', invoice_number: 'INV-2026-011', subtotal: 15000.00, tax_amount: 1275.00, discount_amount: 0.00, total_amount: 16275.00, status: 'paid', due_date: getRelativeDate(60), issued_at: formatWithHour(62, 9), paid_at: formatWithHour(60, 16), payment_method: 'bank_transfer', plan_id: 'p3' },
-  { id: 'inv12', organization_id: 'org1', member_id: 'm13', member_name: 'Michael Jordan', invoice_number: 'INV-2026-012', subtotal: 15000.00, tax_amount: 1275.00, discount_amount: 0.00, total_amount: 16275.00, status: 'paid', due_date: getRelativeDate(90), issued_at: formatWithHour(95, 9), paid_at: formatWithHour(90, 10), payment_method: 'card', plan_id: 'p3' },
+// ─── Firestore Error Friendlifier ─────────────────────────────────────
+const friendlyFirestoreError = (error) => {
+  const code = error?.code || '';
+  const map = {
+    'permission-denied': 'You do not have permission to perform this action.',
+    'not-found': 'The requested document was not found.',
+    'already-exists': 'A document with this ID already exists.',
+    'unavailable': 'Firestore is currently unavailable. Please try again.',
+    'deadline-exceeded': 'The operation timed out. Please try again.',
+  };
+  return map[code] || error?.message || 'An unknown error occurred.';
+};
 
-  // Open & Overdue invoices
-  { id: 'inv3', organization_id: 'org1', member_id: 'm3', member_name: 'Marcus Brody', invoice_number: 'INV-2026-003', subtotal: 8500.00, tax_amount: 722.50, discount_amount: 0.00, total_amount: 9222.50, status: 'void', due_date: getRelativeDate(10), issued_at: formatWithHour(15, 8), paid_at: null, plan_id: 'p2' },
-  { id: 'inv4', organization_id: 'org1', member_id: 'm4', member_name: 'Emma Watson', invoice_number: 'INV-2026-004', subtotal: 4500.00, tax_amount: 382.50, discount_amount: 0.00, total_amount: 4882.50, status: 'overdue', due_date: getRelativeDate(12), issued_at: formatWithHour(18, 8), paid_at: null, plan_id: 'p1' },
-  { id: 'inv7', organization_id: 'org1', member_id: 'm7', member_name: 'Carlos Mendez', invoice_number: 'INV-2026-007', subtotal: 15000.00, tax_amount: 1275.00, discount_amount: 0.00, total_amount: 16275.00, status: 'open', due_date: getRelativeDate(-10), issued_at: formatWithHour(2, 8), paid_at: null, plan_id: 'p3' }
-];
-
-const INITIAL_AUDIT_LOGS = [
-  { id: 'al1', user_name: 'Admin Sarah', action: 'system.login', entity_type: 'auth', entity_id: 'u1', details: 'User successfully logged in from IP 192.168.1.100', occurred_at: new Date().toISOString() },
-  { id: 'al2', user_name: 'Admin Sarah', action: 'member.update', entity_type: 'member', entity_id: 'm3', details: 'Changed status to frozen (requested freeze due to shoulder rest)', occurred_at: getRelativeDate(1) + 'T08:32:00Z' },
-  { id: 'al3', user_name: 'System Cron', action: 'invoice.generate', entity_type: 'invoice', entity_id: 'inv7', details: 'Generated recurring monthly billing for Carlos Mendez', occurred_at: getRelativeDate(3) + 'T08:00:00Z' },
-  { id: 'al4', user_name: 'Admin Sarah', action: 'member.create', entity_type: 'member', entity_id: 'm8', details: 'Activated member Olivia Martinez on Basic plan', occurred_at: getRelativeDate(10) + 'T14:20:00Z' },
-  { id: 'al5', user_name: 'Admin Sarah', action: 'payment.receive', entity_type: 'invoice', entity_id: 'inv1', details: 'Collected LKR 9,222.50 via Card payment for INV-2026-001', occurred_at: getRelativeDate(0) + 'T09:12:00Z' }
-];
-
+// ═══════════════════════════════════════════════════════════════════════
+// PROVIDER COMPONENT
+// ═══════════════════════════════════════════════════════════════════════
 export const DashboardProvider = ({ children }) => {
-  const [plans] = useState(INITIAL_PLANS);
-  const [trainers] = useState(INITIAL_TRAINERS);
+  // ─── Loading & Error State ──────────────────────────────────────────
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [error, setError] = useState(null);
 
-  const [members, setMembers] = useState(() => {
-    const saved = localStorage.getItem('ascend_members_single');
-    return saved ? JSON.parse(saved) : INITIAL_MEMBERS;
-  });
+  // ─── Auth State ─────────────────────────────────────────────────────
+  const [firebaseUser, setFirebaseUser] = useState(null); // Raw Firebase Auth user
+  const [currentUser, setCurrentUser] = useState(null);   // Enriched user (with role, name, etc.)
+  const [authReady, setAuthReady] = useState(false);
 
-  const [registrations, setRegistrations] = useState(() => {
-    const saved = localStorage.getItem('ascend_registrations_single');
-    return saved ? JSON.parse(saved) : INITIAL_REGISTRATIONS;
-  });
+  // ─── Firestore Data State ───────────────────────────────────────────
+  const [plans, setPlans] = useState([]);
+  const [trainers, setTrainers] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
+  const [accessEvents, setAccessEvents] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [admins, setAdmins] = useState([]);
 
-  const [accessEvents, setAccessEvents] = useState(() => {
-    const saved = localStorage.getItem('ascend_access_events_single');
-    return saved ? JSON.parse(saved) : INITIAL_ACCESS_EVENTS;
-  });
-
-  const [invoices, setInvoices] = useState(() => {
-    const saved = localStorage.getItem('ascend_invoices_single');
-    return saved ? JSON.parse(saved) : INITIAL_INVOICES;
-  });
-
-  const [auditLogs, setAuditLogs] = useState(() => {
-    const saved = localStorage.getItem('ascend_audit_logs_single');
-    return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
-  });
-
-  // Sync to localStorage
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE A: Firebase Auth Listener
+  // ═══════════════════════════════════════════════════════════════════
   useEffect(() => {
-    localStorage.setItem('ascend_members_single', JSON.stringify(members));
-  }, [members]);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        // User is signed in — we'll fetch their admin profile from Firestore
+        // The admin doc lookup happens in a separate effect below
+      } else {
+        setCurrentUser(null);
+      }
+      setAuthReady(true);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE B: Fetch admin profile when firebaseUser changes
+  // ═══════════════════════════════════════════════════════════════════
   useEffect(() => {
-    localStorage.setItem('ascend_registrations_single', JSON.stringify(registrations));
-  }, [registrations]);
-
-  useEffect(() => {
-    localStorage.setItem('ascend_access_events_single', JSON.stringify(accessEvents));
-  }, [accessEvents]);
-
-  useEffect(() => {
-    localStorage.setItem('ascend_invoices_single', JSON.stringify(invoices));
-  }, [invoices]);
-
-  useEffect(() => {
-    localStorage.setItem('ascend_audit_logs_single', JSON.stringify(auditLogs));
-  }, [auditLogs]);
-
-  // Log audit helper
-  const logAudit = (action, entityType, entityId, details) => {
-    const newLog = {
-      id: generateUUID(),
-      user_name: 'Admin Sarah',
-      action,
-      entity_type: entityType,
-      entity_id: entityId,
-      details,
-      occurred_at: new Date().toISOString()
-    };
-    setAuditLogs(prev => [newLog, ...prev]);
-  };
-
-  // Member CRUD
-  const addMember = (memberData) => {
-    const memberCode = `ASC-${Math.floor(10000 + Math.random() * 90000)}`;
-    const newMember = {
-      id: generateUUID(),
-      member_code: memberCode,
-      joined_at: new Date().toISOString().split('T')[0],
-      status: 'active',
-      qr_token: `qr_token_${memberCode}_${Date.now()}`,
-      weight_kg: memberData.weight_kg ? parseFloat(memberData.weight_kg) : 75.0,
-      height_cm: memberData.height_cm ? parseInt(memberData.height_cm) : 175,
-      body_fat_pct: memberData.body_fat_pct ? parseFloat(memberData.body_fat_pct) : 18.0,
-      ...memberData
-    };
-
-    setMembers(prev => [...prev, newMember]);
-    logAudit('member.create', 'member', newMember.id, `Created profile for ${newMember.full_name} (${memberCode})`);
-    
-    // Auto-generate invoice for membership attach
-    const plan = plans.find(p => p.id === newMember.plan_id);
-    if (plan) {
-      createInvoiceForMember(newMember, plan);
+    if (!firebaseUser) {
+      setCurrentUser(null);
+      return;
     }
-    return newMember;
-  };
 
-  const updateMember = (id, updatedFields) => {
-    setMembers(prev => prev.map(m => {
-      if (m.id === id) {
+    // Listen to the admins collection for the logged-in user's email
+    const q = query(
+      collection(db, COLLECTIONS.ADMINS),
+      where('email', '==', firebaseUser.email.toLowerCase())
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const adminDoc = snapshot.docs[0];
+        setCurrentUser({
+          id: adminDoc.id,
+          uid: firebaseUser.uid,
+          ...adminDoc.data(),
+        });
+      } else {
+        // User is authenticated but has no admin doc — treat as unauthorized
+        setCurrentUser(null);
+      }
+    }, (err) => {
+      console.error('Error fetching admin profile:', err);
+      setError(friendlyFirestoreError(err));
+    });
+
+    return () => unsubscribe();
+  }, [firebaseUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE C: Real-time Firestore Listeners (only when authenticated)
+  // ═══════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!currentUser) {
+      // Reset all data when logged out
+      setMembers([]);
+      setInvoices([]);
+      setRegistrations([]);
+      setAccessEvents([]);
+      setAuditLogs([]);
+      setPlans([]);
+      setTrainers([]);
+      setAdmins([]);
+      setDataLoaded(false);
+      return;
+    }
+
+    const orgId = currentUser.organization_id || DEFAULT_ORG_ID;
+    const unsubscribers = [];
+    let loadedCount = 0;
+    const totalCollections = 8;
+
+    const markLoaded = () => {
+      loadedCount++;
+      if (loadedCount >= totalCollections) {
+        setDataLoaded(true);
+      }
+    };
+
+    // 1. Plans (org-scoped)
+    const plansQ = query(
+      collection(db, COLLECTIONS.PLANS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(plansQ, (snap) => {
+        setPlans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+      }, (err) => { console.error('Plans listener error:', err); markLoaded(); })
+    );
+
+    // 2. Trainers (org-scoped)
+    const trainersQ = query(
+      collection(db, COLLECTIONS.TRAINERS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(trainersQ, (snap) => {
+        setTrainers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+      }, (err) => { console.error('Trainers listener error:', err); markLoaded(); })
+    );
+
+    // 3. Members (org-scoped)
+    const membersQ = query(
+      collection(db, COLLECTIONS.MEMBERS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(membersQ, (snap) => {
+        setMembers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+      }, (err) => { console.error('Members listener error:', err); markLoaded(); })
+    );
+
+    // 4. Invoices (org-scoped)
+    const invoicesQ = query(
+      collection(db, COLLECTIONS.INVOICES),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(invoicesQ, (snap) => {
+        setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+      }, (err) => { console.error('Invoices listener error:', err); markLoaded(); })
+    );
+
+    // 5. Registrations (org-scoped)
+    const registrationsQ = query(
+      collection(db, COLLECTIONS.REGISTRATIONS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(registrationsQ, (snap) => {
+        setRegistrations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+      }, (err) => { console.error('Registrations listener error:', err); markLoaded(); })
+    );
+
+    // 6. Access Events (org-scoped, ordered by occurred_at descending)
+    const accessQ = query(
+      collection(db, COLLECTIONS.ACCESS_EVENTS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(accessQ, (snap) => {
+        const events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Sort client-side to avoid requiring composite index
+        events.sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
+        setAccessEvents(events);
+        markLoaded();
+      }, (err) => { console.error('Access events listener error:', err); markLoaded(); })
+    );
+
+    // 7. Audit Logs (org-scoped)
+    const auditQ = query(
+      collection(db, COLLECTIONS.AUDIT_LOGS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(auditQ, (snap) => {
+        const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Sort client-side
+        logs.sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
+        setAuditLogs(logs);
+        markLoaded();
+      }, (err) => { console.error('Audit logs listener error:', err); markLoaded(); })
+    );
+
+    // 8. Admins (org-scoped)
+    const adminsQ = query(
+      collection(db, COLLECTIONS.ADMINS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(adminsQ, (snap) => {
+        setAdmins(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+      }, (err) => { console.error('Admins listener error:', err); markLoaded(); })
+    );
+
+    // Cleanup all listeners on unmount or user change
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [currentUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // AUTH ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Login with email + password via Firebase Auth.
+   * After successful auth, the onAuthStateChanged listener will pick up
+   * the user and fetch their admin profile from Firestore.
+   */
+  const login = useCallback(async (email, password) => {
+    try {
+      setError(null);
+      await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle setting currentUser
+      return { success: true };
+    } catch (err) {
+      const code = err?.code || '';
+      const messages = {
+        'auth/user-not-found': 'No account found with this email address.',
+        'auth/wrong-password': 'Incorrect password. Please try again.',
+        'auth/invalid-credential': 'Invalid email or password.',
+        'auth/invalid-email': 'Please enter a valid email address.',
+        'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
+        'auth/user-disabled': 'This account has been disabled. Contact support.',
+        'auth/network-request-failed': 'Network error. Check your internet connection.',
+      };
+      const message = messages[code] || err.message || 'Login failed. Please try again.';
+      return { success: false, message };
+    }
+  }, []);
+
+  /**
+   * Logout — sign out from Firebase Auth.
+   */
+  const logout = useCallback(async () => {
+    try {
+      // Log audit before signing out (while we still have currentUser)
+      if (currentUser) {
+        await logAudit('system.logout', 'auth', currentUser.id, `User logged out`, currentUser.name);
+      }
+      await signOut(auth);
+      // onAuthStateChanged will clear currentUser
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  }, [currentUser]);
+
+  /**
+   * Register a new admin:
+   * 1. Create Firebase Auth account
+   * 2. Write admin document to Firestore
+   */
+  const registerAdmin = useCallback(async (name, email, password, role) => {
+    try {
+      // Check if admin doc already exists in local state
+      const exists = admins.some(a => a.email.toLowerCase() === email.trim().toLowerCase());
+      if (exists) {
+        return { success: false, message: 'An administrator with this email already exists.' };
+      }
+
+      // Create Firebase Auth user
+      // NOTE: createUserWithEmailAndPassword will sign in as the new user!
+      // We need to preserve the current admin's session.
+      // Workaround: We'll create the auth user, then immediately sign back in as the current admin.
+      const currentEmail = firebaseUser?.email;
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      const newUid = userCredential.user.uid;
+
+      // Write admin document to Firestore
+      const adminData = {
+        uid: newUid,
+        name,
+        email: email.trim().toLowerCase(),
+        role,
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        photo_url: role === 'super_admin'
+          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+          : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        created_at: new Date().toISOString(),
+      };
+
+      await addDoc(collection(db, COLLECTIONS.ADMINS), adminData);
+
+      // Sign back in as the current admin (since createUser switches the auth session)
+      // The current admin needs to provide their password again, OR we can skip this
+      // For now we'll let the onAuthStateChanged handle it — the admin list will auto-refresh
+      // NOTE: This is a known Firebase limitation. In production, use Admin SDK via Cloud Function.
+
+      await logAudit(
+        'admin.register', 'auth', newUid,
+        `Registered new admin: ${name} (${role === 'super_admin' ? 'Super Admin' : 'Admin'})`,
+        currentUser?.name
+      );
+
+      return { success: true, message: 'Admin registered. Note: You may need to re-login.' };
+    } catch (err) {
+      const code = err?.code || '';
+      const messages = {
+        'auth/email-already-in-use': 'An account with this email already exists in Firebase Auth.',
+        'auth/weak-password': 'Password must be at least 6 characters.',
+        'auth/invalid-email': 'Please enter a valid email address.',
+      };
+      return { success: false, message: messages[code] || err.message };
+    }
+  }, [admins, currentUser, firebaseUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // AUDIT LOG HELPER
+  // ═══════════════════════════════════════════════════════════════════
+
+  const logAudit = useCallback(async (action, entityType, entityId, details, userOverride = null) => {
+    try {
+      const logEntry = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        user_name: userOverride || (currentUser ? currentUser.name : 'System'),
+        action,
+        entity_type: entityType,
+        entity_id: entityId,
+        details,
+        occurred_at: new Date().toISOString(),
+      };
+      await addDoc(collection(db, COLLECTIONS.AUDIT_LOGS), logEntry);
+    } catch (err) {
+      // Audit logging should never block the main operation
+      console.error('Audit log write failed:', err);
+    }
+  }, [currentUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MEMBER CRUD
+  // ═══════════════════════════════════════════════════════════════════
+
+  const addMember = useCallback(async (memberData) => {
+    try {
+      const newMemberData = helperCreateMemberObject(memberData);
+
+      // Write to Firestore — returns a DocumentReference
+      const docRef = await addDoc(collection(db, COLLECTIONS.MEMBERS), newMemberData);
+      const newMember = { id: docRef.id, ...newMemberData };
+
+      await logAudit(
+        'member.create', 'member', docRef.id,
+        `Created profile for ${newMember.full_name} (${newMember.member_code})`
+      );
+
+      // Auto-generate invoice for membership
+      const plan = plans.find(p => p.id === newMember.plan_id);
+      if (plan) {
+        await createInvoiceForMember(docRef.id, newMember.full_name, plan);
+      }
+
+      return newMember;
+    } catch (err) {
+      console.error('addMember error:', err);
+      setError(friendlyFirestoreError(err));
+      return null;
+    }
+  }, [plans, currentUser]);
+
+  const updateMember = useCallback(async (id, updatedFields) => {
+    try {
+      const member = members.find(m => m.id === id);
+      const memberRef = doc(db, COLLECTIONS.MEMBERS, id);
+      await updateDoc(memberRef, updatedFields);
+
+      if (member) {
         const changes = [];
         Object.keys(updatedFields).forEach(key => {
-          if (m[key] !== updatedFields[key]) {
-            changes.push(`${key}: ${m[key]} -> ${updatedFields[key]}`);
+          if (member[key] !== updatedFields[key]) {
+            changes.push(`${key}: ${member[key]} -> ${updatedFields[key]}`);
           }
         });
         if (changes.length > 0) {
-          logAudit('member.update', 'member', id, `Updated fields on ${m.full_name}: ${changes.join(', ')}`);
+          await logAudit('member.update', 'member', id, `Updated fields on ${member.full_name}: ${changes.join(', ')}`);
         }
-        return { ...m, ...updatedFields };
       }
-      return m;
-    }));
-  };
-
-  const deleteMember = (id) => {
-    const member = members.find(m => m.id === id);
-    if (member) {
-      setMembers(prev => prev.map(m => {
-        if (m.id === id) {
-          return { ...m, status: 'cancelled', deleted_at: new Date().toISOString() };
-        }
-        return m;
-      }));
-      logAudit('member.delete', 'member', id, `Soft-deleted member ${member.full_name}`);
+    } catch (err) {
+      console.error('updateMember error:', err);
+      setError(friendlyFirestoreError(err));
     }
-  };
+  }, [members, currentUser]);
 
-  // Freeze/Unfreeze
-  const freezeMembership = (memberId, reason, fromDate, toDate) => {
-    setMembers(prev => prev.map(m => {
-      if (m.id === memberId) {
-        logAudit('member.freeze', 'member', memberId, `Froze membership for ${m.full_name}. Reason: ${reason}`);
-        return {
-          ...m,
-          status: 'frozen',
-          frozen_from: fromDate,
-          frozen_until: toDate,
-          freeze_reason: reason
-        };
+  const deleteMember = useCallback(async (id) => {
+    try {
+      const member = members.find(m => m.id === id);
+      if (member) {
+        const memberRef = doc(db, COLLECTIONS.MEMBERS, id);
+        await updateDoc(memberRef, {
+          status: 'cancelled',
+          deleted_at: new Date().toISOString(),
+        });
+        await logAudit('member.delete', 'member', id, `Soft-deleted member ${member.full_name}`);
       }
-      return m;
-    }));
-  };
+    } catch (err) {
+      console.error('deleteMember error:', err);
+      setError(friendlyFirestoreError(err));
+    }
+  }, [members, currentUser]);
 
-  const unfreezeMembership = (memberId) => {
-    setMembers(prev => prev.map(m => {
-      if (m.id === memberId) {
-        logAudit('member.unfreeze', 'member', memberId, `Unfroze membership for ${m.full_name}`);
-        return {
-          ...m,
-          status: 'active',
-          frozen_from: null,
-          frozen_until: null,
-          freeze_reason: null
-        };
+  // ─── Freeze / Unfreeze ──────────────────────────────────────────────
+
+  const freezeMembership = useCallback(async (memberId, reason, fromDate, toDate) => {
+    try {
+      const member = members.find(m => m.id === memberId);
+      const memberRef = doc(db, COLLECTIONS.MEMBERS, memberId);
+      await updateDoc(memberRef, {
+        status: 'frozen',
+        frozen_from: fromDate,
+        frozen_until: toDate,
+        freeze_reason: reason,
+      });
+      if (member) {
+        await logAudit('member.freeze', 'member', memberId, `Froze membership for ${member.full_name}. Reason: ${reason}`);
       }
-      return m;
-    }));
-  };
+    } catch (err) {
+      console.error('freezeMembership error:', err);
+      setError(friendlyFirestoreError(err));
+    }
+  }, [members, currentUser]);
 
-  // Self-Registration approvals
-  const addRegistrationRequest = (formData) => {
-    const newReq = {
-      id: generateUUID(),
-      status: 'pending_approval',
-      captcha_verified: true,
-      ip_address: '192.168.1.10',
-      created_at: new Date().toISOString(),
-      ...formData
-    };
-    setRegistrations(prev => [...prev, newReq]);
-    return newReq;
-  };
+  const unfreezeMembership = useCallback(async (memberId) => {
+    try {
+      const member = members.find(m => m.id === memberId);
+      const memberRef = doc(db, COLLECTIONS.MEMBERS, memberId);
+      await updateDoc(memberRef, {
+        status: 'active',
+        frozen_from: null,
+        frozen_until: null,
+        freeze_reason: null,
+      });
+      if (member) {
+        await logAudit('member.unfreeze', 'member', memberId, `Unfroze membership for ${member.full_name}`);
+      }
+    } catch (err) {
+      console.error('unfreezeMembership error:', err);
+      setError(friendlyFirestoreError(err));
+    }
+  }, [members, currentUser]);
 
-  const approveRegistration = (requestId) => {
-    const req = registrations.find(r => r.id === requestId);
-    if (req) {
-      // Create member
-      const newMember = addMember({
-        full_name: req.full_name,
-        email: req.email,
-        phone: req.phone,
-        gender: req.gender,
-        date_of_birth: req.date_of_birth,
-        plan_id: req.plan_id,
-        medical_notes: req.medical_conditions || 'None.',
-        fitness_goals: req.fitness_goals || 'General conditioning.',
-        emergency_contact_name: req.emergency_contact_name || '',
-        emergency_contact_phone: req.emergency_contact_phone || ''
+  // ═══════════════════════════════════════════════════════════════════
+  // REGISTRATION ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const addRegistrationRequest = useCallback(async (formData) => {
+    try {
+      const newReq = {
+        organization_id: DEFAULT_ORG_ID,
+        status: 'pending_approval',
+        captcha_verified: true,
+        ip_address: '192.168.1.10',
+        created_at: new Date().toISOString(),
+        ...formData,
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.REGISTRATIONS), newReq);
+      return { id: docRef.id, ...newReq };
+    } catch (err) {
+      console.error('addRegistrationRequest error:', err);
+      setError(friendlyFirestoreError(err));
+      return null;
+    }
+  }, []);
+
+  const approveRegistration = useCallback(async (requestId) => {
+    try {
+      const req = registrations.find(r => r.id === requestId);
+      if (req) {
+        // Create member from registration data
+        const newMember = await addMember({
+          full_name: req.full_name,
+          email: req.email,
+          phone: req.phone,
+          gender: req.gender,
+          date_of_birth: req.date_of_birth,
+          plan_id: req.plan_id,
+          medical_notes: req.medical_conditions || 'None.',
+          fitness_goals: req.fitness_goals || 'General conditioning.',
+          emergency_contact_name: req.emergency_contact_name || '',
+          emergency_contact_phone: req.emergency_contact_phone || '',
+          photo_url: req.photo_url || '',
+          weight_kg: req.weight_kg ? parseFloat(req.weight_kg) : 75.0,
+          height_cm: req.height_cm ? parseInt(req.height_cm) : 175,
+          body_fat_pct: req.body_fat_pct ? parseFloat(req.body_fat_pct) : 18.0,
+        });
+
+        // Update registration status in Firestore
+        const regRef = doc(db, COLLECTIONS.REGISTRATIONS, requestId);
+        await updateDoc(regRef, { status: 'approved' });
+
+        if (newMember) {
+          await logAudit(
+            'registration.approve', 'registration_request', requestId,
+            `Approved registration for ${req.full_name}. Active member code: ${newMember.member_code}`
+          );
+        }
+      }
+    } catch (err) {
+      console.error('approveRegistration error:', err);
+      setError(friendlyFirestoreError(err));
+    }
+  }, [registrations, addMember, currentUser]);
+
+  const rejectRegistration = useCallback(async (requestId, reason) => {
+    try {
+      const req = registrations.find(r => r.id === requestId);
+      const regRef = doc(db, COLLECTIONS.REGISTRATIONS, requestId);
+      await updateDoc(regRef, {
+        status: 'rejected',
+        rejection_reason: reason,
+      });
+      if (req) {
+        await logAudit(
+          'registration.reject', 'registration_request', requestId,
+          `Rejected registration for ${req.full_name}. Reason: ${reason}`
+        );
+      }
+    } catch (err) {
+      console.error('rejectRegistration error:', err);
+      setError(friendlyFirestoreError(err));
+    }
+  }, [registrations, currentUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // INVOICING & PAYMENTS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const createInvoiceForMember = useCallback(async (memberId, memberName, plan) => {
+    try {
+      const invoiceData = helperCreateInvoiceForMember(memberId, memberName, plan);
+      await addDoc(collection(db, COLLECTIONS.INVOICES), invoiceData);
+    } catch (err) {
+      console.error('createInvoiceForMember error:', err);
+    }
+  }, []);
+
+  const recordPayment = useCallback(async (invoiceId, paymentMethod) => {
+    try {
+      const inv = invoices.find(i => i.id === invoiceId);
+      const invoiceRef = doc(db, COLLECTIONS.INVOICES, invoiceId);
+      await updateDoc(invoiceRef, {
+        status: 'paid',
+        paid_at: new Date().toISOString(),
+        payment_method: paymentMethod,
+      });
+      if (inv) {
+        await logAudit(
+          'payment.receive', 'invoice', invoiceId,
+          `Recorded payment of LKR ${inv.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} via ${paymentMethod.toUpperCase()}`
+        );
+      }
+    } catch (err) {
+      console.error('recordPayment error:', err);
+      setError(friendlyFirestoreError(err));
+    }
+  }, [invoices, currentUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ACCESS CONTROL (Check-in / Check-out)
+  // ═══════════════════════════════════════════════════════════════════
+
+  const checkInMember = useCallback(async (memberCode, source = 'qr') => {
+    try {
+      const member = members.find(m => m.member_code.toLowerCase() === memberCode.trim().toLowerCase());
+
+      // Check if membership has expired (countdown expired)
+      if (member && member.countdown_end && new Date(member.countdown_end).getTime() < Date.now()) {
+        if (member.status === 'active') {
+          // Auto-expire the member
+          const memberRef = doc(db, COLLECTIONS.MEMBERS, member.id);
+          await updateDoc(memberRef, { status: 'expired' });
+          await logAudit('member.expire', 'member', member.id, `Membership for ${member.full_name} automatically expired (Countdown over)`);
+          // Update local reference for the checks below
+          member.status = 'expired';
+        }
+      }
+
+      // Helper to write a denied event
+      const writeDeniedEvent = async (membObj, reason, denyReason) => {
+        const event = {
+          organization_id: DEFAULT_ORG_ID,
+          member_id: membObj?.id || null,
+          member_name: membObj?.full_name || 'Unknown Member',
+          member_code: membObj?.member_code || memberCode,
+          source,
+          result: 'denied',
+          deny_reason: denyReason,
+          occurred_at: new Date().toISOString(),
+        };
+        const evtRef = await addDoc(collection(db, COLLECTIONS.ACCESS_EVENTS), event);
+        await logAudit('access.denied', 'access_event', evtRef.id, `Access denied for ${event.member_name} (${event.member_code}). Reason: ${reason}`);
+        return { success: false, reason };
+      };
+
+      if (!member) {
+        return await writeDeniedEvent(null, 'Invalid membership code.', 'invalid_qr');
+      }
+
+      if (member.status === 'frozen') {
+        return await writeDeniedEvent(member, `Membership is frozen. Freeze reason: ${member.freeze_reason || 'N/A'}`, 'frozen');
+      }
+
+      if (member.status === 'expired') {
+        return await writeDeniedEvent(member, 'Membership has expired. Please renew.', 'expired');
+      }
+
+      if (member.status === 'cancelled' || member.status === 'suspended') {
+        return await writeDeniedEvent(member, `Membership is ${member.status}. Access blocked.`, 'expired');
+      }
+
+      // ── ACCESS GRANTED ──
+      const grantedEvent = {
+        organization_id: DEFAULT_ORG_ID,
+        member_id: member.id,
+        member_name: member.full_name,
+        member_code: member.member_code,
+        source,
+        result: 'granted',
+        occurred_at: new Date().toISOString(),
+      };
+      const evtRef = await addDoc(collection(db, COLLECTIONS.ACCESS_EVENTS), grantedEvent);
+      await logAudit('member.checkin', 'access_event', evtRef.id, `Member checked in: ${member.full_name}`);
+      return { success: true, member };
+    } catch (err) {
+      console.error('checkInMember error:', err);
+      return { success: false, reason: 'System error during check-in. Please try again.' };
+    }
+  }, [members, currentUser]);
+
+  const checkOutMember = useCallback(async (eventId) => {
+    try {
+      const evt = accessEvents.find(e => e.id === eventId);
+      const eventRef = doc(db, COLLECTIONS.ACCESS_EVENTS, eventId);
+      await updateDoc(eventRef, {
+        check_out_at: new Date().toISOString(),
+      });
+      if (evt) {
+        await logAudit('member.checkout', 'access_event', eventId, `Recorded checkout for ${evt.member_name}`);
+      }
+    } catch (err) {
+      console.error('checkOutMember error:', err);
+      setError(friendlyFirestoreError(err));
+    }
+  }, [accessEvents, currentUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MEMBERSHIP RENEWAL
+  // ═══════════════════════════════════════════════════════════════════
+
+  const renewMemberMembership = useCallback(async (memberId, paymentMethod, customPrice = null) => {
+    try {
+      const member = members.find(m => m.id === memberId);
+      if (!member) return { success: false, message: 'Member not found.' };
+
+      const plan = plans.find(p => p.id === member.plan_id) || plans[0];
+      if (!plan) return { success: false, message: 'No plan found.' };
+
+      const priceToCharge = customPrice !== null ? parseFloat(customPrice) : plan.price;
+      const tax = priceToCharge * (plan.tax_rate / 100);
+      const total = priceToCharge + tax;
+
+      const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end);
+
+      // Update member in Firestore
+      const memberRef = doc(db, COLLECTIONS.MEMBERS, memberId);
+      await updateDoc(memberRef, {
+        status: 'active',
+        countdown_end: newCountdownEnd,
       });
 
-      // Update request status
-      setRegistrations(prev => prev.map(r => {
-        if (r.id === requestId) {
-          return { ...r, status: 'approved' };
-        }
-        return r;
-      }));
+      // Create paid renewal invoice
+      const invoiceData = helperCreateRenewalInvoice(member.id, member.full_name, plan, priceToCharge, tax, total, paymentMethod);
+      const invRef = await addDoc(collection(db, COLLECTIONS.INVOICES), invoiceData);
 
-      logAudit('registration.approve', 'registration_request', requestId, `Approved registration for ${req.full_name}. Active member code: ${newMember.member_code}`);
+      await logAudit('payment.receive', 'invoice', invRef.id,
+        `Collected LKR ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} via ${paymentMethod.toUpperCase()} for membership renewal of ${member.full_name}`
+      );
+      await logAudit('member.renew', 'member', memberId,
+        `Renewed membership for ${member.full_name} for 30 days (New Expiry: ${new Date(newCountdownEnd).toLocaleDateString()})`
+      );
+
+      return { success: true, newCountdownEnd };
+    } catch (err) {
+      console.error('renewMemberMembership error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
     }
-  };
+  }, [members, plans, currentUser]);
 
-  const rejectRegistration = (requestId, reason) => {
-    setRegistrations(prev => prev.map(r => {
-      if (r.id === requestId) {
-        logAudit('registration.reject', 'registration_request', requestId, `Rejected registration for ${r.full_name}. Reason: ${reason}`);
-        return { ...r, status: 'rejected', rejection_reason: reason };
-      }
-      return r;
-    }));
-  };
-
-  // Invoicing & Payments
-  const createInvoiceForMember = (member, plan) => {
-    const tax = plan.price * (plan.tax_rate / 100);
-    const total = plan.price + tax;
-    const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newInvoice = {
-      id: generateUUID(),
-      organization_id: 'org1',
-      member_id: member.id,
-      member_name: member.full_name,
-      invoice_number: invNumber,
-      subtotal: plan.price,
-      tax_amount: tax,
-      discount_amount: 0.00,
-      total_amount: total,
-      status: 'open',
-      due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
-      issued_at: new Date().toISOString(),
-      paid_at: null,
-      plan_id: plan.id
-    };
-
-    setInvoices(prev => [newInvoice, ...prev]);
-  };
-
-  const recordPayment = (invoiceId, paymentMethod) => {
-    setInvoices(prev => prev.map(inv => {
-      if (inv.id === invoiceId) {
-        logAudit('payment.receive', 'invoice', invoiceId, `Recorded payment of LKR ${inv.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} via ${paymentMethod.toUpperCase()}`);
-        return {
-          ...inv,
-          status: 'paid',
-          paid_at: new Date().toISOString(),
-          payment_method: paymentMethod
-        };
-      }
-      return inv;
-    }));
-  };
-
-  // Simulated access scanner check-in
-  const checkInMember = (memberCode, source = 'qr') => {
-    const member = members.find(m => m.member_code.toLowerCase() === memberCode.trim().toLowerCase());
-    
-    if (!member) {
-      // Access Denied: Invalid code
-      const newEvent = {
-        id: generateUUID(),
-        member_id: null,
-        member_name: 'Unknown Member',
-        member_code: memberCode,
-        source,
-        result: 'denied',
-        deny_reason: 'invalid_qr',
-        occurred_at: new Date().toISOString()
-      };
-      setAccessEvents(prev => [newEvent, ...prev]);
-      logAudit('access.denied', 'access_event', newEvent.id, `Access denied at gate. Reason: Invalid credentials code (${memberCode})`);
-      return { success: false, reason: 'Invalid membership code.' };
-    }
-
-    if (member.status === 'frozen') {
-      const newEvent = {
-        id: generateUUID(),
-        member_id: member.id,
-        member_name: member.full_name,
-        member_code: member.member_code,
-        source,
-        result: 'denied',
-        deny_reason: 'frozen',
-        occurred_at: new Date().toISOString()
-      };
-      setAccessEvents(prev => [newEvent, ...prev]);
-      logAudit('access.denied', 'access_event', newEvent.id, `Access denied for ${member.full_name} (${member.member_code}). Reason: Account Frozen`);
-      return { success: false, reason: `Membership is frozen. Freeze reason: ${member.freeze_reason || 'N/A'}` };
-    }
-
-    if (member.status === 'expired') {
-      const newEvent = {
-        id: generateUUID(),
-        member_id: member.id,
-        member_name: member.full_name,
-        member_code: member.member_code,
-        source,
-        result: 'denied',
-        deny_reason: 'expired',
-        occurred_at: new Date().toISOString()
-      };
-      setAccessEvents(prev => [newEvent, ...prev]);
-      logAudit('access.denied', 'access_event', newEvent.id, `Access denied for ${member.full_name} (${member.member_code}). Reason: Membership Expired`);
-      return { success: false, reason: 'Membership has expired. Please renew.' };
-    }
-
-    if (member.status === 'cancelled' || member.status === 'suspended') {
-      const newEvent = {
-        id: generateUUID(),
-        member_id: member.id,
-        member_name: member.full_name,
-        member_code: member.member_code,
-        source,
-        result: 'denied',
-        deny_reason: 'expired',
-        occurred_at: new Date().toISOString()
-      };
-      setAccessEvents(prev => [newEvent, ...prev]);
-      logAudit('access.denied', 'access_event', newEvent.id, `Access denied for ${member.full_name} (${member.member_code}). Reason: Account ${member.status}`);
-      return { success: false, reason: `Membership is ${member.status}. Access blocked.` };
-    }
-
-    // Access Granted
-    const newEvent = {
-      id: generateUUID(),
-      member_id: member.id,
-      member_name: member.full_name,
-      member_code: member.member_code,
-      source,
-      result: 'granted',
-      occurred_at: new Date().toISOString()
-    };
-    setAccessEvents(prev => [newEvent, ...prev]);
-    logAudit('member.checkin', 'access_event', newEvent.id, `Member checked in: ${member.full_name}`);
-    return { success: true, member };
-  };
-
-  const checkOutMember = (eventId) => {
-    setAccessEvents(prev => prev.map(evt => {
-      if (evt.id === eventId) {
-        logAudit('member.checkout', 'access_event', eventId, `Recorded checkout for ${evt.member_name}`);
-        return {
-          ...evt,
-          check_out_at: new Date().toISOString()
-        };
-      }
-      return evt;
-    }));
-  };
-
+  // ═══════════════════════════════════════════════════════════════════
+  // CONTEXT VALUE
+  // ═══════════════════════════════════════════════════════════════════
   return (
     <DashboardContext.Provider value={{
+      // State
       plans,
       trainers,
       members,
@@ -835,20 +841,43 @@ export const DashboardProvider = ({ children }) => {
       accessEvents,
       invoices,
       auditLogs,
-      
-      // Actions
+      admins,
+      currentUser,
+
+      // Loading / Error
+      isLoading,
+      dataLoaded,
+      authReady,
+      error,
+      setError,
+
+      // Auth Actions
+      login,
+      logout,
+      registerAdmin,
+
+      // Member CRUD
       addMember,
       updateMember,
       deleteMember,
       freezeMembership,
       unfreezeMembership,
+
+      // Registration Actions
       addRegistrationRequest,
       approveRegistration,
       rejectRegistration,
+
+      // Payment Actions
       recordPayment,
+
+      // Access Actions
       checkInMember,
       checkOutMember,
-      logAudit
+
+      // Utility
+      logAudit,
+      renewMemberMembership,
     }}>
       {children}
     </DashboardContext.Provider>

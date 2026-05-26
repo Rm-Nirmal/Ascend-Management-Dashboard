@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Scan, CheckCircle2, AlertOctagon, UserMinus, Clock, UserCheck, ShieldAlert 
+  Scan, CheckCircle2, AlertOctagon, Clock 
 } from 'lucide-react';
 
 const AccessConsole = () => {
@@ -41,20 +41,29 @@ const AccessConsole = () => {
       memberCode: ''
     });
 
-    setTimeout(() => {
-      const response = checkInMember(codeToScan, scanMethod);
-      if (response.success) {
-        setScannerState({
-          status: 'granted',
-          message: 'ACCESS GRANTED',
-          memberName: response.member.full_name,
-          memberCode: response.member.member_code
-        });
-      } else {
+    setTimeout(async () => {
+      try {
+        const response = await checkInMember(codeToScan, scanMethod);
+        if (response.success) {
+          setScannerState({
+            status: 'granted',
+            message: 'ACCESS GRANTED',
+            memberName: response.member.full_name,
+            memberCode: response.member.member_code
+          });
+        } else {
+          setScannerState({
+            status: 'denied',
+            message: `ACCESS DENIED: ${response.reason}`,
+            memberName: 'Rejected Attempt',
+            memberCode: codeToScan
+          });
+        }
+      } catch (err) {
         setScannerState({
           status: 'denied',
-          message: `ACCESS DENIED: ${response.reason}`,
-          memberName: 'Rejected Attempt',
+          message: 'ACCESS DENIED: System error',
+          memberName: 'Error',
           memberCode: codeToScan
         });
       }

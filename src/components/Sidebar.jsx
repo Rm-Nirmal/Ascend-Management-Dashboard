@@ -1,4 +1,4 @@
-import React from 'react';
+import { useDashboard } from '../context/DashboardContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -6,19 +6,38 @@ import {
   QrCode, 
   CreditCard, 
   Sparkles, 
-  ClipboardList
+  ClipboardList,
+  Shield,
+  LogOut
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-  const navItems = [
+  const { currentUser, logout } = useDashboard();
+
+  // All potential nav items
+  const allNavItems = [
     { id: 'overview', name: 'Dashboard Overview', icon: LayoutDashboard },
     { id: 'members', name: 'Members Directory', icon: Users },
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'access', name: 'Access Console', icon: QrCode },
     { id: 'payments', name: 'Invoices & Payments', icon: CreditCard },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
-    { id: 'audit', name: 'System Audit Logs', icon: ClipboardList }
+    { id: 'audit', name: 'System Audit Logs', icon: ClipboardList },
+    { id: 'admin_management', name: 'Admin Console', icon: Shield }
   ];
+
+  // Filter based on currentUser role
+  const navItems = allNavItems.filter(item => {
+    if (!currentUser) return false;
+    
+    // Regular admin can only access members, registrations, access
+    if (currentUser.role === 'admin') {
+      return ['members', 'registrations', 'access'].includes(item.id);
+    }
+    
+    // Super admin can access everything
+    return true;
+  });
 
   return (
     <aside className="sidebar">
@@ -48,16 +67,49 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         </nav>
       </div>
 
-      {/* Footer Profile (Persona: Org Owner / Org Admin) */}
-      <div className="sidebar-footer">
+      {/* Footer Profile with Logout Capability */}
+      <div className="sidebar-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
         <img 
-          src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
-          alt="Sarah Jenkins Avatar" 
+          src={currentUser?.photo_url || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
+          alt={`${currentUser?.name || 'Admin'} Avatar`} 
           className="user-avatar"
         />
-        <div className="user-info">
-          <span className="user-name">Sarah Jenkins</span>
-          <span className="user-role">Org Administrator</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexGrow: 1, overflow: 'hidden' }}>
+          <div className="user-info" style={{ overflow: 'hidden', paddingRight: '0.25rem' }}>
+            <span className="user-name" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100px', display: 'block' }}>
+              {currentUser?.name || 'Administrator'}
+            </span>
+            <span className="user-role" style={{ fontSize: '0.7rem' }}>
+              {currentUser?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+            </span>
+          </div>
+          
+          <button 
+            onClick={logout} 
+            title="Log Out Session"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '0.35rem',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'var(--transition-fast)',
+              outline: 'none'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--color-danger)';
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--text-muted)';
+              e.currentTarget.style.background = 'none';
+            }}
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </aside>

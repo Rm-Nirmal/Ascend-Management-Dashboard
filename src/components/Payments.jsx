@@ -1,8 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  DollarSign, Landmark, CreditCard, Sparkles, X, Check, BellRing, Mail, Smartphone, Printer, Eye 
+  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye 
 } from 'lucide-react';
+
+const createManualReminderLog = (invoice) => {
+  return {
+    id: `l_${Date.now()}`,
+    member: invoice.member_name,
+    invoice: invoice.invoice_number,
+    type: 'manual_alert',
+    channel: 'email',
+    sent_at: new Date().toISOString(),
+    status: 'sent'
+  };
+};
 
 const Payments = () => {
   const {
@@ -43,11 +55,7 @@ const Payments = () => {
       .reduce((sum, inv) => sum + inv.total_amount, 0);
   }, [filteredInvoices]);
 
-  const overdueAmount = useMemo(() => {
-    return filteredInvoices
-      .filter(i => i.status === 'overdue')
-      .reduce((sum, inv) => sum + inv.total_amount, 0);
-  }, [filteredInvoices]);
+
 
   // Revenue by Payment Method Calculations
   const methodRevenue = useMemo(() => {
@@ -81,24 +89,20 @@ const Payments = () => {
     return { stats, total: totalPaid };
   }, [filteredInvoices]);
 
-  const handlePayInvoice = (e) => {
+  const handlePayInvoice = async (e) => {
     e.preventDefault();
     if (!selectedInvoice) return;
-    recordPayment(selectedInvoice.id, paymentMethod);
-    setSelectedInvoice(null);
-    alert(`Payment recorded successfully via ${paymentMethod.toUpperCase()}!`);
+    try {
+      await recordPayment(selectedInvoice.id, paymentMethod);
+      setSelectedInvoice(null);
+      alert(`Payment recorded successfully via ${paymentMethod.toUpperCase()}!`);
+    } catch (err) {
+      alert('Failed to record payment. Please try again.');
+    }
   };
 
   const triggerManualReminder = (invoice) => {
-    const newLog = {
-      id: `l_${Date.now()}`,
-      member: invoice.member_name,
-      invoice: invoice.invoice_number,
-      type: 'manual_alert',
-      channel: 'email',
-      sent_at: new Date().toISOString(),
-      status: 'sent'
-    };
+    const newLog = createManualReminderLog(invoice);
     setReminderLogs(prev => [newLog, ...prev]);
     alert(`Payment reminder notification sent to ${invoice.member_name} for invoice ${invoice.invoice_number}.`);
   };

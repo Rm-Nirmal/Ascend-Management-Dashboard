@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  History, Key, Shield, User, FileText, Search, Mail, MessageSquare, AlertCircle,
+  History, Key, Shield, User, Search, Mail,
   DollarSign, ShieldAlert, ClipboardCheck
 } from 'lucide-react';
 

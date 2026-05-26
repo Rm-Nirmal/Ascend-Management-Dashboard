@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend
 } from 'recharts';
 import { 
-  Sparkles, ShieldAlert, TrendingUp, UserMinus, Percent, Info, CalendarClock 
+  Sparkles, ShieldAlert, TrendingUp, Info, CalendarClock 
 } from 'lucide-react';
 
 const AIInsights = () => {
@@ -27,9 +27,17 @@ const AIInsights = () => {
       'm7': { score: 45, factors: ['Payment delay 3 days', 'Check-ins down by 25% vs last month', 'Main branch user'] }
     };
 
+    const getDeterministicRiskScore = (memberId) => {
+      let hash = 0;
+      for (let i = 0; i < memberId.length; i++) {
+        hash = memberId.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return 15 + Math.abs(hash % 45); // deterministic score between 15 and 59
+    };
+
     return activeMembers.map(m => {
       const riskData = seedScores[m.id] || { 
-        score: Math.round(15 + Math.random() * 45), 
+        score: getDeterministicRiskScore(m.id), 
         factors: ['Average check-in frequency', 'General health subscriber', 'No immediate warnings'] 
       };
       

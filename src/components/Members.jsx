@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Plus, Search, Edit2, Trash2, Eye, ShieldAlert, Sparkles, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock 
+  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock
 } from 'lucide-react';
 
 const Members = () => {
@@ -13,7 +13,8 @@ const Members = () => {
     updateMember,
     deleteMember,
     freezeMembership,
-    unfreezeMembership
+    unfreezeMembership,
+    renewMemberMembership
   } = useDashboard();
 
   // Component States
@@ -22,6 +23,95 @@ const Members = () => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMedical, setShowMedical] = useState(false);
+  
+  // Ticking state for live countdowns
+  const [time, setTime] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Membership Renewal States
+  const [selectedRenewMember, setSelectedRenewMember] = useState(null);
+  const [renewPrice, setRenewPrice] = useState('');
+  const [renewPaymentMethod, setRenewPaymentMethod] = useState('card');
+
+
+
+  const handleRenewSubmit = async (e) => {
+    e.preventDefault();
+    if (!renewPrice || !selectedRenewMember) return;
+    try {
+      const res = await renewMemberMembership(selectedRenewMember.id, renewPaymentMethod, renewPrice);
+      if (res.success) {
+        alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for 30 days! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
+        setSelectedRenewMember(null);
+        // Keep detail drawer profile updated
+        if (selectedMember && selectedMember.id === selectedRenewMember.id) {
+          setSelectedMember(prev => ({
+            ...prev,
+            status: 'active',
+            countdown_end: res.newCountdownEnd
+          }));
+        }
+      } else {
+        alert(res.message || 'Renewal failed. Please try again.');
+      }
+    } catch (err) {
+      alert('An error occurred during renewal. Please try again.');
+    }
+  };
+
+  const getCountdownDisplay = (member) => {
+    if (member.status === 'frozen') {
+      return <span style={{ color: 'var(--text-dark)' }}>Paused (Frozen)</span>;
+    }
+    if (!member.countdown_end) {
+      return <span style={{ color: 'var(--text-muted)' }}>No Limit</span>;
+    }
+    
+    const diff = new Date(member.countdown_end).getTime() - time;
+    if (diff <= 0) {
+      return <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>Expired</span>;
+    }
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+    
+    if (days > 0) {
+      return (
+        <span style={{ 
+          color: days <= 3 ? 'var(--color-warning)' : 'var(--color-success)', 
+          display: 'inline-flex', 
+          alignItems: 'center', 
+          gap: '0.25rem', 
+          fontWeight: 600, 
+          fontSize: '0.8rem' 
+        }}>
+          <Clock size={12} />
+          {days}d {hours}h {minutes}m
+        </span>
+      );
+    }
+    return (
+      <span style={{ 
+        color: 'var(--color-danger)', 
+        display: 'inline-flex', 
+        alignItems: 'center', 
+        gap: '0.25rem', 
+        fontWeight: 700, 
+        fontSize: '0.8rem',
+        animation: 'pulse 1s infinite' 
+      }}>
+        <Clock size={12} />
+        {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+      </span>
+    );
+  };
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,10 +158,7 @@ const Members = () => {
     });
   }, [members, statusFilter, searchTerm]);
 
-  // Reset page to 1 on filter/search change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+
 
   const totalPages = Math.ceil(filteredMembersList.length / itemsPerPage);
   
@@ -81,41 +168,47 @@ const Members = () => {
   }, [filteredMembersList, currentPage]);
 
   // Handle Add Member submit
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!newMemberForm.full_name || !newMemberForm.email || !newMemberForm.plan_id) {
       alert('Please fill out all required fields.');
       return;
     }
 
-    const created = addMember({
-      ...newMemberForm,
-      plan_id: newMemberForm.plan_id,
-      trainer_id: newMemberForm.trainer_id || null,
-      auto_renew: true
-    });
+    try {
+      const created = await addMember({
+        ...newMemberForm,
+        plan_id: newMemberForm.plan_id,
+        trainer_id: newMemberForm.trainer_id || null,
+        auto_renew: true
+      });
 
-    setShowAddModal(false);
-    // Reset form
-    setNewMemberForm({
-      full_name: '',
-      email: '',
-      phone: '',
-      gender: 'male',
-      date_of_birth: '',
-      plan_id: '',
-      emergency_contact_name: '',
-      emergency_contact_phone: '',
-      medical_notes: '',
-      fitness_goals: '',
-      weight_kg: '',
-      height_cm: '',
-      body_fat_pct: '',
-      trainer_id: ''
-    });
-    
-    // Select the newly created member to view QR details
-    setSelectedMember(created);
+      setShowAddModal(false);
+      // Reset form
+      setNewMemberForm({
+        full_name: '',
+        email: '',
+        phone: '',
+        gender: 'male',
+        date_of_birth: '',
+        plan_id: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        medical_notes: '',
+        fitness_goals: '',
+        weight_kg: '',
+        height_cm: '',
+        body_fat_pct: '',
+        trainer_id: ''
+      });
+      
+      // Select the newly created member to view QR details
+      if (created) {
+        setSelectedMember(created);
+      }
+    } catch (err) {
+      alert('Failed to add member. Please try again.');
+    }
   };
 
   const handleRotateQR = (memberId) => {
@@ -187,7 +280,10 @@ const Members = () => {
             type="text" 
             placeholder="Search by name, email, code or phone..." 
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%', fontSize: '0.875rem' }}
           />
         </div>
@@ -197,7 +293,10 @@ const Members = () => {
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Status:</span>
           <select 
             value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             className="glass-select"
           >
             <option value="all">All Statuses</option>
@@ -222,6 +321,7 @@ const Members = () => {
                 <th>Name</th>
                 <th>Attached Plan</th>
                 <th>Status</th>
+                <th>Validity</th>
                 <th>Joined</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -229,7 +329,7 @@ const Members = () => {
             <tbody>
               {displayedMembers.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No members matching filters.
                   </td>
                 </tr>
@@ -258,9 +358,24 @@ const Members = () => {
                           {member.status}
                         </span>
                       </td>
+                      <td>
+                        {getCountdownDisplay(member)}
+                      </td>
                       <td>{member.joined_at}</td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.4rem', color: 'var(--color-success)' }}
+                            title="Collect Payment & Renew"
+                            onClick={() => {
+                              setSelectedRenewMember(member);
+                              const plan = plans.find(p => p.id === member.plan_id);
+                              setRenewPrice(plan ? plan.price : '');
+                            }}
+                          >
+                            <CreditCard size={14} />
+                          </button>
                           <button 
                             className="btn btn-secondary" 
                             style={{ padding: '0.4rem' }}
@@ -417,6 +532,27 @@ const Members = () => {
                   {selectedMember.auto_renew ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
                 </button>
               </div>
+            </div>
+
+            {/* Validity Countdown and Renew inside drawer */}
+            <div style={{ background: 'rgba(6,182,212,0.03)', border: '1px solid rgba(6,182,212,0.15)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', textTransform: 'uppercase', fontWeight: 700 }}>Membership Validity</span>
+                <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', marginTop: '0.25rem' }}>
+                  {getCountdownDisplay(selectedMember)}
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setSelectedRenewMember(selectedMember);
+                  const plan = plans.find(p => p.id === selectedMember.plan_id);
+                  setRenewPrice(plan ? plan.price : '');
+                }}
+                className="btn btn-primary" 
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', gap: '0.35rem' }}
+              >
+                <CreditCard size={12} /> Collect & Renew
+              </button>
             </div>
 
             {/* Health & Body measurements & Goal (FR-MEM-05) */}
@@ -786,6 +922,87 @@ const Members = () => {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   Create Profile & Activate
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Collect Payment & Renew Modal */}
+      {selectedRenewMember && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '420px', animation: 'slideUp 0.25s ease-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CreditCard size={20} style={{ color: 'var(--color-primary)' }} />
+                Collect Payment & Renew
+              </h2>
+              <button 
+                onClick={() => setSelectedRenewMember(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+              <img 
+                src={selectedRenewMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                alt={selectedRenewMember.full_name} 
+                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+              />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{selectedRenewMember.full_name}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Code: {selectedRenewMember.member_code}</div>
+              </div>
+            </div>
+
+            <form onSubmit={handleRenewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Plan info */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Attached Membership Plan</label>
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '6px', marginTop: '0.25rem', border: '1px solid var(--border-color)' }}>
+                  {plans.find(p => p.id === selectedRenewMember.plan_id)?.name || 'N/A'}
+                </div>
+              </div>
+
+              {/* Price */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Renew Amount (LKR)</label>
+                <input 
+                  type="number"
+                  required
+                  className="glass-input"
+                  style={{ marginTop: '0.25rem', fontWeight: 700, color: 'var(--color-success)' }}
+                  value={renewPrice}
+                  onChange={(e) => setRenewPrice(e.target.value)}
+                />
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Payment Collection Method</label>
+                <select
+                  className="glass-select"
+                  style={{ marginTop: '0.25rem', width: '100%', padding: '0.5rem' }}
+                  value={renewPaymentMethod}
+                  onChange={(e) => setRenewPaymentMethod(e.target.value)}
+                >
+                  <option value="card">Credit / Debit Card</option>
+                  <option value="cash">Cash Payment</option>
+                  <option value="upi">UPI / Instant Pay</option>
+                  <option value="bank_transfer">Bank Wire Transfer</option>
+                </select>
+              </div>
+
+              {/* Action buttons */}
+              <div className="grid-2 margin-t-1">
+                <button type="button" className="btn btn-secondary" onClick={() => setSelectedRenewMember(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-success">
+                  Renew & Activate
                 </button>
               </div>
             </form>

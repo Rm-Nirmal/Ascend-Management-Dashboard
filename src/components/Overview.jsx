@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { 
-  Users, DollarSign, Calendar, Clock, UserCheck, AlertCircle, ArrowUpRight, Download, Filter
+  DollarSign, Calendar, UserCheck, AlertCircle, ArrowUpRight, Download
 } from 'lucide-react';
 
 const Overview = () => {
@@ -27,10 +27,7 @@ const Overview = () => {
   const revenueStats = useMemo(() => {
     const paidInvoices = invoices.filter(i => i.status === 'paid' && i.paid_at);
     
-    let total = 0;
-    let count = 0;
-    let label = '';
-    let comparison = '';
+    let total, count, label, comparison;
 
     if (timeframe === 'daily') {
       // Paid on selectedDate
