@@ -797,7 +797,9 @@ export const DashboardProvider = ({ children }) => {
       if (!plan) return { success: false, message: 'No plan found.' };
 
       const priceToCharge = customPrice !== null ? parseFloat(customPrice) : plan.price;
-      const tax = priceToCharge * (plan.tax_rate / 100);
+      // When a custom price is entered, treat it as the final amount (no tax added).
+      // Tax is only auto-calculated when using the plan's default price.
+      const tax = customPrice !== null ? 0 : priceToCharge * (plan.tax_rate / 100);
       const total = priceToCharge + tax;
 
       const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end);
