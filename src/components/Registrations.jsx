@@ -201,7 +201,10 @@ const Registrations = () => {
 
       {/* View 2: Simulated Public Form */}
       {currentSubTab === 'form' && (() => {
-        const registrationUrl = `${window.location.origin}/?view=register`;
+        const base = window.location.pathname.endsWith('/') 
+          ? window.location.pathname 
+          : window.location.pathname + '/';
+        const registrationUrl = `${window.location.origin}${base}?view=register`;
         const handleCopyLink = () => {
           navigator.clipboard.writeText(registrationUrl);
           showToast('Public registration URL copied to clipboard!', 'success');
