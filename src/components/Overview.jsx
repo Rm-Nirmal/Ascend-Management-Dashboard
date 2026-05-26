@@ -254,7 +254,55 @@ const Overview = () => {
   }, [members]);
 
   const handleExport = (format) => {
-    alert(`Snapshot exported successfully in ${format.toUpperCase()} format.`);
+    if (format === 'csv') {
+      try {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        
+        // Title & Header info
+        csvContent += `Ascend Gym Management Dashboard - Report Snapshot\n`;
+        csvContent += `Generated At,${new Date().toLocaleString()}\n`;
+        csvContent += `Timeframe,${timeframe.toUpperCase()}\n`;
+        csvContent += `Selected Period,${timeframe === 'daily' ? selectedDate : timeframe === 'yearly' ? selectedYear : selectedMonth}\n\n`;
+        
+        // KPI Summary section
+        csvContent += `KPI Summary\n`;
+        csvContent += `Metric,Value,Context\n`;
+        csvContent += `Total Revenue,LKR ${revenueStats.total.toFixed(2)},${revenueStats.comparison.replace(/,/g, '')}\n`;
+        csvContent += `Active Members,${activeMembersCount},Out of ${totalMembersCount} total subscribers\n`;
+        csvContent += `Granted Entrances,${activeAttendanceCount},For selected timeframe\n`;
+        csvContent += `Pending Registrations,${pendingRegistrationsCount},Requires operator review\n\n`;
+        
+        // Detailed breakdown list
+        csvContent += `Trend Telemetry Breakdown\n`;
+        csvContent += `Period Interval,Gate Attendance Volume,Revenue (LKR),New Signups,Cumulative Subscribers\n`;
+        
+        const length = chartData.attendance.length;
+        for (let i = 0; i < length; i++) {
+          const intervalName = chartData.attendance[i].name;
+          const attVal = chartData.attendance[i].value;
+          const revVal = chartData.revenue[i].value;
+          const newSig = chartData.signups[i].new;
+          const cumSub = chartData.signups[i].total;
+          csvContent += `"${intervalName}",${attVal},${revVal.toFixed(2)},${newSig},${cumSub}\n`;
+        }
+        
+        // Trigger file download
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        const fileName = `Ascend_Report_${timeframe}_${timeframe === 'daily' ? selectedDate : timeframe === 'yearly' ? selectedYear : selectedMonth}.csv`;
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error("CSV Export error:", err);
+        alert("Failed to export CSV. Please try again.");
+      }
+    } else {
+      // Trigger print for PDF conversion
+      window.print();
+    }
   };
 
   return (
@@ -336,8 +384,11 @@ const Overview = () => {
             ))}
           </div>
 
+          <button className="btn btn-secondary" onClick={() => handleExport('csv')} style={{ gap: '0.35rem' }}>
+            <Download size={14} /> Export CSV
+          </button>
           <button className="btn btn-secondary" onClick={() => handleExport('pdf')} style={{ gap: '0.35rem' }}>
-            <Download size={14} /> Export Report
+            <Download size={14} /> Print Report
           </button>
         </div>
       </div>
