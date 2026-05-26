@@ -30,8 +30,7 @@ const DashboardContext = createContext();
  * Build a new member data object suitable for writing to Firestore.
  * Generates member_code, qr_token, and sets defaults.
  */
-const helperCreateMemberObject = (memberData) => {
-  const memberCode = `ASC-${Math.floor(10000 + Math.random() * 90000)}`;
+const helperCreateMemberObject = (memberData, memberCode) => {
   const now = new Date();
   return {
     organization_id: DEFAULT_ORG_ID,
@@ -496,7 +495,20 @@ export const DashboardProvider = ({ children }) => {
 
   const addMember = useCallback(async (memberData) => {
     try {
-      const newMemberData = helperCreateMemberObject(memberData);
+      // Find the next member code sequentially (in order starting with 1000)
+      let maxNum = 999;
+      members.forEach(m => {
+        if (m.member_code && m.member_code.startsWith('ASC-')) {
+          const numStr = m.member_code.replace('ASC-', '');
+          const num = parseInt(numStr, 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      });
+      const memberCode = `ASC-${maxNum + 1}`;
+
+      const newMemberData = helperCreateMemberObject(memberData, memberCode);
 
       // Write to Firestore — returns a DocumentReference
       const docRef = await addDoc(collection(db, COLLECTIONS.MEMBERS), newMemberData);
@@ -519,7 +531,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return null;
     }
-  }, [plans, currentUser]);
+  }, [plans, currentUser, members]);
 
   const updateMember = useCallback(async (id, updatedFields) => {
     try {

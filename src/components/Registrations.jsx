@@ -54,7 +54,7 @@ const Registrations = () => {
       <div className="page-header">
         <div className="page-info">
           <h1>Registration Desk</h1>
-          <p>Process public registrations, verify phone/email OTP flow, and approve signups.</p>
+          <p>Process public registrations and approve member signups.</p>
         </div>
       </div>
 
@@ -88,7 +88,7 @@ const Registrations = () => {
           <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700 }}>
-                Pending Approval Queue (Draft &rarr; OTP Verified)
+                Pending Approval Queue
               </h3>
             </div>
             
@@ -124,7 +124,7 @@ const Registrations = () => {
                           <td>{plan ? plan.name : 'N/A'}</td>
                           <td>
                             <span className="badge badge-active" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', borderColor: 'var(--border-color)' }}>
-                              <ShieldCheck size={10} style={{ marginRight: '0.2rem' }} /> OTP Verified
+                              <Check size={10} style={{ marginRight: '0.2rem' }} /> Submitted
                             </span>
                           </td>
                           <td>{new Date(req.created_at).toLocaleString()}</td>

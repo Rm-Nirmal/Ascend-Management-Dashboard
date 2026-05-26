@@ -201,9 +201,6 @@ const DashboardContentShell = () => {
         {/* Topbar Header */}
         <header className="topbar">
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              FitCore Tenant Console
-            </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.15rem' }}>
               <span className="topbar-title">Ascend Fitness Headquarters</span>
             </div>
