@@ -45,7 +45,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         {/* Brand Logo */}
         <div className="sidebar-logo" style={{ marginBottom: '2.5rem' }}>
           <Sparkles className="icon" style={{ color: 'var(--color-primary)' }} />
-          <span className="logo-text">ASCEND FIT</span>
+          <span className="logo-text">ASCEND FITNESS</span>
         </div>
 
         {/* Navigation links */}

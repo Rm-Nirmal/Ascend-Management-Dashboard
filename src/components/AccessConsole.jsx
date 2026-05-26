@@ -105,10 +105,10 @@ const AccessConsole = () => {
   // Helper for heatmap cell color depending on density
   const getCellColor = (density) => {
     if (density === 0) return 'rgba(255, 255, 255, 0.02)';
-    if (density < 15) return 'rgba(16, 185, 129, 0.15)';
-    if (density < 35) return 'rgba(16, 185, 129, 0.35)';
-    if (density < 60) return 'rgba(16, 185, 129, 0.6)';
-    return 'rgba(16, 185, 129, 0.9)'; // Peak
+    if (density < 15) return 'rgba(255, 255, 255, 0.15)';
+    if (density < 35) return 'rgba(255, 255, 255, 0.35)';
+    if (density < 60) return 'rgba(255, 255, 255, 0.6)';
+    return 'rgba(255, 255, 255, 0.9)'; // Peak
   };
 
   return (
@@ -133,8 +133,8 @@ const AccessConsole = () => {
             alignItems: 'center', 
             justifyContent: 'center', 
             padding: '2.5rem 2rem', 
-            border: scannerState.status === 'granted' ? '2px solid var(--color-success)' : scannerState.status === 'denied' ? '2px solid var(--color-danger)' : '1px solid var(--border-color)',
-            boxShadow: scannerState.status === 'granted' ? '0 0 20px rgba(16, 185, 129, 0.2)' : scannerState.status === 'denied' ? '0 0 20px rgba(239, 68, 68, 0.2)' : 'var(--shadow-glass)',
+            border: scannerState.status === 'granted' ? '2px solid #ffffff' : scannerState.status === 'denied' ? '2px dashed #404040' : '1px solid var(--border-color)',
+            boxShadow: scannerState.status === 'granted' ? '0 0 25px rgba(255, 255, 255, 0.25)' : scannerState.status === 'denied' ? '0 0 15px rgba(255, 255, 255, 0.05)' : 'var(--shadow-glass)',
             transition: 'all 0.3s ease-out',
             textAlign: 'center'
           }}>
@@ -166,14 +166,14 @@ const AccessConsole = () => {
 
               {scannerState.status === 'processing' && (
                 <div>
-                  <div style={{ width: '32px', height: '32px', border: '3px solid rgba(6,182,212,0.1)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 0.75rem auto' }} />
+                  <div style={{ width: '32px', height: '32px', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 0.75rem auto' }} />
                   <div style={{ fontSize: '0.9rem', color: 'var(--color-primary)', fontWeight: 600 }}>{scannerState.message}</div>
                 </div>
               )}
 
               {scannerState.status === 'granted' && (
-                <div style={{ color: 'var(--color-success)', animation: 'slideUp 0.2s ease-out' }}>
-                  <CheckCircle2 size={42} style={{ margin: '0 auto 0.75rem auto' }} />
+                <div style={{ color: '#ffffff', animation: 'slideUp 0.2s ease-out' }}>
+                  <CheckCircle2 size={42} style={{ margin: '0 auto 0.75rem auto', color: '#ffffff' }} />
                   <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800, letterSpacing: '0.05em' }}>{scannerState.message}</h3>
                   <div style={{ color: '#fff', fontSize: '0.95rem', fontWeight: 700, marginTop: '0.25rem' }}>{scannerState.memberName}</div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>ID: {scannerState.memberCode}</div>
@@ -181,9 +181,9 @@ const AccessConsole = () => {
               )}
 
               {scannerState.status === 'denied' && (
-                <div style={{ color: 'var(--color-danger)', animation: 'slideUp 0.2s ease-out' }}>
-                  <AlertOctagon size={42} style={{ margin: '0 auto 0.75rem auto' }} />
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 800, letterSpacing: '0.02em' }}>{scannerState.message}</h3>
+                <div style={{ color: '#a3a3a3', animation: 'slideUp 0.2s ease-out' }}>
+                  <AlertOctagon size={42} style={{ margin: '0 auto 0.75rem auto', color: '#a3a3a3' }} />
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 800, letterSpacing: '0.02em', color: '#ffffff' }}>{scannerState.message}</h3>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem' }}>Code checked: {scannerState.memberCode}</div>
                 </div>
               )}
@@ -226,10 +226,10 @@ const AccessConsole = () => {
               </h3>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                 <span>Less</span>
-                <div style={{ width: '10px', height: '10px', background: 'rgba(16, 185, 129, 0.15)', borderRadius: '2px' }} />
-                <div style={{ width: '10px', height: '10px', background: 'rgba(16, 185, 129, 0.35)', borderRadius: '2px' }} />
-                <div style={{ width: '10px', height: '10px', background: 'rgba(16, 185, 129, 0.60)', borderRadius: '2px' }} />
-                <div style={{ width: '10px', height: '10px', background: 'rgba(16, 185, 129, 0.90)', borderRadius: '2px' }} />
+                <div style={{ width: '10px', height: '10px', background: 'rgba(255, 255, 255, 0.15)', borderRadius: '2px' }} />
+                <div style={{ width: '10px', height: '10px', background: 'rgba(255, 255, 255, 0.35)', borderRadius: '2px' }} />
+                <div style={{ width: '10px', height: '10px', background: 'rgba(255, 255, 255, 0.60)', borderRadius: '2px' }} />
+                <div style={{ width: '10px', height: '10px', background: 'rgba(255, 255, 255, 0.90)', borderRadius: '2px' }} />
                 <span>Peak</span>
               </div>
             </div>

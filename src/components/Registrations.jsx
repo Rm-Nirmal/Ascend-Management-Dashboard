@@ -1,9 +1,9 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { uploadToCloudinary } from '../lib/cloudinary';
 import { 
-  Check, X, Smartphone, Send, ShieldCheck, Upload, Camera, Image, Loader2 
+  Check, X, ShieldCheck, QrCode, Link, Copy, ExternalLink
 } from 'lucide-react';
+import PublicRegistrationForm from './PublicRegistrationForm';
 
 const Registrations = () => {
   const {
@@ -11,7 +11,7 @@ const Registrations = () => {
     plans,
     approveRegistration,
     rejectRegistration,
-    addRegistrationRequest
+    showToast
   } = useDashboard();
 
   // Navigation: Toggle between "Admin Queue" and "Simulate Public Registration Form"
@@ -22,54 +22,6 @@ const Registrations = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
 
-  // States for simulated public form
-  const [formStep, setFormStep] = useState(1); // 1 = input, 2 = simulated OTP verification
-  const [otpCode, setOtpCode] = useState('');
-  const [sentOtp, setSentOtp] = useState('');
-  const [formErrors, setFormErrors] = useState({});
-  
-  const fileInputRef = useRef(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-
-  const [publicForm, setPublicForm] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    gender: 'female',
-    date_of_birth: '',
-    branch_id: '',
-    plan_id: '',
-    medical_conditions: '',
-    fitness_goals: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
-    photo_url: '',
-    weight_kg: '',
-    height_cm: '',
-    body_fat_pct: '',
-  });
-
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    try {
-      const data = await uploadToCloudinary(file, {
-        onProgress: (pct) => setUploadProgress(pct)
-      });
-      setPublicForm(prev => ({ ...prev, photo_url: data.secure_url }));
-    } catch (err) {
-      console.error('Photo upload failed:', err);
-      alert(`Photo upload failed: ${err.message || err}`);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   // Filter queue
   const pendingRequests = useMemo(() => {
     return registrations.filter(r => r.status === 'pending_approval');
@@ -79,65 +31,6 @@ const Registrations = () => {
     return registrations.filter(r => r.status === 'approved' || r.status === 'rejected');
   }, [registrations]);
 
-  // Handle simulated public form validation & OTP request
-  const handleRequestOtp = (e) => {
-    e.preventDefault();
-    const errors = {};
-    if (!publicForm.full_name) errors.full_name = 'Name is required';
-    if (!publicForm.email) errors.email = 'Email is required';
-    if (!publicForm.phone) errors.phone = 'Phone number is required';
-    if (!publicForm.date_of_birth) errors.date_of_birth = 'Date of birth is required';
-    if (!publicForm.plan_id) errors.plan_id = 'Membership plan is required';
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-    setFormErrors({});
-
-    // Generate random 6-digit OTP code (mock)
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setSentOtp(code);
-    setFormStep(2);
-    alert(`[Simulated Gateway] SMS OTP Code sent to ${publicForm.phone}: ${code}`);
-  };
-
-  // Submit OTP & complete pending request submission
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
-    if (otpCode !== sentOtp) {
-      alert('Invalid verification code. Please enter the correct code shown in the simulation alert.');
-      return;
-    }
-
-    // Add to requests queue
-    addRegistrationRequest(publicForm);
-
-    // Reset Form
-    setPublicForm({
-      full_name: '',
-      email: '',
-      phone: '',
-      gender: 'female',
-      date_of_birth: '',
-      branch_id: '',
-      plan_id: '',
-      medical_conditions: '',
-      fitness_goals: '',
-      emergency_contact_name: '',
-      emergency_contact_phone: '',
-      photo_url: '',
-      weight_kg: '',
-      height_cm: '',
-      body_fat_pct: '',
-    });
-    setFormStep(1);
-    setOtpCode('');
-    setSentOtp('');
-    setCurrentSubTab('queue');
-    alert('OTP Verified! Registration request successfully submitted to the Admin Approval Queue.');
-  };
-
   const handleAdminApprove = (requestId) => {
     approveRegistration(requestId);
     setSelectedReq(null);
@@ -146,7 +39,7 @@ const Registrations = () => {
   const handleAdminReject = (e) => {
     e.preventDefault();
     if (!rejectReason) {
-      alert('Please specify a rejection reason.');
+      showToast('Please specify a rejection reason.', 'warning');
       return;
     }
     rejectRegistration(selectedReq.id, rejectReason);
@@ -307,296 +200,125 @@ const Registrations = () => {
       )}
 
       {/* View 2: Simulated Public Form */}
-      {currentSubTab === 'form' && (
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '580px', padding: '2rem', border: '1px solid rgba(6,182,212,0.2)' }}>
-            
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <Smartphone size={32} style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }} />
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800 }}>
-                Ascend Fitness HQ
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                Public Registration Portal Mockup (otp_verified flow simulation)
-              </p>
+      {currentSubTab === 'form' && (() => {
+        const registrationUrl = `${window.location.origin}/?view=register`;
+        const handleCopyLink = () => {
+          navigator.clipboard.writeText(registrationUrl);
+          showToast('Public registration URL copied to clipboard!', 'success');
+        };
+
+        return (
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap',
+            gap: '2rem',
+            alignItems: 'start'
+          }}>
+            {/* Left Column: QR and Link Simulation Details */}
+            <div className="glass-card" style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '1.5rem', 
+              padding: '2rem',
+              flex: '1 1 280px',
+              minWidth: '280px'
+            }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: 700, marginBottom: '0.5rem', color: '#ffffff' }}>
+                  Public Portal Credentials
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.5' }}>
+                  Provide members with direct access to signup on their personal mobile devices, tablets, or at the gym reception desk.
+                </p>
+              </div>
+
+              {/* Scannable Dynamic QR Code */}
+              <div style={{ 
+                background: '#0c0c0c', 
+                border: '1px solid var(--border-color)', 
+                borderRadius: '12px', 
+                padding: '1.5rem', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '1rem'
+              }}>
+                <div style={{ 
+                  background: '#000000', 
+                  padding: '1rem', 
+                  borderRadius: '8px', 
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  boxShadow: 'inset 0 0 15px rgba(255,255,255,0.05)'
+                }}>
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=ffffff&bgcolor=000000&qzone=1&data=${encodeURIComponent(registrationUrl)}`} 
+                    alt="Public Registration QR Code"
+                    style={{ width: '180px', height: '180px', display: 'block' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <QrCode size={14} /> Scan with Mobile Camera
+                </div>
+              </div>
+
+              {/* Simulation Link */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
+                  Public Registration Link
+                </span>
+                <div style={{ 
+                  background: 'rgba(0,0,0,0.3)', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: '8px', 
+                  padding: '0.75rem 1rem', 
+                  fontSize: '0.8rem',
+                  fontFamily: 'monospace',
+                  wordBreak: 'break-all',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '0.5rem' }}>
+                    {registrationUrl}
+                  </span>
+                  <button 
+                    onClick={handleCopyLink} 
+                    title="Copy Link"
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  >
+                    <Copy size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                <button onClick={handleCopyLink} className="btn btn-secondary" style={{ flexGrow: 1, gap: '0.4rem', fontSize: '0.8rem' }}>
+                  <Copy size={14} /> Copy Link
+                </button>
+                <a 
+                  href={registrationUrl} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="btn btn-primary" 
+                  style={{ flexGrow: 1, gap: '0.4rem', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', background: '#ffffff', color: '#000000' }}
+                >
+                  <ExternalLink size={14} /> Simulate
+                </a>
+              </div>
             </div>
 
-             {formStep === 1 ? (
-              <form onSubmit={handleRequestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                
-                {/* Profile Photo Upload */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.5rem', gap: '0.5rem' }}>
-                  <div 
-                    onClick={() => !isUploading && fileInputRef.current?.click()}
-                    style={{
-                      width: '90px',
-                      height: '90px',
-                      borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.03)',
-                      border: '2px dashed rgba(255,255,255,0.15)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: isUploading ? 'not-allowed' : 'pointer',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    {publicForm.photo_url ? (
-                      <img 
-                        src={publicForm.photo_url} 
-                        alt="Profile Preview" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                    ) : isUploading ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                        <Loader2 size={20} style={{ color: 'var(--color-primary)', animation: 'spin 1s linear infinite' }} />
-                        <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{uploadProgress}%</span>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', color: 'var(--text-dark)' }}>
-                        <Camera size={20} />
-                        <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Upload Photo</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handlePhotoUpload} 
-                    accept="image/*" 
-                    style={{ display: 'none' }} 
-                  />
-                  
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                    {isUploading ? 'Uploading to Cloudinary...' : 'Upload profile photo (PNG, JPG)'}
-                  </span>
-                </div>
-
-                <div className="grid-2">
-                  <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="Amara Walker"
-                      value={publicForm.full_name}
-                      onChange={(e) => setPublicForm({...publicForm, full_name: e.target.value})}
-                      className="glass-input"
-                      style={{ marginTop: '0.25rem' }}
-                    />
-                    {formErrors.full_name && <span style={{ fontSize: '0.7rem', color: 'var(--color-danger)' }}>{formErrors.full_name}</span>}
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address *</label>
-                    <input 
-                      type="email" 
-                      required
-                      placeholder="amara@gmail.com"
-                      value={publicForm.email}
-                      onChange={(e) => setPublicForm({...publicForm, email: e.target.value})}
-                      className="glass-input"
-                      style={{ marginTop: '0.25rem' }}
-                    />
-                    {formErrors.email && <span style={{ fontSize: '0.7rem', color: 'var(--color-danger)' }}>{formErrors.email}</span>}
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mobile Number *</label>
-                    <input 
-                      type="tel" 
-                      required
-                      placeholder="+1 (555) 998-1234"
-                      value={publicForm.phone}
-                      onChange={(e) => setPublicForm({...publicForm, phone: e.target.value})}
-                      className="glass-input"
-                      style={{ marginTop: '0.25rem' }}
-                    />
-                    {formErrors.phone && <span style={{ fontSize: '0.7rem', color: 'var(--color-danger)' }}>{formErrors.phone}</span>}
-                  </div>
-                  <div className="grid-2">
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gender</label>
-                      <select 
-                        value={publicForm.gender}
-                        onChange={(e) => setPublicForm({...publicForm, gender: e.target.value})}
-                        className="glass-select"
-                        style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
-                      >
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Date of Birth *</label>
-                      <input 
-                        type="date" 
-                        required
-                        value={publicForm.date_of_birth}
-                        onChange={(e) => setPublicForm({...publicForm, date_of_birth: e.target.value})}
-                        className="glass-input"
-                        style={{ marginTop: '0.25rem', padding: '0.5rem' }}
-                      />
-                      {formErrors.date_of_birth && <span style={{ fontSize: '0.7rem', color: 'var(--color-danger)' }}>{formErrors.date_of_birth}</span>}
-                    </div>
-                  </div>
-                  
-                  {/* Weight, Height, and Body Fat */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Weight (kg)</label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 70"
-                        value={publicForm.weight_kg}
-                        onChange={(e) => setPublicForm({...publicForm, weight_kg: e.target.value})}
-                        className="glass-input"
-                        style={{ marginTop: '0.25rem' }}
-                        min="10"
-                        max="300"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Height (cm)</label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 175"
-                        value={publicForm.height_cm}
-                        onChange={(e) => setPublicForm({...publicForm, height_cm: e.target.value})}
-                        className="glass-input"
-                        style={{ marginTop: '0.25rem' }}
-                        min="50"
-                        max="250"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Body Fat (%)</label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 15"
-                        value={publicForm.body_fat_pct}
-                        onChange={(e) => setPublicForm({...publicForm, body_fat_pct: e.target.value})}
-                        className="glass-input"
-                        style={{ marginTop: '0.25rem' }}
-                        min="1"
-                        max="80"
-                        step="0.1"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Select Membership Plan *</label>
-                  <select 
-                    required
-                    value={publicForm.plan_id}
-                    onChange={(e) => setPublicForm({...publicForm, plan_id: e.target.value})}
-                    className="glass-select"
-                    style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
-                  >
-                    <option value="">Select Plan...</option>
-                    {plans.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (LKR {p.price.toLocaleString()}/mo)</option>
-                    ))}
-                  </select>
-                  {formErrors.plan_id && <span style={{ fontSize: '0.7rem', color: 'var(--color-danger)' }}>{formErrors.plan_id}</span>}
-                </div>
-
-                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Any Medical Conditions / Injuries</label>
-                  <textarea 
-                    placeholder="Brief details if applicable..."
-                    value={publicForm.medical_conditions}
-                    onChange={(e) => setPublicForm({...publicForm, medical_conditions: e.target.value})}
-                    className="glass-input"
-                    style={{ marginTop: '0.25rem', resize: 'none', height: '60px', padding: '0.5rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Primary Fitness Goals</label>
-                  <input 
-                    type="text" 
-                    placeholder="Cardio fitness, strength training, flexibility..."
-                    value={publicForm.fitness_goals}
-                    onChange={(e) => setPublicForm({...publicForm, fitness_goals: e.target.value})}
-                    className="glass-input"
-                    style={{ marginTop: '0.25rem' }}
-                  />
-                </div>
-
-                <div className="grid-2">
-                  <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="Parent / Spouse Name"
-                      value={publicForm.emergency_contact_name}
-                      onChange={(e) => setPublicForm({...publicForm, emergency_contact_name: e.target.value})}
-                      className="glass-input"
-                      style={{ marginTop: '0.25rem' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Mobile</label>
-                    <input 
-                      type="text" 
-                      placeholder="+1 (555) 000-0000"
-                      value={publicForm.emergency_contact_phone}
-                      onChange={(e) => setPublicForm({...publicForm, emergency_contact_phone: e.target.value})}
-                      className="glass-input"
-                      style={{ marginTop: '0.25rem' }}
-                    />
-                  </div>
-                </div>
-
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', gap: '0.5rem' }}>
-                  <Send size={16} /> Request SMS Verification Code
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', textAlign: 'center', padding: '1rem 0' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.25rem' }}>Enter Verification Code</h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    We sent a 6-digit OTP passcode to your mobile device: <strong>{publicForm.phone}</strong>
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="Enter 6-digit OTP code"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    className="glass-input"
-                    maxLength={6}
-                    style={{ width: '220px', textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.25em', padding: '0.75rem' }}
-                  />
-                </div>
-
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Didn't receive SMS? <span style={{ color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => alert(`Resending OTP code: ${sentOtp}`)}>Resend Code</span>
-                </div>
-
-                <div className="grid-2" style={{ maxWidth: '320px', margin: '0 auto', width: '100%' }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setFormStep(1)}>
-                    Back
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Verify & Submit
-                  </button>
-                </div>
-              </form>
-            )}
+            {/* Right Column: Embedded Simulator Form */}
+            <div style={{ flex: '1.2 1 320px', minWidth: '320px' }}>
+              <PublicRegistrationForm isStandalone={false} />
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Review details details popup */}
       {selectedReq && (

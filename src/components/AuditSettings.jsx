@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 const AuditSettings = () => {
-  const { auditLogs } = useDashboard();
+  const { auditLogs, showToast } = useDashboard();
   const [searchTerm, setSearchTerm] = useState('');
   
   // Scoped logs filter
@@ -28,21 +28,21 @@ const AuditSettings = () => {
     
     if (successEvents.some(evt => action.startsWith(evt) || action === evt)) {
       return {
-        background: 'rgba(16, 185, 129, 0.08)',
-        border: '1px solid rgba(16, 185, 129, 0.25)',
-        color: 'var(--color-success)'
+        background: 'rgba(255, 255, 255, 0.08)',
+        border: '1px solid rgba(255, 255, 255, 0.25)',
+        color: '#ffffff'
       };
     } else if (dangerEvents.some(evt => action.startsWith(evt) || action === evt)) {
       return {
-        background: 'rgba(239, 68, 68, 0.08)',
-        border: '1px solid rgba(239, 68, 68, 0.25)',
-        color: 'var(--color-danger)'
+        background: 'rgba(255, 255, 255, 0.02)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        color: 'var(--text-muted)'
       };
     } else {
       return {
-        background: 'rgba(245, 158, 11, 0.08)',
-        border: '1px solid rgba(245, 158, 11, 0.25)',
-        color: 'var(--color-warning)'
+        background: 'rgba(255, 255, 255, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        color: 'var(--text-muted)'
       };
     }
   };
@@ -75,7 +75,7 @@ const AuditSettings = () => {
       }
       return t;
     }));
-    alert('Notification template updated successfully.');
+    showToast('Notification template updated successfully.', 'success');
   };
 
   return (

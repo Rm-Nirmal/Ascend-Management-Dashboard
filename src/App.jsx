@@ -11,6 +11,8 @@ import AuditSettings from './components/AuditSettings';
 import Login from './components/Login';
 import AdminManagement from './components/AdminManagement';
 import { Bell, ShieldCheck, HelpCircle, Loader2 } from 'lucide-react';
+import PublicRegistrationForm from './components/PublicRegistrationForm';
+import ToastContainer from './components/Toast';
 
 /**
  * Full-screen loading spinner shown while Firebase Auth initializes.
@@ -127,8 +129,20 @@ const DataLoadingOverlay = () => (
 );
 
 const DashboardContentShell = () => {
-  const { currentUser, authReady, dataLoaded, error, setError } = useDashboard();
+  const { currentUser, authReady, dataLoaded, error, setError, toasts, removeToast, showToast } = useDashboard();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Check if we are simulating the standalone public registration form
+  const isPublicRegister = window.location.hash === '#register' || window.location.search.includes('view=register');
+
+  if (isPublicRegister) {
+    return (
+      <>
+        <PublicRegistrationForm isStandalone={true} />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+      </>
+    );
+  }
 
   // Phase 1: Wait for Firebase Auth to resolve
   if (!authReady) {
@@ -173,47 +187,11 @@ const DashboardContentShell = () => {
 
   return (
     <div className="app-container">
+      {/* Dynamic Toast Notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+
       {/* Data loading overlay while Firestore streams initial data */}
       {!dataLoaded && <DataLoadingOverlay />}
-
-      {/* Global error toast */}
-      {error && (
-        <div style={{
-          position: 'fixed',
-          top: '1rem',
-          right: '1rem',
-          zIndex: 10000,
-          background: 'rgba(239, 68, 68, 0.12)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          color: '#ef4444',
-          padding: '0.75rem 1.25rem',
-          borderRadius: '10px',
-          fontSize: '0.825rem',
-          fontWeight: 600,
-          maxWidth: '400px',
-          backdropFilter: 'blur(12px)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          animation: 'fadeIn 0.3s ease-out',
-        }}>
-          <span>⚠️ {error}</span>
-          <button
-            onClick={() => setError(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#ef4444',
-              cursor: 'pointer',
-              fontSize: '1.1rem',
-              padding: 0,
-              lineHeight: 1,
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {/* Sidebar Navigation */}
       <Sidebar activeTab={resolvedTab} setActiveTab={setActiveTab} />
@@ -242,7 +220,7 @@ const DashboardContentShell = () => {
             <button 
               className="btn btn-secondary" 
               style={{ padding: '0.5rem', borderRadius: '50%', position: 'relative' }}
-              onClick={() => alert(`All systems operational. Logged in as ${currentUser.name}\nRole: ${currentUser.role}\nOrg: ${currentUser.organization_id || 'N/A'}`)}
+              onClick={() => showToast(`Logged in as ${currentUser.name} | Org: ${currentUser.organization_id || 'N/A'}`, 'info')}
             >
               <Bell size={16} />
               <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', background: 'var(--color-danger)', borderRadius: '50%' }} />
@@ -251,7 +229,7 @@ const DashboardContentShell = () => {
             <button 
               className="btn btn-secondary" 
               style={{ padding: '0.5rem', borderRadius: '50%' }}
-              onClick={() => alert(`Access Level: ${currentUser.role === 'super_admin' ? 'Super Administrator (All Access)' : 'Standard Administrator (Restricted View)'}`)}
+              onClick={() => showToast(`Access: ${currentUser.role === 'super_admin' ? 'Super Administrator (All Access)' : 'Standard Administrator'}`, 'info')}
             >
               <HelpCircle size={16} />
             </button>

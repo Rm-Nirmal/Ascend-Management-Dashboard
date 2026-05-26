@@ -1,28 +1,28 @@
 /* Ascend Management Dashboard Design System */
 :root {
   /* Colors */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #121212;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --bg-card-hover: rgba(255, 255, 255, 0.05);
+  --bg-primary: #000000;
+  --bg-secondary: #0c0c0c;
+  --bg-card: rgba(255, 255, 255, 0.02);
+  --bg-card-hover: rgba(255, 255, 255, 0.04);
   --border-color: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(160, 160, 160, 0.2);
+  --border-glow: rgba(255, 255, 255, 0.12);
   
   --text-main: #ffffff;
-  --text-muted: #a0a0a0;
-  --text-dark: #666666;
+  --text-muted: #a3a3a3;
+  --text-dark: #525252;
   
-  /* Accent Colors (Neon & Harmonies) */
-  --color-primary: #a0a0a0;      /* Premium Silver - Brand main */
-  --color-primary-glow: rgba(160, 160, 160, 0.3);
-  --color-success: #10b981;      /* Emerald - Active / Granted */
-  --color-success-glow: rgba(16, 185, 129, 0.3);
-  --color-warning: #f59e0b;      /* Amber - Frozen / Pending */
-  --color-warning-glow: rgba(245, 158, 11, 0.3);
-  --color-danger: #ef4444;       /* Rose - Expired / Denied */
-  --color-danger-glow: rgba(239, 68, 68, 0.3);
-  --color-ai: #d4d4d8;           /* Light gray for AI Analytics in luxury context */
-  --color-ai-glow: rgba(212, 212, 216, 0.3);
+  /* Accent Colors (Strict Monochrome Black/Gray/White) */
+  --color-primary: #ffffff;      /* Pure White - Brand main */
+  --color-primary-glow: rgba(255, 255, 255, 0.15);
+  --color-success: #ffffff;      /* Active / Granted - Pure White badge */
+  --color-success-glow: rgba(255, 255, 255, 0.1);
+  --color-warning: #a3a3a3;      /* Pending / Frozen - Medium Gray */
+  --color-warning-glow: rgba(163, 163, 163, 0.1);
+  --color-danger: #404040;       /* Expired / Denied - Charcoal Gray */
+  --color-danger-glow: rgba(64, 64, 64, 0.1);
+  --color-ai: #d4d4d8;           /* Luxury Silver Gray */
+  --color-ai-glow: rgba(212, 212, 216, 0.1);
 
   /* Fonts */
   --font-display: 'Oswald', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -33,7 +33,7 @@
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
   /* Shadows */
-  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
   --shadow-glow: 0 0 15px var(--color-primary-glow);
 }
 
@@ -103,7 +103,7 @@ body {
   align-items: center;
   padding: 1.25rem 2rem;
   border-bottom: 1px solid var(--border-color);
-  background: rgba(8, 12, 20, 0.5);
+  background: rgba(12, 12, 12, 0.5);
   backdrop-filter: blur(12px);
   position: sticky;
   top: 0;
@@ -128,7 +128,7 @@ body {
 
 /* Sidebar styling */
 .sidebar {
-  background: rgba(15, 23, 42, 0.85);
+  background: #000000;
   border-right: 1px solid var(--border-color);
   backdrop-filter: blur(16px);
   display: flex;
@@ -183,10 +183,9 @@ body {
 }
 
 .nav-link.active {
-  color: #fff;
-  background: linear-gradient(90deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.02) 100%);
-  border-left: 3px solid var(--color-primary);
-  box-shadow: inset 5px 0 10px rgba(6, 182, 212, 0.05);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border-left: 3px solid #ffffff;
 }
 
 .sidebar-footer {
@@ -295,17 +294,18 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary), #0891b2);
-  color: #fff;
+  background: #ffffff;
+  color: #000000;
 }
 
 .btn-primary:hover {
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
+  background: #f4f4f5;
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
   color: var(--text-main);
 }
@@ -315,33 +315,38 @@ body {
 }
 
 .btn-success {
-  background: linear-gradient(135deg, var(--color-success), #059669);
-  color: #fff;
+  background: #e4e4e7;
+  color: #000000;
 }
 
 .btn-success:hover {
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
+  background: #ffffff;
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, var(--color-danger), #dc2626);
-  color: #fff;
+  background: #1e1b1b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .btn-danger:hover {
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
   transform: translateY(-1px);
+  background: #2d2626;
 }
 
 .btn-ai {
-  background: linear-gradient(135deg, var(--color-ai), #7c3aed);
-  color: #fff;
+  background: #0f0f11;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .btn-ai:hover {
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
+  background: #18181b;
 }
 
 /* Icons */
@@ -488,27 +493,27 @@ body {
 }
 
 .badge-active {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--color-success);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .badge-frozen {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--color-warning);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  color: #a3a3a3;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .badge-expired {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-danger);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  color: #525252;
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .badge-pending {
-  background: rgba(139, 92, 246, 0.1);
-  color: var(--color-ai);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #d4d4d8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Modals & Drawers overlay */
@@ -727,4 +732,26 @@ body {
     fill: #0b0f19 !important;
   }
 }
+
+/* Toast Notifications CSS Animations */
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%) translateY(0);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastProgress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 

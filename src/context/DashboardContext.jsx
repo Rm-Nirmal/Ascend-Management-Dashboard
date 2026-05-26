@@ -134,6 +134,22 @@ export const DashboardProvider = ({ children }) => {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [error, setError] = useState(null);
 
+  // ─── Toast Notifications State ──────────────────────────────────────
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = useCallback((message, type = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9) + Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    // Auto-remove toast after 4000ms
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
+
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   // ─── Auth State ─────────────────────────────────────────────────────
   const [firebaseUser, setFirebaseUser] = useState(null); // Raw Firebase Auth user
   const [currentUser, setCurrentUser] = useState(null);   // Enriched user (with role, name, etc.)
@@ -203,7 +219,24 @@ export const DashboardProvider = ({ children }) => {
   }, [firebaseUser]);
 
   // ═══════════════════════════════════════════════════════════════════
-  // PHASE C: Real-time Firestore Listeners (only when authenticated)
+  // PHASE C: Public Plans Firestore Listener (runs for guest too)
+  // ═══════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    const orgId = currentUser?.organization_id || DEFAULT_ORG_ID;
+    const plansQ = query(
+      collection(db, COLLECTIONS.PLANS),
+      where('organization_id', '==', orgId)
+    );
+    const unsubscribe = onSnapshot(plansQ, (snap) => {
+      setPlans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => {
+      console.error('Plans listener error:', err);
+    });
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE D: Real-time Firestore Listeners (only when authenticated)
   // ═══════════════════════════════════════════════════════════════════
   useEffect(() => {
     if (!currentUser) {
@@ -223,7 +256,7 @@ export const DashboardProvider = ({ children }) => {
     const orgId = currentUser.organization_id || DEFAULT_ORG_ID;
     const unsubscribers = [];
     let loadedCount = 0;
-    const totalCollections = 8;
+    const totalCollections = 7; // Removed plans from counting since loaded separately
 
     const markLoaded = () => {
       loadedCount++;
@@ -231,18 +264,6 @@ export const DashboardProvider = ({ children }) => {
         setDataLoaded(true);
       }
     };
-
-    // 1. Plans (org-scoped)
-    const plansQ = query(
-      collection(db, COLLECTIONS.PLANS),
-      where('organization_id', '==', orgId)
-    );
-    unsubscribers.push(
-      onSnapshot(plansQ, (snap) => {
-        setPlans(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        markLoaded();
-      }, (err) => { console.error('Plans listener error:', err); markLoaded(); })
-    );
 
     // 2. Trainers (org-scoped)
     const trainersQ = query(
@@ -845,6 +866,7 @@ export const DashboardProvider = ({ children }) => {
       auditLogs,
       admins,
       currentUser,
+      toasts,
 
       // Loading / Error
       isLoading,
@@ -852,6 +874,10 @@ export const DashboardProvider = ({ children }) => {
       authReady,
       error,
       setError,
+
+      // Toast Actions
+      showToast,
+      removeToast,
 
       // Auth Actions
       login,

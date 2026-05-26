@@ -12,7 +12,8 @@ const Overview = () => {
     members, 
     accessEvents, 
     invoices, 
-    registrations 
+    registrations,
+    showToast
   } = useDashboard();
 
   // Tab State for Revenue & Chart period: 'daily', 'monthly', 'yearly'
@@ -297,7 +298,7 @@ const Overview = () => {
         document.body.removeChild(link);
       } catch (err) {
         console.error("CSV Export error:", err);
-        alert("Failed to export CSV. Please try again.");
+        showToast("Failed to export CSV. Please try again.", "error");
       }
     } else {
       // Trigger print for PDF conversion
@@ -494,12 +495,12 @@ const Overview = () => {
                   labelStyle={{ color: '#fff', fontWeight: 600 }}
                   formatter={(value) => [`LKR ${value.toLocaleString()}`, 'Revenue']}
                 />
-                <Line type="monotone" dataKey="value" stroke="var(--color-success)" strokeWidth={3} dot={{ fill: 'var(--color-success)', r: 4 }} name="Revenue (LKR)" />
+                <Line type="monotone" dataKey="value" stroke="#e5e7eb" strokeWidth={3} dot={{ fill: '#e5e7eb', r: 4 }} name="Revenue (LKR)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
-
+ 
         {/* Membership Growth Bar Chart */}
         <div className="glass-card" style={{ gridColumn: 'span 2' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 600 }}>
@@ -515,8 +516,8 @@ const Overview = () => {
                   contentStyle={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '8px' }}
                 />
                 <Legend fontSize={10} wrapperStyle={{ paddingTop: 10 }} />
-                <Bar dataKey="total" fill="var(--color-ai)" radius={[4, 4, 0, 0]} name="Cumulative Subscribed" />
-                <Bar dataKey="new" fill="var(--color-primary)" radius={[4, 4, 0, 0]} name="New Registrations" />
+                <Bar dataKey="total" fill="#525252" radius={[4, 4, 0, 0]} name="Cumulative Subscribed" />
+                <Bar dataKey="new" fill="#ffffff" radius={[4, 4, 0, 0]} name="New Registrations" />
               </BarChart>
             </ResponsiveContainer>
           </div>
