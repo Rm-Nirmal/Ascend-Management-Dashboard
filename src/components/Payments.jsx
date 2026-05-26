@@ -1,0 +1,727 @@
+import React, { useState, useMemo } from 'react';
+import { useDashboard } from '../context/DashboardContext';
+import { 
+  DollarSign, Landmark, CreditCard, Sparkles, X, Check, BellRing, Mail, Smartphone, Printer, Eye 
+} from 'lucide-react';
+
+const Payments = () => {
+  const {
+    invoices,
+    recordPayment
+  } = useDashboard();
+
+  // Component states
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [viewingInvoice, setViewingInvoice] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [reminderConfig, setReminderConfig] = useState({
+    tMinus7: true,
+    tMinus3: true,
+    tZero: true,
+    overdue: true
+  });
+  
+  // List of sent reminders logs (mock state)
+  const [reminderLogs, setReminderLogs] = useState([
+    { id: 'l1', member: 'Emma Watson', invoice: 'INV-2026-004', type: 'overdue', channel: 'email', sent_at: '2026-05-20T09:00:00Z', status: 'sent' },
+    { id: 'l2', member: 'Carlos Mendez', invoice: 'INV-2026-007', type: 't_minus_7', channel: 'email', sent_at: '2026-05-21T10:00:00Z', status: 'sent' }
+  ]);
+
+  // Scoped filtering - Focus solely on single Gym HQ (no branch selector)
+  const filteredInvoices = invoices;
+
+  // Financial Metrics
+  const revenueCollected = useMemo(() => {
+    return filteredInvoices
+      .filter(i => i.status === 'paid')
+      .reduce((sum, inv) => sum + inv.total_amount, 0);
+  }, [filteredInvoices]);
+
+  const outstandingAmount = useMemo(() => {
+    return filteredInvoices
+      .filter(i => i.status === 'open')
+      .reduce((sum, inv) => sum + inv.total_amount, 0);
+  }, [filteredInvoices]);
+
+  const overdueAmount = useMemo(() => {
+    return filteredInvoices
+      .filter(i => i.status === 'overdue')
+      .reduce((sum, inv) => sum + inv.total_amount, 0);
+  }, [filteredInvoices]);
+
+  // Revenue by Payment Method Calculations
+  const methodRevenue = useMemo(() => {
+    const stats = { card: 0, cash: 0, upi: 0, bank_transfer: 0 };
+    let totalPaid = 0;
+    
+    filteredInvoices.forEach(inv => {
+      if (inv.status === 'paid') {
+        const method = inv.payment_method || 'card';
+        stats[method] = (stats[method] || 0) + inv.total_amount;
+        totalPaid += inv.total_amount;
+      }
+    });
+
+    return { stats, total: totalPaid };
+  }, [filteredInvoices]);
+
+  // Revenue by Plan Calculations
+  const planRevenue = useMemo(() => {
+    const stats = { p1: 0, p2: 0, p3: 0 };
+    let totalPaid = 0;
+
+    filteredInvoices.forEach(inv => {
+      if (inv.status === 'paid') {
+        const planId = inv.plan_id || 'p2';
+        stats[planId] = (stats[planId] || 0) + inv.total_amount;
+        totalPaid += inv.total_amount;
+      }
+    });
+
+    return { stats, total: totalPaid };
+  }, [filteredInvoices]);
+
+  const handlePayInvoice = (e) => {
+    e.preventDefault();
+    if (!selectedInvoice) return;
+    recordPayment(selectedInvoice.id, paymentMethod);
+    setSelectedInvoice(null);
+    alert(`Payment recorded successfully via ${paymentMethod.toUpperCase()}!`);
+  };
+
+  const triggerManualReminder = (invoice) => {
+    const newLog = {
+      id: `l_${Date.now()}`,
+      member: invoice.member_name,
+      invoice: invoice.invoice_number,
+      type: 'manual_alert',
+      channel: 'email',
+      sent_at: new Date().toISOString(),
+      status: 'sent'
+    };
+    setReminderLogs(prev => [newLog, ...prev]);
+    alert(`Payment reminder notification sent to ${invoice.member_name} for invoice ${invoice.invoice_number}.`);
+  };
+
+  return (
+    <div className="page-container">
+      {/* Header */}
+      <div className="page-header">
+        <div className="page-info">
+          <h1>Payments & Financials</h1>
+          <p>Generate invoices, collect payments, and review outstanding accounts.</p>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="metrics-grid">
+        <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-success)' }}>
+          <div className="metric-header">
+            <span>REVENUE COLLECTED</span>
+            <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
+          </div>
+          <div className="metric-value">LKR {revenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+          <div className="metric-subtext">Paid memberships MTD</div>
+        </div>
+
+        <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
+          <div className="metric-header">
+            <span>OUTSTANDING ACCOUNT</span>
+            <Landmark size={18} style={{ color: 'var(--color-primary)' }} />
+          </div>
+          <div className="metric-value">LKR {outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+          <div className="metric-subtext">Awaiting payment (Open status)</div>
+        </div>
+
+      </div>
+  
+      {/* Revenue Breakdowns (FR-PAY-03) */}
+      <div className="glass-card grid-2" style={{ gap: '2.5rem', marginBottom: '2rem', padding: '1.5rem 2rem' }}>
+        <div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Sparkles size={16} style={{ color: 'var(--color-primary)' }} />
+            Revenue by Payment Method
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Card */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Credit/Debit Card</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {methodRevenue.stats.card.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.card / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.card / methodRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-primary)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-primary)' 
+                }} />
+              </div>
+            </div>
+            {/* Cash */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Cash Punch</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {methodRevenue.stats.cash.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.cash / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.cash / methodRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-success)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-success)' 
+                }} />
+              </div>
+            </div>
+            {/* UPI */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Mobile UPI</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {methodRevenue.stats.upi.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.upi / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.upi / methodRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-warning)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-warning)' 
+                }} />
+              </div>
+            </div>
+            {/* Bank Wire */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Bank Wire</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {methodRevenue.stats.bank_transfer.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.bank_transfer / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.bank_transfer / methodRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-ai)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-ai)' 
+                }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Sparkles size={16} style={{ color: 'var(--color-success)' }} />
+            Revenue by Membership Plan
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+            {/* Starter (p1) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Basic Starter (LKR 4,500)</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {planRevenue.stats.p1.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p1 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p1 / planRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: '#38bdf8', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px #38bdf8' 
+                }} />
+              </div>
+            </div>
+            {/* Elite (p2) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Ascend Elite (LKR 8,500)</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {planRevenue.stats.p2.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p2 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p2 / planRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-primary)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-primary)' 
+                }} />
+              </div>
+            </div>
+            {/* VIP (p3) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>VIP Platinum (LKR 15,000)</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {planRevenue.stats.p3.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p3 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p3 / planRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: '#a855f7', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px #a855f7' 
+                }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '2rem' }}>
+        
+        {/* Invoices List */}
+        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700 }}>
+              Recent Invoices & Billing logs
+            </h3>
+          </div>
+          
+          <div className="table-container">
+            <table className="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Inv Number</th>
+                  <th>Member Name</th>
+                  <th>Total Amount</th>
+                  <th>Due Date</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInvoices.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      No invoices found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredInvoices.map(inv => {
+                    return (
+                      <tr key={inv.id}>
+                        <td>
+                          <button 
+                            className="btn-link"
+                            style={{ 
+                              background: 'none', 
+                              border: 'none', 
+                              color: 'var(--color-primary)', 
+                              fontWeight: 700, 
+                              cursor: 'pointer', 
+                              padding: 0,
+                              textDecoration: 'underline'
+                            }}
+                            onClick={() => setViewingInvoice(inv)}
+                          >
+                            {inv.invoice_number}
+                          </button>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{inv.member_name}</td>
+                        <td style={{ fontWeight: 600 }}>LKR {inv.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td>{inv.due_date}</td>
+                        <td>
+                          <span className={`badge badge-${inv.status === 'paid' ? 'active' : inv.status === 'overdue' ? 'expired' : 'frozen'}`}>
+                            {inv.status}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.35rem' }}
+                              title="View Invoice Details"
+                              onClick={() => setViewingInvoice(inv)}
+                            >
+                              <Eye size={12} />
+                            </button>
+                            {inv.status !== 'paid' && inv.status !== 'void' ? (
+                              <>
+                                <button 
+                                  className="btn btn-primary" 
+                                  style={{ fontSize: '0.7rem', padding: '0.35rem 0.65rem' }}
+                                  onClick={() => setSelectedInvoice(inv)}
+                                >
+                                  Collect Pay
+                                </button>
+                                <button 
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '0.35rem' }}
+                                  title="Send Email Reminder"
+                                  onClick={() => triggerManualReminder(inv)}
+                                >
+                                  <Mail size={12} />
+                                </button>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontStyle: 'italic', display: 'flex', alignItems: 'center' }}>
+                                Processed
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Reminders & Automation configurations (FR-PAY-04) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* Automated Reminders Schedule */}
+          <div className="glass-card">
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+              Billing Reminders Engine (FR-PAY-04)
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-7 Days Early Warning</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send email reminder 7 days before due date</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={reminderConfig.tMinus7} 
+                  onChange={(e) => setReminderConfig({...reminderConfig, tMinus7: e.target.checked})}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-3 Days Urgent Alert</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send urgent notification 3 days before due date</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={reminderConfig.tMinus3} 
+                  onChange={(e) => setReminderConfig({...reminderConfig, tMinus3: e.target.checked})}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-0 Renewal Day Alert</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send billing reminder on invoice due date</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={reminderConfig.tZero} 
+                  onChange={(e) => setReminderConfig({...reminderConfig, tZero: e.target.checked})}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Overdue Suspension Warning</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Auto-alert when payments are overdue</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={reminderConfig.overdue} 
+                  onChange={(e) => setReminderConfig({...reminderConfig, overdue: e.target.checked})}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Reminders queued/sent logs */}
+          <div className="glass-card" style={{ flexGrow: 1, maxHeight: '280px', overflowY: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+              Notifications Log Feed (FR-NOT-02)
+            </h3>
+            
+            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
+              {reminderLogs.map(log => (
+                <div key={log.id} style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.625rem', fontSize: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                    <span>{log.member}</span>
+                    <span style={{ color: 'var(--color-primary)' }}>{log.type.toUpperCase()}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                    <span>Invoice: {log.invoice} via {log.channel}</span>
+                    <span>{new Date(log.sent_at).toLocaleTimeString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* Collect Payment Modal (FR-PAY-01 to 02) */}
+      {selectedInvoice && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '480px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700 }}>
+                Record Payment Received
+              </h2>
+              <button 
+                onClick={() => setSelectedInvoice(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handlePayInvoice} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Invoice breakdown */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Invoice Number:</span>
+                  <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{selectedInvoice.invoice_number}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Member Name:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedInvoice.member_name}</span>
+                </div>
+                
+                <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.75rem 0', paddingTop: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                    <span>Membership Subtotal:</span>
+                    <span>LKR {selectedInvoice.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                    <span>Tax (8.5%):</span>
+                    <span>+LKR {selectedInvoice.tax_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  {selectedInvoice.discount_amount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', color: 'var(--color-success)' }}>
+                      <span>Discount code:</span>
+                      <span>-LKR {selectedInvoice.discount_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-success)', marginTop: '0.5rem', borderTop: '1px dotted var(--border-color)', paddingTop: '0.5rem' }}>
+                    <span>Total Bill:</span>
+                    <span>LKR {selectedInvoice.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method Select (FR-PAY-02) */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>
+                  Select Payment Collection Method
+                </label>
+                <div className="grid-2" style={{ gap: '0.75rem' }}>
+                  <label style={{ 
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', background: paymentMethod === 'card' ? 'rgba(6,182,212,0.15)' : 'rgba(255,255,255,0.02)',
+                    border: paymentMethod === 'card' ? '1px solid var(--color-primary)' : '1px solid var(--border-color)',
+                    padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
+                  }}>
+                    <input 
+                      type="radio" name="paymethod" value="card" checked={paymentMethod === 'card'} 
+                      onChange={() => setPaymentMethod('card')} style={{ display: 'none' }}
+                    />
+                    <CreditCard size={16} /> Credit/Debit Card
+                  </label>
+
+                  <label style={{ 
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', background: paymentMethod === 'cash' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.02)',
+                    border: paymentMethod === 'cash' ? '1px solid var(--color-success)' : '1px solid var(--border-color)',
+                    padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
+                  }}>
+                    <input 
+                      type="radio" name="paymethod" value="cash" checked={paymentMethod === 'cash'} 
+                      onChange={() => setPaymentMethod('cash')} style={{ display: 'none' }}
+                    />
+                    <DollarSign size={16} /> Cash Punch
+                  </label>
+
+                  <label style={{ 
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', background: paymentMethod === 'upi' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.02)',
+                    border: paymentMethod === 'upi' ? '1px solid var(--color-warning)' : '1px solid var(--border-color)',
+                    padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
+                  }}>
+                    <input 
+                      type="radio" name="paymethod" value="upi" checked={paymentMethod === 'upi'} 
+                      onChange={() => setPaymentMethod('upi')} style={{ display: 'none' }}
+                    />
+                    <Smartphone size={16} /> Mobile UPI
+                  </label>
+
+                  <label style={{ 
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', background: paymentMethod === 'bank_transfer' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
+                    border: paymentMethod === 'bank_transfer' ? '1px solid var(--color-ai)' : '1px solid var(--border-color)',
+                    padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
+                  }}>
+                    <input 
+                      type="radio" name="paymethod" value="bank_transfer" checked={paymentMethod === 'bank_transfer'} 
+                      onChange={() => setPaymentMethod('bank_transfer')} style={{ display: 'none' }}
+                    />
+                    <Landmark size={16} /> Bank Wire
+                  </label>
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex-gap-1" style={{ justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setSelectedInvoice(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-success">
+                  <Check size={14} /> Submit Payment
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* High-fidelity itemized invoice details overlay */}
+      {viewingInvoice && (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-content" style={{ maxWidth: '600px', padding: '2rem', border: '1px solid var(--border-color)', background: 'rgba(23, 23, 23, 0.95)', backdropFilter: 'blur(20px)', boxShadow: '0 0 40px rgba(0, 0, 0, 0.6)' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '0.05em' }}>
+                  <Sparkles size={20} /> ASCEND FITNESS HQ
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  Ascend HQ Single Gym franchise console
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewingInvoice(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Invoice Meta Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.25rem' }}>Billed To</span>
+                <strong style={{ fontSize: '0.95rem', display: 'block', color: '#fff' }}>{viewingInvoice.member_name}</strong>
+                <span style={{ color: 'var(--text-muted)' }}>Registered Member ID: {viewingInvoice.member_id}</span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.25rem' }}>Invoice Details</span>
+                <div>Invoice No: <strong style={{ color: 'var(--color-primary)' }}>{viewingInvoice.invoice_number}</strong></div>
+                <div>Issue Date: {viewingInvoice.issued_at ? new Date(viewingInvoice.issued_at).toLocaleDateString() : 'N/A'}</div>
+                <div>Due Date: {viewingInvoice.due_date}</div>
+              </div>
+            </div>
+
+            {/* Line Items Table */}
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.2)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)' }}>Description</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>Qty</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--text-muted)' }}>Rate</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right', color: 'var(--text-muted)' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td style={{ padding: '1rem' }}>
+                      <strong style={{ color: '#fff' }}>
+                        {viewingInvoice.plan_id === 'p1' ? 'Basic Starter Plan' : viewingInvoice.plan_id === 'p3' ? 'VIP Platinum Plan' : 'Ascend Elite Plan'}
+                      </strong>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                        30 Days recurring gym facility access & training desk integration
+                      </div>
+                    </td>
+                    <td style={{ padding: '1rem', textAlign: 'center', color: '#fff' }}>1</td>
+                    <td style={{ padding: '1rem', textAlign: 'right', color: '#fff' }}>LKR {viewingInvoice.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td style={{ padding: '1rem', textAlign: 'right', color: '#fff' }}>LKR {viewingInvoice.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Subtotals & Billing details */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', fontSize: '0.85rem' }}>
+              <div>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.25rem' }}>Payment Status Info</span>
+                {viewingInvoice.status === 'paid' ? (
+                  <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', padding: '0.75rem', borderRadius: '8px', color: 'var(--color-success)' }}>
+                    <div style={{ fontWeight: 600 }}>Payment Settled Successfully</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                      Method: {viewingInvoice.payment_method ? viewingInvoice.payment_method.toUpperCase() : 'CARD'}
+                    </div>
+                    {viewingInvoice.paid_at && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        Cleared at: {new Date(viewingInvoice.paid_at).toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', padding: '0.75rem', borderRadius: '8px', color: 'var(--color-warning)' }}>
+                    <div style={{ fontWeight: 600 }}>Awaiting Payment ({viewingInvoice.status.toUpperCase()})</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                      This invoice is currently outstanding. Process the payment via the dashboard terminal or send a billing alert.
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', textAlign: 'right' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Subtotal:</span>
+                  <span style={{ color: '#fff' }}>LKR {viewingInvoice.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Tax (8.5%):</span>
+                  <span style={{ color: '#fff' }}>+LKR {viewingInvoice.tax_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                </div>
+                {viewingInvoice.discount_amount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-success)' }}>
+                    <span>Discounts:</span>
+                    <span>-LKR {viewingInvoice.discount_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.1rem', color: 'var(--color-success)', borderTop: '1px dotted var(--border-color)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                  <span>Total Bill:</span>
+                  <span>LKR {viewingInvoice.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer controls */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid var(--border-color)', marginTop: '1.5rem', paddingTop: '1rem' }}>
+              <button className="btn btn-secondary" onClick={() => window.print()} style={{ fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Printer size={12} /> Print Receipt
+              </button>
+              <button className="btn btn-primary" onClick={() => setViewingInvoice(null)} style={{ fontSize: '0.8rem' }}>
+                Dismiss
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Payments;

@@ -1,0 +1,323 @@
+import React, { useState, useMemo } from 'react';
+import { useDashboard } from '../context/DashboardContext';
+import { 
+  History, Key, Shield, User, FileText, Search, Mail, MessageSquare, AlertCircle,
+  DollarSign, ShieldAlert, ClipboardCheck
+} from 'lucide-react';
+
+const AuditSettings = () => {
+  const { auditLogs } = useDashboard();
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Scoped logs filter
+  const filteredLogs = useMemo(() => {
+    return auditLogs.filter(log => {
+      const search = searchTerm.toLowerCase();
+      return (
+        log.action.toLowerCase().includes(search) || 
+        log.details.toLowerCase().includes(search) || 
+        log.user_name.toLowerCase().includes(search)
+      );
+    });
+  }, [auditLogs, searchTerm]);
+
+  // Action class color badge mapper (NFR-05)
+  const getActionBadgeStyle = (action) => {
+    const successEvents = ['system.login', 'payment.receive', 'member.checkin', 'member.unfreeze', 'registration.approve'];
+    const dangerEvents = ['access.denied', 'member.delete', 'registration.reject'];
+    
+    if (successEvents.some(evt => action.startsWith(evt) || action === evt)) {
+      return {
+        background: 'rgba(16, 185, 129, 0.08)',
+        border: '1px solid rgba(16, 185, 129, 0.25)',
+        color: 'var(--color-success)'
+      };
+    } else if (dangerEvents.some(evt => action.startsWith(evt) || action === evt)) {
+      return {
+        background: 'rgba(239, 68, 68, 0.08)',
+        border: '1px solid rgba(239, 68, 68, 0.25)',
+        color: 'var(--color-danger)'
+      };
+    } else {
+      return {
+        background: 'rgba(245, 158, 11, 0.08)',
+        border: '1px solid rgba(245, 158, 11, 0.25)',
+        color: 'var(--color-warning)'
+      };
+    }
+  };
+
+  // Map actions to circular Lucide badges
+  const getActionIcon = (action) => {
+    if (action.startsWith('system.login')) return <Key size={14} />;
+    if (action.startsWith('member.checkin')) return <User size={14} />;
+    if (action.startsWith('member.unfreeze') || action.startsWith('member.delete') || action.startsWith('member.update') || action.startsWith('member.create')) return <User size={14} />;
+    if (action.startsWith('payment.') || action.startsWith('invoice.')) return <DollarSign size={14} />;
+    if (action.startsWith('access.denied') || action.startsWith('registration.reject')) return <ShieldAlert size={14} />;
+    if (action.startsWith('registration.')) return <ClipboardCheck size={14} />;
+    return <History size={14} />;
+  };
+
+  // Mock template states (FR-NOT-01)
+  const [templates, setTemplates] = useState([
+    { id: 't_exp', name: 'Membership Expiry Alert', channel: 'email', subject: 'Your Membership is Expiring Soon!', body: 'Hello {{name}}, your membership plan {{plan}} expires on {{date}}. Renew today to retain access.' },
+    { id: 't_pay', name: 'Payment Reminder Alert', channel: 'email', subject: 'Invoice Payment Due Notice', body: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} is due on {{date}}.' },
+    { id: 't_welcome', name: 'New Registration Welcome', channel: 'sms', subject: null, body: 'Welcome to Ascend Fit {{name}}! Your membership code is {{code}}. Scan your QR code at the entrance gate to check in.' }
+  ]);
+
+  const [activeTemplate, setActiveTemplate] = useState(templates[0]);
+
+  const handleUpdateTemplate = (e) => {
+    e.preventDefault();
+    setTemplates(prev => prev.map(t => {
+      if (t.id === activeTemplate.id) {
+        return activeTemplate;
+      }
+      return t;
+    }));
+    alert('Notification template updated successfully.');
+  };
+
+  return (
+    <div className="page-container">
+      {/* Header */}
+      <div className="page-header">
+        <div className="page-info">
+          <h1>System Audit & Settings</h1>
+          <p>Review organization security logs, configure notification templates, and manage credentials.</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '2rem' }}>
+        
+        {/* Security Audit Logs (NFR-05) */}
+        <div className="glass-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '620px' }}>
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <History size={18} style={{ color: 'var(--color-primary)' }} />
+              Security Audit Trail (NFR-05)
+            </h3>
+            
+            {/* Search */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)', width: '220px' }}>
+              <Search size={14} style={{ color: 'var(--text-muted)' }} />
+              <input 
+                type="text" 
+                placeholder="Search audit logs..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%', fontSize: '0.75rem' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ overflowY: 'auto', flexGrow: 1, padding: '1.5rem' }}>
+            {filteredLogs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem 1.5rem', color: 'var(--text-muted)' }}>
+                No audit logs recorded matching search.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative' }}>
+                {/* Timeline connector line */}
+                <div style={{
+                  position: 'absolute',
+                  left: '21px',
+                  top: '10px',
+                  bottom: '10px',
+                  width: '2px',
+                  background: 'rgba(255,255,255,0.05)',
+                  zIndex: 0
+                }} />
+
+                {filteredLogs.map(log => {
+                  const badgeStyle = getActionBadgeStyle(log.action);
+                  return (
+                    <div 
+                      key={log.id} 
+                      style={{ 
+                        display: 'flex', 
+                        gap: '1rem', 
+                        alignItems: 'flex-start',
+                        position: 'relative',
+                        zIndex: 1,
+                        background: 'rgba(255,255,255,0.01)',
+                        border: '1px solid var(--border-color)',
+                        borderLeft: `4px solid ${badgeStyle.color}`,
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        transition: 'all 0.2s ease',
+                        boxShadow: 'var(--shadow-glass)'
+                      }}
+                    >
+                      {/* Circular icon badge */}
+                      <div style={{ 
+                        width: '32px', 
+                        height: '32px', 
+                        borderRadius: '50%', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        background: badgeStyle.background,
+                        border: badgeStyle.border,
+                        color: badgeStyle.color,
+                        flexShrink: 0
+                      }}>
+                        {getActionIcon(log.action)}
+                      </div>
+
+                      {/* Log details */}
+                      <div style={{ flexGrow: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {new Date(log.occurred_at).toLocaleString()}
+                          </span>
+                          <span style={{ 
+                            fontSize: '0.65rem', 
+                            fontFamily: 'monospace', 
+                            padding: '0.1rem 0.4rem', 
+                            borderRadius: '4px',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            background: 'rgba(255,255,255,0.03)',
+                            color: badgeStyle.color,
+                            border: `1px solid ${badgeStyle.color}30`
+                          }}>
+                            {log.action}
+                          </span>
+                        </div>
+                        
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Actor:</span>
+                          <span style={{ color: '#fff' }}>{log.user_name}</span>
+                        </div>
+
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem', wordBreak: 'break-word', lineHeight: '1.4' }}>
+                          {log.details}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right side: Notification Templates Builder (FR-NOT-01) & Security config */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* Notification Templates Builder */}
+          <div className="glass-card">
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Mail size={18} style={{ color: 'var(--color-ai)' }} />
+              Notification Templates (FR-NOT-01)
+            </h3>
+
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              {templates.map(t => (
+                <button 
+                  key={t.id}
+                  className="btn btn-secondary" 
+                  style={{ 
+                    fontSize: '0.7rem', 
+                    padding: '0.35rem 0.65rem',
+                    background: activeTemplate.id === t.id ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255,255,255,0.02)',
+                    borderColor: activeTemplate.id === t.id ? 'var(--color-ai)' : 'var(--border-color)',
+                    color: activeTemplate.id === t.id ? '#fff' : 'var(--text-muted)'
+                  }}
+                  onClick={() => setActiveTemplate(t)}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleUpdateTemplate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="grid-2">
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Channel Type</label>
+                  <select 
+                    value={activeTemplate.channel}
+                    onChange={(e) => setActiveTemplate({...activeTemplate, channel: e.target.value})}
+                    className="glass-select"
+                    style={{ width: '100%', marginTop: '0.25rem' }}
+                  >
+                    <option value="email">Email Gateway</option>
+                    <option value="sms">SMS Gateway</option>
+                    <option value="whatsapp">WhatsApp Business API</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Variables Helper</label>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', marginTop: '0.25rem' }}>
+                    <code>{"{{name}}, {{plan}}, {{date}}, {{code}}"}</code>
+                  </div>
+                </div>
+              </div>
+
+              {activeTemplate.channel === 'email' && (
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Subject Line</label>
+                  <input 
+                    type="text" 
+                    value={activeTemplate.subject || ''}
+                    onChange={(e) => setActiveTemplate({...activeTemplate, subject: e.target.value})}
+                    className="glass-input"
+                    style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+                    required
+                  />
+                </div>
+              )}
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Template Message Body</label>
+                <textarea 
+                  value={activeTemplate.body}
+                  onChange={(e) => setActiveTemplate({...activeTemplate, body: e.target.value})}
+                  className="glass-input"
+                  style={{ marginTop: '0.25rem', resize: 'none', height: '110px', padding: '0.5rem', fontSize: '0.8rem', lineHeight: '1.4' }}
+                  required
+                />
+              </div>
+
+              <button type="submit" className="btn btn-ai" style={{ width: '100%' }}>
+                Save Template Configurations
+              </button>
+            </form>
+          </div>
+
+          {/* SaaS Limits & Settings status */}
+          <div className="glass-card">
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Shield size={16} style={{ color: 'var(--color-warning)' }} />
+              SaaS Plan Limits & Scope
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Current Plan Tier:</span>
+                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>Growth Tier</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Franchise Type:</span>
+                <span style={{ fontWeight: 700, color: '#fff' }}>Single HQ Gym (Branches Off)</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Active Members Cap:</span>
+                <span>15 / 1,000 active capacity</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.25rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>API Credentials:</span>
+                <span style={{ fontFamily: 'monospace', color: 'var(--text-dark)' }}>••••••••••••••••hk59</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default AuditSettings;
