@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye 
+  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye, Dumbbell, Share2 
 } from 'lucide-react';
 
 const createManualReminderLog = (invoice) => {
@@ -19,7 +19,8 @@ const createManualReminderLog = (invoice) => {
 const Payments = () => {
   const {
     invoices,
-    recordPayment
+    recordPayment,
+    members
   } = useDashboard();
 
   // Component states
@@ -143,7 +144,7 @@ const Payments = () => {
       <div className="glass-card grid-2" style={{ gap: '2.5rem', marginBottom: '2rem', padding: '1.5rem 2rem' }}>
         <div>
           <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={16} style={{ color: 'var(--color-primary)' }} />
+            <CreditCard size={16} style={{ color: 'var(--color-primary)' }} />
             Revenue by Payment Method
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -224,7 +225,7 @@ const Payments = () => {
 
         <div>
           <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={16} style={{ color: 'var(--color-success)' }} />
+            <DollarSign size={16} style={{ color: 'var(--color-success)' }} />
             Revenue by Membership Plan
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
@@ -507,10 +508,6 @@ const Payments = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                     <span>Membership Subtotal:</span>
                     <span>LKR {selectedInvoice.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                    <span>Tax (8.5%):</span>
-                    <span>+LKR {selectedInvoice.tax_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
                   {selectedInvoice.discount_amount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', color: 'var(--color-success)' }}>

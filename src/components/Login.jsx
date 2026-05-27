@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, Sparkles, Loader2 } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ShieldCheck, Dumbbell, Loader2 } from 'lucide-react';
 
 const Login = () => {
   const { login } = useDashboard();
@@ -107,7 +107,7 @@ const Login = () => {
             boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
             marginBottom: '1rem'
           }}>
-            <Sparkles size={28} style={{ color: 'var(--color-primary)' }} />
+            <Dumbbell size={28} style={{ color: 'var(--color-primary)' }} />
           </div>
           <h2 style={{
             fontFamily: 'var(--font-display)',

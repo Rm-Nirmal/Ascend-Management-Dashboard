@@ -56,8 +56,8 @@ const helperCreateMemberObject = (memberData, memberCode) => {
  * Build an invoice object for a new member enrollment.
  */
 const helperCreateInvoiceForMember = (memberId, memberName, plan) => {
-  const tax = plan.price * (plan.tax_rate / 100);
-  const total = plan.price + tax;
+  const tax = 0.0;
+  const total = plan.price;
   const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
   return {
     organization_id: DEFAULT_ORG_ID,
@@ -165,6 +165,8 @@ export const DashboardProvider = ({ children }) => {
   const [invoices, setInvoices] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [admins, setAdmins] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [employeeRegistrations, setEmployeeRegistrations] = useState([]);
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE A: Firebase Auth Listener
@@ -236,6 +238,85 @@ export const DashboardProvider = ({ children }) => {
     return () => unsubscribe();
   }, [currentUser]);
 
+  // ─── Seeding Helpers for Employees & Employee Registrations ─────────
+  const seedMockEmployees = async () => {
+    const orgId = currentUser?.organization_id || DEFAULT_ORG_ID;
+    const initialEmployees = [
+      {
+        organization_id: orgId,
+        full_name: 'Sarah Jenkins',
+        email: 'superadmin@ascend.com',
+        phone: '+94 77 111 2222',
+        role: 'Manager',
+        salary: 125000,
+        next_salary_date: '2026-06-25',
+        status: 'active',
+        joined_at: '2025-01-10',
+        created_at: new Date().toISOString(),
+      },
+      {
+        organization_id: orgId,
+        full_name: 'Marcus Rivera',
+        email: 'marcus@ascend.com',
+        phone: '+94 77 333 4444',
+        role: 'Head Trainer',
+        salary: 95000,
+        next_salary_date: '2026-06-25',
+        status: 'active',
+        joined_at: '2025-03-15',
+        created_at: new Date().toISOString(),
+      },
+      {
+        organization_id: orgId,
+        full_name: 'Priya Chandrasekhar',
+        email: 'priya@ascend.com',
+        phone: '+94 77 555 6666',
+        role: 'Yoga Coach',
+        salary: 80000,
+        next_salary_date: '2026-06-25',
+        status: 'active',
+        joined_at: '2025-04-01',
+        created_at: new Date().toISOString(),
+      }
+    ];
+    for (const emp of initialEmployees) {
+      await addDoc(collection(db, COLLECTIONS.EMPLOYEES), emp);
+    }
+  };
+
+  const seedMockEmployeeRegistrations = async () => {
+    const orgId = currentUser?.organization_id || DEFAULT_ORG_ID;
+    const initialRegs = [
+      {
+        organization_id: orgId,
+        full_name: 'Dilan Perera',
+        email: 'dilan.p@gmail.com',
+        phone: '+94 77 777 8888',
+        date_of_birth: '1998-05-12',
+        role: 'Front Desk',
+        expected_salary: 45000,
+        cover_note: 'I have 2 years of receptionist experience. Excited to apply at Ascend!',
+        status: 'pending_approval',
+        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        organization_id: orgId,
+        full_name: 'Nisansala Silva',
+        email: 'nisansala@gmail.com',
+        phone: '+94 71 222 3333',
+        date_of_birth: '1995-11-20',
+        role: 'Personal Trainer',
+        expected_salary: 75000,
+        cover_note: 'Certified fitness coach specializing in female hypertrophy and strength training.',
+        status: 'pending_approval',
+        created_at: new Date().toISOString(),
+      }
+    ];
+    for (const reg of initialRegs) {
+      await addDoc(collection(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS), reg);
+    }
+  };
+
   // ═══════════════════════════════════════════════════════════════════
   // PHASE D: Real-time Firestore Listeners (only when authenticated)
   // ═══════════════════════════════════════════════════════════════════
@@ -250,6 +331,8 @@ export const DashboardProvider = ({ children }) => {
       setPlans([]);
       setTrainers([]);
       setAdmins([]);
+      setEmployees([]);
+      setEmployeeRegistrations([]);
       setDataLoaded(false);
       return;
     }
@@ -257,7 +340,7 @@ export const DashboardProvider = ({ children }) => {
     const orgId = currentUser.organization_id || DEFAULT_ORG_ID;
     const unsubscribers = [];
     let loadedCount = 0;
-    const totalCollections = 7; // Removed plans from counting since loaded separately
+    const totalCollections = 9; // Added employees and employeeRegistrations (7 + 2 = 9)
 
     const markLoaded = () => {
       loadedCount++;
@@ -354,6 +437,36 @@ export const DashboardProvider = ({ children }) => {
         setAdmins(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         markLoaded();
       }, (err) => { console.error('Admins listener error:', err); markLoaded(); })
+    );
+
+    // 9. Employees (org-scoped)
+    const employeesQ = query(
+      collection(db, COLLECTIONS.EMPLOYEES),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(employeesQ, (snap) => {
+        setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+        if (snap.empty) {
+          seedMockEmployees();
+        }
+      }, (err) => { console.error('Employees listener error:', err); markLoaded(); })
+    );
+
+    // 10. Employee Registrations (org-scoped)
+    const empRegsQ = query(
+      collection(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(empRegsQ, (snap) => {
+        setEmployeeRegistrations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+        if (snap.empty) {
+          seedMockEmployeeRegistrations();
+        }
+      }, (err) => { console.error('Employee registrations listener error:', err); markLoaded(); })
     );
 
     // Cleanup all listeners on unmount or user change
@@ -699,6 +812,132 @@ export const DashboardProvider = ({ children }) => {
   }, [registrations, currentUser]);
 
   // ═══════════════════════════════════════════════════════════════════
+  // EMPLOYEE CRUD & PAYROLL ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const addEmployee = useCallback(async (employeeData) => {
+    try {
+      const newEmp = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        status: 'active',
+        joined_at: employeeData.joined_at || new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString(),
+        ...employeeData,
+        salary: parseFloat(employeeData.salary),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.EMPLOYEES), newEmp);
+      await logAudit('employee.create', 'employee', docRef.id, `Hired employee: ${newEmp.full_name} (${newEmp.role})`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addEmployee error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updateEmployee = useCallback(async (id, updatedFields) => {
+    try {
+      const empRef = doc(db, COLLECTIONS.EMPLOYEES, id);
+      const updated = { ...updatedFields };
+      if (updated.salary !== undefined) updated.salary = parseFloat(updated.salary);
+      await updateDoc(empRef, updated);
+      await logAudit('employee.update', 'employee', id, `Updated employee fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateEmployee error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deleteEmployee = useCallback(async (id) => {
+    try {
+      const employee = employees.find(e => e.id === id);
+      const empRef = doc(db, COLLECTIONS.EMPLOYEES, id);
+      await updateDoc(empRef, {
+        status: 'terminated',
+        terminated_at: new Date().toISOString(),
+      });
+      if (employee) {
+        await logAudit('employee.terminate', 'employee', id, `Terminated employee profile for ${employee.full_name}`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('deleteEmployee error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [employees, logAudit]);
+
+  const addEmployeeRegistrationRequest = useCallback(async (formData) => {
+    try {
+      const newReq = {
+        organization_id: DEFAULT_ORG_ID,
+        status: 'pending_approval',
+        created_at: new Date().toISOString(),
+        ...formData,
+        expected_salary: parseFloat(formData.expected_salary),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS), newReq);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addEmployeeRegistrationRequest error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, []);
+
+  const approveEmployeeRegistration = useCallback(async (requestId, finalSalary, nextSalaryDate) => {
+    try {
+      const req = employeeRegistrations.find(r => r.id === requestId);
+      if (req) {
+        // Create full employee profile
+        const empRes = await addEmployee({
+          full_name: req.full_name,
+          email: req.email,
+          phone: req.phone,
+          role: req.role,
+          salary: finalSalary,
+          next_salary_date: nextSalaryDate,
+          joined_at: new Date().toISOString().split('T')[0],
+        });
+
+        if (empRes.success) {
+          // Update registration status
+          const regRef = doc(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS, requestId);
+          await updateDoc(regRef, { status: 'approved' });
+          await logAudit('employee_registration.approve', 'employee_registration', requestId, `Approved job application and hired ${req.full_name} as ${req.role}`);
+          return { success: true };
+        }
+      }
+      return { success: false, message: 'Application not found or hiring failed.' };
+    } catch (err) {
+      console.error('approveEmployeeRegistration error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [employeeRegistrations, addEmployee, logAudit]);
+
+  const rejectEmployeeRegistration = useCallback(async (requestId, reason) => {
+    try {
+      const req = employeeRegistrations.find(r => r.id === requestId);
+      const regRef = doc(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS, requestId);
+      await updateDoc(regRef, {
+        status: 'rejected',
+        rejection_reason: reason,
+      });
+      if (req) {
+        await logAudit('employee_registration.reject', 'employee_registration', requestId, `Rejected application for ${req.full_name}. Reason: ${reason}`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('rejectEmployeeRegistration error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [employeeRegistrations, logAudit]);
+
+  // ═══════════════════════════════════════════════════════════════════
   // INVOICING & PAYMENTS
   // ═══════════════════════════════════════════════════════════════════
 
@@ -833,10 +1072,8 @@ export const DashboardProvider = ({ children }) => {
       if (!plan) return { success: false, message: 'No plan found.' };
 
       const priceToCharge = customPrice !== null ? parseFloat(customPrice) : plan.price;
-      // When a custom price is entered, treat it as the final amount (no tax added).
-      // Tax is only auto-calculated when using the plan's default price.
-      const tax = customPrice !== null ? 0 : priceToCharge * (plan.tax_rate / 100);
-      const total = priceToCharge + tax;
+      const tax = 0.0;
+      const total = priceToCharge;
 
       const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end);
 
@@ -1054,6 +1291,8 @@ export const DashboardProvider = ({ children }) => {
       invoices,
       auditLogs,
       admins,
+      employees,
+      employeeRegistrations,
       currentUser,
       toasts,
 
@@ -1084,6 +1323,14 @@ export const DashboardProvider = ({ children }) => {
       addRegistrationRequest,
       approveRegistration,
       rejectRegistration,
+
+      // Employee Actions
+      addEmployee,
+      updateEmployee,
+      deleteEmployee,
+      addEmployeeRegistrationRequest,
+      approveEmployeeRegistration,
+      rejectEmployeeRegistration,
 
       // Payment Actions
       recordPayment,

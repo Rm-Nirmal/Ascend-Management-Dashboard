@@ -10,6 +10,7 @@ import AIInsights from './components/AIInsights';
 import AuditSettings from './components/AuditSettings';
 import Login from './components/Login';
 import AdminManagement from './components/AdminManagement';
+import Employees from './components/Employees';
 import { Bell, ShieldCheck, HelpCircle, Loader2 } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
 import ToastContainer from './components/Toast';
@@ -157,7 +158,7 @@ const DashboardContentShell = () => {
   // Security Gate: Redirect standard admin to members if they try to access super admin tabs
   const isAllowedTab = (tab) => {
     if (currentUser.role === 'super_admin') return true;
-    return ['members', 'registrations', 'access'].includes(tab);
+    return ['members', 'registrations', 'access', 'employees'].includes(tab);
   };
 
   const resolvedTab = isAllowedTab(activeTab) ? activeTab : 'members';
@@ -170,6 +171,8 @@ const DashboardContentShell = () => {
         return <Members />;
       case 'registrations':
         return <Registrations />;
+      case 'employees':
+        return <Employees />;
       case 'access':
         return <AccessConsole />;
       case 'payments':
