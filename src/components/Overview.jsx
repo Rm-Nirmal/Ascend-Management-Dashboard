@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+  LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell
 } from 'recharts';
 import { 
   DollarSign, Calendar, UserCheck, AlertCircle, ArrowUpRight, Download
@@ -254,6 +255,38 @@ const Overview = () => {
     return members.filter(m => m.status === 'expired' || m.status === 'frozen').slice(0, 3);
   }, [members]);
 
+  // Gender stats calculation for Pie Chart
+  const genderStats = useMemo(() => {
+    const stats = { male: 0, female: 0, other: 0, unspecified: 0 };
+    members.forEach(m => {
+      const g = (m.gender || '').toLowerCase().trim();
+      if (g === 'male') stats.male++;
+      else if (g === 'female') stats.female++;
+      else if (g === 'other') stats.other++;
+      else stats.unspecified++;
+    });
+
+    const data = [];
+    if (stats.male > 0) {
+      data.push({ name: 'Male', value: stats.male, color: '#3b82f6' }); // Blue
+    }
+    if (stats.female > 0) {
+      data.push({ name: 'Female', value: stats.female, color: '#ec4899' }); // Pink
+    }
+    if (stats.other > 0) {
+      data.push({ name: 'Other', value: stats.other, color: '#10b981' }); // emerald
+    }
+    if (stats.unspecified > 0) {
+      data.push({ name: 'Unspecified', value: stats.unspecified, color: '#6b7280' }); // Gray
+    }
+
+    return data;
+  }, [members]);
+
+  const hasGenderData = useMemo(() => {
+    return genderStats.some(d => d.value > 0);
+  }, [genderStats]);
+
   const handleExport = (format) => {
     if (format === 'csv') {
       try {
@@ -502,7 +535,7 @@ const Overview = () => {
         </div>
  
         {/* Membership Growth Bar Chart */}
-        <div className="glass-card" style={{ gridColumn: 'span 2' }}>
+        <div className="glass-card">
           <h3 style={{ fontFamily: 'var(--font-display)', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 600 }}>
             Subscribers Growth Projection ({timeframe === 'daily' ? 'Hourly on ' + selectedDate : timeframe === 'yearly' ? 'Monthly ' + selectedYear : 'Weekly ' + selectedMonth})
           </h3>
@@ -520,6 +553,48 @@ const Overview = () => {
                 <Bar dataKey="new" fill="#ffffff" radius={[4, 4, 0, 0]} name="New Registrations" />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Gender Demographics Pie Chart */}
+        <div className="glass-card">
+          <h3 style={{ fontFamily: 'var(--font-display)', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 600 }}>
+            Member Gender Demographics
+          </h3>
+          <div style={{ width: '100%', height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            {hasGenderData ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={genderStats}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {genderStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '8px' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36} 
+                    iconType="circle"
+                    formatter={(value) => <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center' }}>
+                No gender telemetry available.
+              </div>
+            )}
           </div>
         </div>
       </div>
