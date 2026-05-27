@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Search, Plus, Edit2, Trash2, Mail, Phone, Briefcase, 
-  DollarSign, Calendar, Check, X, ShieldAlert, FileText, Send, CheckCircle2
+  DollarSign, Calendar, Check, X, ShieldAlert, FileText, Send, CheckCircle2,
+  UserPlus
 } from 'lucide-react';
 
 const Employees = () => {
@@ -625,7 +626,6 @@ const Employees = () => {
                     required
                   >
                     <option value="Front Desk">Front Desk / Receptionist</option>
-                    <option value="Personal Trainer">Personal Trainer</option>
                     <option value="Yoga Coach">Yoga/Mobility Coach</option>
                     <option value="Gym Manager">Gym Manager</option>
                     <option value="Maintenance Staff">Maintenance / Cleaning Crew</option>
