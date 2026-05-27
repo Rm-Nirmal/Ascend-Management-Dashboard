@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock
+  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2
 } from 'lucide-react';
 
 const Members = () => {
@@ -14,7 +14,9 @@ const Members = () => {
     deleteMember,
     freezeMembership,
     unfreezeMembership,
-    renewMemberMembership
+    renewMemberMembership,
+    currentUser,
+    showToast
   } = useDashboard();
 
   // Component States
@@ -23,6 +25,26 @@ const Members = () => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMedical, setShowMedical] = useState(false);
+
+  // Edit Member States
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
+  const [editMemberForm, setEditMemberForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    gender: 'male',
+    date_of_birth: '',
+    plan_id: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    medical_notes: '',
+    fitness_goals: '',
+    weight_kg: '',
+    height_cm: '',
+    body_fat_pct: '',
+    trainer_id: ''
+  });
   
   // Ticking state for live countdowns
   const [time, setTime] = useState(() => Date.now());
@@ -61,6 +83,67 @@ const Members = () => {
       }
     } catch (err) {
       alert('An error occurred during renewal. Please try again.');
+    }
+  };
+
+  const handleEditClick = (member) => {
+    setEditingMember(member);
+    setEditMemberForm({
+      full_name: member.full_name || '',
+      email: member.email || '',
+      phone: member.phone || '',
+      gender: member.gender || 'male',
+      date_of_birth: member.date_of_birth || '',
+      plan_id: member.plan_id || '',
+      emergency_contact_name: member.emergency_contact_name || '',
+      emergency_contact_phone: member.emergency_contact_phone || '',
+      medical_notes: member.medical_notes || '',
+      fitness_goals: member.fitness_goals || '',
+      weight_kg: member.weight_kg !== undefined && member.weight_kg !== null ? member.weight_kg.toString() : '',
+      height_cm: member.height_cm !== undefined && member.height_cm !== null ? member.height_cm.toString() : '',
+      body_fat_pct: member.body_fat_pct !== undefined && member.body_fat_pct !== null ? member.body_fat_pct.toString() : '',
+      trainer_id: member.trainer_id || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editMemberForm.full_name || !editMemberForm.email || !editMemberForm.plan_id) {
+      alert('Please fill out all required fields.');
+      return;
+    }
+
+    try {
+      const updatedFields = {
+        ...editMemberForm,
+        plan_id: editMemberForm.plan_id,
+        trainer_id: editMemberForm.trainer_id || null,
+        weight_kg: editMemberForm.weight_kg ? parseFloat(editMemberForm.weight_kg) : null,
+        height_cm: editMemberForm.height_cm ? parseInt(editMemberForm.height_cm) : null,
+        body_fat_pct: editMemberForm.body_fat_pct ? parseFloat(editMemberForm.body_fat_pct) : null,
+      };
+
+      await updateMember(editingMember.id, updatedFields);
+
+      setShowEditModal(false);
+      
+      // Update selectedMember view if currently open
+      if (selectedMember && selectedMember.id === editingMember.id) {
+        setSelectedMember(prev => ({
+          ...prev,
+          ...updatedFields,
+        }));
+      }
+
+      setEditingMember(null);
+      if (showToast) {
+        showToast('Member details updated successfully!', 'success');
+      } else {
+        alert('Member details updated successfully!');
+      }
+    } catch (err) {
+      alert('Failed to update member. Please try again.');
     }
   };
 
@@ -384,6 +467,16 @@ const Members = () => {
                           >
                             <Eye size={14} />
                           </button>
+                          {currentUser?.role === 'super_admin' && (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
+                              title="Edit Member Details"
+                              onClick={() => handleEditClick(member)}
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                          )}
                           <button 
                             className="btn btn-secondary" 
                             style={{ padding: '0.4rem', color: 'var(--color-danger)' }}
@@ -483,21 +576,32 @@ const Members = () => {
             </div>
 
             {/* Profile Info Header */}
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <img 
-                src={selectedMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
-                alt={selectedMember.full_name} 
-                style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--color-primary)', objectFit: 'cover' }}
-              />
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{selectedMember.full_name}</h3>
-                <span className={`badge badge-${selectedMember.status}`} style={{ fontSize: '0.65rem' }}>
-                  {selectedMember.status}
-                </span>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Code: <strong>{selectedMember.member_code}</strong>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <img 
+                  src={selectedMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                  alt={selectedMember.full_name} 
+                  style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--color-primary)', objectFit: 'cover' }}
+                />
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{selectedMember.full_name}</h3>
+                  <span className={`badge badge-${selectedMember.status}`} style={{ fontSize: '0.65rem' }}>
+                    {selectedMember.status}
+                  </span>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    Code: <strong>{selectedMember.member_code}</strong>
+                  </div>
                 </div>
               </div>
+              {currentUser?.role === 'super_admin' && (
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
+                  onClick={() => handleEditClick(selectedMember)}
+                >
+                  <Edit2 size={12} /> Edit Details
+                </button>
+              )}
             </div>
 
             {/* Core details */}
@@ -1003,6 +1107,236 @@ const Members = () => {
                 </button>
                 <button type="submit" className="btn btn-success">
                   Renew & Activate
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700 }}>
+                Edit Member Profile
+              </h2>
+              <button 
+                onClick={() => { setShowEditModal(false); setEditingMember(null); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Section: Credentials */}
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
+                  1. Personal & Contact Details
+                </h4>
+                <div className="grid-2">
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="Jane Austin"
+                      value={editMemberForm.full_name}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, full_name: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address *</label>
+                    <input 
+                      type="email" 
+                      required
+                      placeholder="jane@example.com"
+                      value={editMemberForm.email}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, email: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phone Number</label>
+                    <input 
+                      type="tel" 
+                      placeholder="+1 (555) 012-3456"
+                      value={editMemberForm.phone}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, phone: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div className="grid-2">
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gender</label>
+                      <select 
+                        value={editMemberForm.gender} 
+                        onChange={(e) => setEditMemberForm({...editMemberForm, gender: e.target.value})}
+                        className="glass-select"
+                        style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                      >
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer_not_to_say">Declined</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Date of Birth</label>
+                      <input 
+                        type="date" 
+                        value={editMemberForm.date_of_birth}
+                        onChange={(e) => setEditMemberForm({...editMemberForm, date_of_birth: e.target.value})}
+                        className="glass-input"
+                        style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Plan Details */}
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
+                  2. Membership & Trainer Assignment
+                </h4>
+                <div className="grid-2">
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Membership Plan *</label>
+                    <select 
+                      required
+                      value={editMemberForm.plan_id}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, plan_id: e.target.value})}
+                      className="glass-select"
+                      style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                    >
+                      <option value="">Select Plan...</option>
+                      {plans.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} (LKR {p.price.toLocaleString()}/mo)</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Personal Trainer Assignment</label>
+                    <select 
+                      value={editMemberForm.trainer_id}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, trainer_id: e.target.value})}
+                      className="glass-select"
+                      style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                    >
+                      <option value="">Unassigned (Self-guided)</option>
+                      {trainers.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.specialization})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Medical / Goals */}
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
+                  3. Health Metrics & Notes
+                </h4>
+                <div className="grid-3" style={{ marginBottom: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Weight (kg)</label>
+                    <input 
+                      type="number" step="0.1"
+                      placeholder="72.5"
+                      value={editMemberForm.weight_kg}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, weight_kg: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Height (cm)</label>
+                    <input 
+                      type="number"
+                      placeholder="178"
+                      value={editMemberForm.height_cm}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, height_cm: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Body Fat %</label>
+                    <input 
+                      type="number" step="0.1"
+                      placeholder="18.5"
+                      value={editMemberForm.body_fat_pct}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, body_fat_pct: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid-2">
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="John Smith"
+                      value={editMemberForm.emergency_contact_name}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, emergency_contact_name: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Phone</label>
+                    <input 
+                      type="text" 
+                      placeholder="+1 (555) 987-6543"
+                      value={editMemberForm.emergency_contact_phone}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, emergency_contact_phone: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confidential Medical Notes</label>
+                  <textarea 
+                    placeholder="Allergies, chronic conditions, structural constraints..."
+                    value={editMemberForm.medical_notes}
+                    onChange={(e) => setEditMemberForm({...editMemberForm, medical_notes: e.target.value})}
+                    className="glass-input"
+                    style={{ marginTop: '0.25rem', resize: 'none', height: '60px', padding: '0.5rem' }}
+                  />
+                </div>
+
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fitness Goals</label>
+                  <input 
+                    type="text" 
+                    placeholder="Strength progression, fat reduction..."
+                    value={editMemberForm.fitness_goals}
+                    onChange={(e) => setEditMemberForm({...editMemberForm, fitness_goals: e.target.value})}
+                    className="glass-input"
+                    style={{ marginTop: '0.25rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Submit panel */}
+              <div className="flex-gap-1" style={{ justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowEditModal(false); setEditingMember(null); }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Changes
                 </button>
               </div>
             </form>

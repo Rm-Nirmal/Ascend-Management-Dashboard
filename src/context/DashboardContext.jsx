@@ -8,6 +8,7 @@ import {
   doc,
   addDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -20,6 +21,7 @@ import {
   signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
+  updatePassword,
 } from 'firebase/auth';
 
 const DashboardContext = createContext();
@@ -435,6 +437,7 @@ export const DashboardProvider = ({ children }) => {
         name,
         email: email.trim().toLowerCase(),
         role,
+        password, // Save password in Firestore for advanced Super Admin actions
         organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
         photo_url: role === 'super_admin'
           ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
@@ -862,6 +865,180 @@ export const DashboardProvider = ({ children }) => {
       return { success: false, message: friendlyFirestoreError(err) };
     }
   }, [members, plans, currentUser]);
+  
+  // ═══════════════════════════════════════════════════════════════════
+  // PLAN (MEMBERSHIP PACKAGE) CRUD ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const addPlan = useCallback(async (planData) => {
+    try {
+      const newPlan = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        name: planData.name,
+        price: parseFloat(planData.price),
+        tax_rate: parseFloat(planData.tax_rate || 5),
+        duration_days: parseInt(planData.duration_days || 30),
+        features: planData.features || [],
+        created_at: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.PLANS), newPlan);
+      await logAudit('plan.create', 'plan', docRef.id, `Created membership package: ${newPlan.name}`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addPlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updatePlan = useCallback(async (id, planFields) => {
+    try {
+      const planRef = doc(db, COLLECTIONS.PLANS, id);
+      const updated = {
+        ...planFields,
+        price: planFields.price ? parseFloat(planFields.price) : undefined,
+        tax_rate: planFields.tax_rate ? parseFloat(planFields.tax_rate) : undefined,
+        duration_days: planFields.duration_days ? parseInt(planFields.duration_days) : undefined,
+      };
+      // remove undefined values
+      Object.keys(updated).forEach(key => updated[key] === undefined && delete updated[key]);
+
+      await updateDoc(planRef, updated);
+      await logAudit('plan.update', 'plan', id, `Updated membership package fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updatePlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deletePlan = useCallback(async (id) => {
+    try {
+      const plan = plans.find(p => p.id === id);
+      const planRef = doc(db, COLLECTIONS.PLANS, id);
+      await deleteDoc(planRef);
+      if (plan) {
+        await logAudit('plan.delete', 'plan', id, `Deleted membership package: ${plan.name}`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('deletePlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [plans, logAudit]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PERSONAL TRAINER CRUD ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const addTrainer = useCallback(async (trainerData) => {
+    try {
+      const newTrainer = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        name: trainerData.name,
+        specialization: trainerData.specialization,
+        bio: trainerData.bio || '',
+        hourly_rate: parseFloat(trainerData.hourly_rate),
+        photo_url: trainerData.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        created_at: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.TRAINERS), newTrainer);
+      await logAudit('trainer.create', 'trainer', docRef.id, `Added personal trainer: ${newTrainer.name}`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addTrainer error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updateTrainer = useCallback(async (id, trainerFields) => {
+    try {
+      const trainerRef = doc(db, COLLECTIONS.TRAINERS, id);
+      const updated = {
+        ...trainerFields,
+        hourly_rate: trainerFields.hourly_rate ? parseFloat(trainerFields.hourly_rate) : undefined,
+      };
+      Object.keys(updated).forEach(key => updated[key] === undefined && delete updated[key]);
+
+      await updateDoc(trainerRef, updated);
+      await logAudit('trainer.update', 'trainer', id, `Updated personal trainer fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateTrainer error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deleteTrainer = useCallback(async (id) => {
+    try {
+      const trainer = trainers.find(t => t.id === id);
+      const trainerRef = doc(db, COLLECTIONS.TRAINERS, id);
+      await deleteDoc(trainerRef);
+      if (trainer) {
+        await logAudit('trainer.delete', 'trainer', id, `Deleted personal trainer: ${trainer.name}`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('deleteTrainer error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [trainers, logAudit]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ADVANCED ADMINISTRATOR ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const updateAdminPassword = useCallback(async (adminId, newPassword) => {
+    try {
+      const admin = admins.find(a => a.id === adminId);
+      if (!admin) return { success: false, message: 'Admin not found.' };
+
+      // Update Firestore admin doc
+      const adminRef = doc(db, COLLECTIONS.ADMINS, adminId);
+      await updateDoc(adminRef, { password: newPassword });
+
+      // If it is the current user logged in, also update in Firebase Auth
+      if (currentUser && currentUser.id === adminId && auth.currentUser) {
+        await updatePassword(auth.currentUser, newPassword);
+      }
+
+      await logAudit('admin.password_update', 'admin', adminId, `Updated password for administrator: ${admin.name}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateAdminPassword error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [admins, currentUser, logAudit]);
+
+  const deleteAdmin = useCallback(async (adminId) => {
+    try {
+      const admin = admins.find(a => a.id === adminId);
+      if (!admin) return { success: false, message: 'Admin not found.' };
+
+      // Delete from Firestore
+      const adminRef = doc(db, COLLECTIONS.ADMINS, adminId);
+      await deleteDoc(adminRef);
+
+      await logAudit('admin.delete', 'admin', adminId, `Deleted administrator account: ${admin.name}`);
+
+      // If they deleted themselves, sign out
+      if (currentUser && currentUser.id === adminId) {
+        await logout();
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('deleteAdmin error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [admins, currentUser, logout, logAudit]);
 
   // ═══════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
@@ -918,6 +1095,20 @@ export const DashboardProvider = ({ children }) => {
       // Utility
       logAudit,
       renewMemberMembership,
+
+      // Plan CRUD
+      addPlan,
+      updatePlan,
+      deletePlan,
+
+      // Trainer CRUD
+      addTrainer,
+      updateTrainer,
+      deleteTrainer,
+
+      // Admin Management Actions
+      updateAdminPassword,
+      deleteAdmin,
     }}>
       {children}
     </DashboardContext.Provider>
