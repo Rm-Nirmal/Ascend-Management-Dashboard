@@ -43,6 +43,8 @@ export const COLLECTIONS = {
   ADMINS: 'admins',
   EMPLOYEES: 'employees',
   EMPLOYEE_REGISTRATIONS: 'employee_registrations',
+  EXPENSES: 'expenses',
+  INCOME: 'income',
 };
 
 // Default organization ID (single-tenant for now)

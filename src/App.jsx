@@ -11,6 +11,7 @@ import AuditSettings from './components/AuditSettings';
 import Login from './components/Login';
 import AdminManagement from './components/AdminManagement';
 import Employees from './components/Employees';
+import Finance from './components/Finance';
 import { Bell, ShieldCheck, HelpCircle, Loader2 } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
 import ToastContainer from './components/Toast';
@@ -177,6 +178,8 @@ const DashboardContentShell = () => {
         return <AccessConsole />;
       case 'payments':
         return <Payments />;
+      case 'finance':
+        return <Finance />;
       case 'ai':
         return <AIInsights />;
       case 'audit':

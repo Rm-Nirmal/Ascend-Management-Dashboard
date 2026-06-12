@@ -10,7 +10,8 @@ import {
   Shield,
   LogOut,
   Briefcase,
-  Dumbbell
+  Dumbbell,
+  DollarSign
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -24,6 +25,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
     { id: 'access', name: 'Access Console', icon: QrCode },
     { id: 'payments', name: 'Invoices & Payments', icon: CreditCard },
+    { id: 'finance', name: 'Finance', icon: DollarSign },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
     { id: 'audit', name: 'System Audit Logs', icon: ClipboardList },
     { id: 'admin_management', name: 'Admin Console', icon: Shield }
