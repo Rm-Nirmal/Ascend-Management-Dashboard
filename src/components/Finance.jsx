@@ -211,15 +211,15 @@ const Finance = () => {
     });
     
     const colors = {
-      Rent: '#ffffff',
-      Electricity: '#e4e4e7',
-      Water: '#a1a1aa',
-      Internet: '#71717a',
-      Salary: '#52525b',
-      Equipment: '#3f3f46',
-      Maintenance: '#27272a',
-      Marketing: '#18181b',
-      Other: '#09090b'
+      Rent: '#f43f5e',
+      Electricity: '#f59e0b',
+      Water: '#06b6d4',
+      Internet: '#8b5cf6',
+      Salary: '#10b981',
+      Equipment: '#ec4899',
+      Maintenance: '#ef4444',
+      Marketing: '#14b8a6',
+      Other: '#71717a'
     };
     
     return Object.keys(categories).map(cat => ({
@@ -459,15 +459,15 @@ const Finance = () => {
     }
     
     const colors = {
-      Rent: '#ffffff',
-      Electricity: '#e4e4e7',
-      Water: '#a1a1aa',
-      Internet: '#71717a',
-      Salary: '#52525b',
-      Equipment: '#3f3f46',
-      Maintenance: '#27272a',
-      Marketing: '#18181b',
-      Other: '#09090b'
+      Rent: '#f43f5e',
+      Electricity: '#f59e0b',
+      Water: '#06b6d4',
+      Internet: '#8b5cf6',
+      Salary: '#10b981',
+      Equipment: '#ec4899',
+      Maintenance: '#ef4444',
+      Marketing: '#14b8a6',
+      Other: '#71717a'
     };
     
     const expenseCategoryChart = expenseBreakdown
@@ -1187,12 +1187,14 @@ const Finance = () => {
             </div>
 
             {/* Recent transactions list */}
-            <div className="glass-card">
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckCircle size={16} /> Recent Transactions Table
-              </h3>
-              <div style={{ overflowX: 'auto' }}>
-                <table className="table" style={{ width: '100%', fontSize: '0.8rem' }}>
+            <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '1.5rem 1.5rem 0.5rem 1.5rem' }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CheckCircle size={16} /> Recent Transactions Table
+                </h3>
+              </div>
+              <div className="table-container">
+                <table className="dashboard-table">
                   <thead>
                     <tr>
                       <th>Date</th>
@@ -1303,9 +1305,9 @@ const Finance = () => {
           </div>
 
           {/* Income Directory Table */}
-          <div className="glass-card" style={{ padding: '0.75rem' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="table" style={{ width: '100%', fontSize: '0.85rem' }}>
+          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="table-container">
+              <table className="dashboard-table">
                 <thead>
                   <tr>
                     <th>Date</th>
@@ -1427,9 +1429,9 @@ const Finance = () => {
           </div>
 
           {/* Expenses Directory Table */}
-          <div className="glass-card" style={{ padding: '0.75rem' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="table" style={{ width: '100%', fontSize: '0.85rem' }}>
+          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="table-container">
+              <table className="dashboard-table">
                 <thead>
                   <tr>
                     <th>Date</th>
