@@ -14,6 +14,7 @@ const Overview = () => {
     accessEvents, 
     invoices, 
     registrations,
+    income,
     showToast
   } = useDashboard();
 
@@ -28,14 +29,16 @@ const Overview = () => {
   // 1. Metric Calculations per Timeframe & Date/Month Selection
   const revenueStats = useMemo(() => {
     const paidInvoices = invoices.filter(i => i.status === 'paid' && i.paid_at);
+    const validIncome = income || [];
     
     let total, count, label, comparison, isTrendUp = true;
 
     if (timeframe === 'daily') {
-      // Paid on selectedDate
+      // Paid on selectedDate (combining invoices and manual income)
       const dailyPaid = paidInvoices.filter(i => i.paid_at.startsWith(selectedDate));
-      total = dailyPaid.reduce((sum, i) => sum + i.total_amount, 0);
-      count = dailyPaid.length;
+      const dailyManual = validIncome.filter(inc => inc.date && inc.date.startsWith(selectedDate));
+      total = dailyPaid.reduce((sum, i) => sum + i.total_amount, 0) + dailyManual.reduce((sum, inc) => sum + inc.amount, 0);
+      count = dailyPaid.length + dailyManual.length;
       label = `Daily Revenue`;
       
       // Calculate comparison vs yesterday (selectedDate - 1 day)
@@ -43,7 +46,8 @@ const Overview = () => {
       prevDate.setDate(prevDate.getDate() - 1);
       const prevDateStr = prevDate.toISOString().split('T')[0];
       const prevPaid = paidInvoices.filter(i => i.paid_at.startsWith(prevDateStr));
-      const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0);
+      const prevManual = validIncome.filter(inc => inc.date && inc.date.startsWith(prevDateStr));
+      const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0) + prevManual.reduce((sum, inc) => sum + inc.amount, 0);
       const diff = total - prevTotal;
       isTrendUp = diff >= 0;
       if (prevTotal > 0) {
@@ -56,14 +60,16 @@ const Overview = () => {
     } else if (timeframe === 'yearly') {
       // Paid in selectedYear
       const yearPaid = paidInvoices.filter(i => i.paid_at.startsWith(selectedYear));
-      total = yearPaid.reduce((sum, i) => sum + i.total_amount, 0);
-      count = yearPaid.length;
+      const yearManual = validIncome.filter(inc => inc.date && inc.date.startsWith(selectedYear));
+      total = yearPaid.reduce((sum, i) => sum + i.total_amount, 0) + yearManual.reduce((sum, inc) => sum + inc.amount, 0);
+      count = yearPaid.length + yearManual.length;
       label = `Yearly Revenue`;
       
       // Calculate comparison vs last year
       const prevYearStr = String(parseInt(selectedYear) - 1);
       const prevPaid = paidInvoices.filter(i => i.paid_at.startsWith(prevYearStr));
-      const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0);
+      const prevManual = validIncome.filter(inc => inc.date && inc.date.startsWith(prevYearStr));
+      const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0) + prevManual.reduce((sum, inc) => sum + inc.amount, 0);
       const diff = total - prevTotal;
       isTrendUp = diff >= 0;
       if (prevTotal > 0) {
@@ -76,8 +82,9 @@ const Overview = () => {
     } else {
       // Monthly (Default)
       const monthPaid = paidInvoices.filter(i => i.paid_at.startsWith(selectedMonth));
-      total = monthPaid.reduce((sum, i) => sum + i.total_amount, 0);
-      count = monthPaid.length;
+      const monthManual = validIncome.filter(inc => inc.date && inc.date.startsWith(selectedMonth));
+      total = monthPaid.reduce((sum, i) => sum + i.total_amount, 0) + monthManual.reduce((sum, inc) => sum + inc.amount, 0);
+      count = monthPaid.length + monthManual.length;
       label = `Monthly Revenue`;
       
       // Calculate comparison vs last month
@@ -87,7 +94,8 @@ const Overview = () => {
       const prevMonthDate = new Date(y, m - 2, 1);
       const prevMonthStr = prevMonthDate.toISOString().substring(0, 7);
       const prevPaid = paidInvoices.filter(i => i.paid_at.startsWith(prevMonthStr));
-      const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0);
+      const prevManual = validIncome.filter(inc => inc.date && inc.date.startsWith(prevMonthStr));
+      const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0) + prevManual.reduce((sum, inc) => sum + inc.amount, 0);
       const diff = total - prevTotal;
       isTrendUp = diff >= 0;
       if (prevTotal > 0) {
@@ -99,7 +107,7 @@ const Overview = () => {
     }
 
     return { total, count, label, comparison, isTrendUp };
-  }, [invoices, timeframe, selectedDate, selectedMonth, selectedYear]);
+  }, [invoices, income, timeframe, selectedDate, selectedMonth, selectedYear]);
 
   // Overall counts (independent of selector)
   const totalMembersCount = members.length;

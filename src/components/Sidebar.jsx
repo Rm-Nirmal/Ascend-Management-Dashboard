@@ -34,9 +34,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
     
-    // Regular admin can only access members, registrations, access, employees
+    // Regular admin can only access members, registrations, access
     if (currentUser.role === 'admin') {
-      return ['members', 'registrations', 'access', 'employees'].includes(item.id);
+      return ['members', 'registrations', 'access'].includes(item.id);
     }
     
     // Super admin can access everything

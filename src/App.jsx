@@ -170,7 +170,7 @@ const DashboardContentShell = () => {
   // Security Gate: Redirect standard admin to members if they try to access super admin tabs
   const isAllowedTab = (tab) => {
     if (currentUser.role === 'super_admin') return true;
-    return ['members', 'registrations', 'access', 'employees'].includes(tab);
+    return ['members', 'registrations', 'access'].includes(tab);
   };
 
   const resolvedTab = isAllowedTab(activeTab) ? activeTab : 'members';

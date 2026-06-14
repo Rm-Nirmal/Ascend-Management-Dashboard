@@ -376,6 +376,9 @@ const Finance = () => {
   // Exports Tab State
   const [exportCustomRange, setExportCustomRange] = useState({ startDate: '', endDate: '' });
 
+  // Recent Transactions date filter state
+  const [txDateFilter, setTxDateFilter] = useState('');
+
   // Expense Categories List
   const expenseCategories = ['Rent', 'Electricity', 'Water', 'Internet', 'Salary', 'Equipment', 'Maintenance', 'Marketing', 'Other'];
   const userExpenseCategories = expenseCategories.filter(cat => cat !== 'Salary');
@@ -494,7 +497,7 @@ const Finance = () => {
 
   // Unified Recent Transactions List
   const recentTransactions = useMemo(() => {
-    const trans = [];
+    let trans = [];
     
     // Paid invoices (Membership payments)
     invoices.forEach(inv => {
@@ -534,10 +537,17 @@ const Finance = () => {
       });
     });
     
+    // Filter by specific date if selected
+    if (txDateFilter) {
+      trans = trans.filter(tx => tx.date === txDateFilter);
+    }
+    
     // Sort descending by date
     trans.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return trans.slice(0, 10);
-  }, [invoices, income, expenses]);
+    
+    // Show all matching when filtered, otherwise default to top 10
+    return txDateFilter ? trans : trans.slice(0, 10);
+  }, [invoices, income, expenses, txDateFilter]);
 
   // ─── 3. INCOME TAB FILTERING & MERGING ──────────────────────────────
 
@@ -1449,58 +1459,82 @@ const Finance = () => {
               </div>
             </div>
 
-            {/* Recent transactions list */}
-            <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '1.5rem 1.5rem 0.5rem 1.5rem' }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CheckCircle size={16} /> Recent Transactions Table
-                </h3>
-              </div>
-              <div className="table-container">
-                <table className="dashboard-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Type</th>
-                      <th>Description</th>
-                      <th>Category</th>
-                      <th style={{ textAlign: 'right' }}>Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentTransactions.map((tx, idx) => (
-                      <tr key={idx}>
-                        <td>{tx.date}</td>
-                        <td>
-                          <span className={`badge ${tx.type === 'Income' ? 'badge-success' : 'badge-danger'}`} style={{
-                            padding: '0.2rem 0.5rem',
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            borderRadius: '4px',
-                            background: tx.type === 'Income' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
-                            border: `1px solid ${tx.type === 'Income' ? 'rgba(255,255,255,0.2)' : 'var(--border-color)'}`,
-                            color: tx.type === 'Income' ? '#fff' : 'var(--text-muted)'
-                          }}>
-                            {tx.type}
-                          </span>
-                        </td>
-                        <td style={{ color: '#fff', fontWeight: 500 }}>{tx.description}</td>
-                        <td style={{ color: 'var(--text-muted)' }}>{tx.category}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: tx.type === 'Income' ? '#fff' : 'var(--text-muted)' }}>
-                          {tx.type === 'Income' ? '+' : '-'} LKR {tx.amount.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                    {recentTransactions.length === 0 && (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No transactions found.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+          </div>
+
+          {/* Recent transactions list (Full Width) */}
+          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '1.5rem 1.5rem 0.5rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <h3 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CheckCircle size={18} style={{ color: 'var(--color-primary)' }} /> Recent Transactions Table
+              </h3>
+
+              {/* Date Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Filter by Date:</span>
+                <input
+                  type="date"
+                  className="glass-input"
+                  style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', width: '140px', outline: 'none' }}
+                  value={txDateFilter}
+                  onChange={(e) => setTxDateFilter(e.target.value)}
+                />
+                {txDateFilter && (
+                  <button 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
+                    onClick={() => setTxDateFilter('')}
+                  >
+                    Clear Filter
+                  </button>
+                )}
               </div>
             </div>
-
+            
+            <div className="table-container" style={{ borderTop: '1px solid var(--border-color)', marginTop: '0.5rem' }}>
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th style={{ textAlign: 'right' }}>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentTransactions.map((tx, idx) => (
+                    <tr key={idx}>
+                      <td>{tx.date}</td>
+                      <td>
+                        <span className={`badge ${tx.type === 'Income' ? 'badge-success' : 'badge-danger'}`} style={{
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          borderRadius: '4px',
+                          background: tx.type === 'Income' ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)',
+                          border: `1px solid ${tx.type === 'Income' ? 'rgba(255,255,255,0.2)' : 'var(--border-color)'}`,
+                          color: tx.type === 'Income' ? '#fff' : 'var(--text-muted)'
+                        }}>
+                          {tx.type}
+                        </span>
+                      </td>
+                      <td style={{ color: '#fff', fontWeight: 500 }}>{tx.description}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{tx.category}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: tx.type === 'Income' ? '#fff' : 'var(--text-muted)' }}>
+                        {tx.type === 'Income' ? '+' : '-'} LKR {tx.amount.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                  {recentTransactions.length === 0 && (
+                    <tr>
+                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                        No transactions found for the selected date.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
         </div>
