@@ -94,23 +94,6 @@ const Employees = () => {
     return Array.from(roles);
   }, [activeEmployees]);
 
-  // Release payroll simulation
-  const handleReleaseSalary = async (emp) => {
-    const today = new Date();
-    // Calculate next month's salary date (e.g. 25th of next month)
-    const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 25);
-    const nextMonthStr = nextMonthDate.toISOString().split('T')[0];
-
-    try {
-      await updateEmployee(emp.id, {
-        next_salary_date: nextMonthStr
-      });
-      showToast(`Salary of LKR ${parseFloat(emp.salary).toLocaleString('en-US')} released successfully to ${emp.full_name}! Next payroll scheduled for ${nextMonthStr}.`, 'success');
-    } catch (err) {
-      showToast('Failed to release salary. Please try again.', 'error');
-    }
-  };
-
   // Add employee directly
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -419,14 +402,6 @@ const Employees = () => {
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ fontSize: '0.7rem', padding: '0.4rem 0.65rem' }}
-                              onClick={() => handleReleaseSalary(emp)}
-                              title="Release payroll transfer"
-                            >
-                              Release Salary
-                            </button>
                             <button 
                               className="btn btn-secondary" 
                               style={{ padding: '0.4rem' }}

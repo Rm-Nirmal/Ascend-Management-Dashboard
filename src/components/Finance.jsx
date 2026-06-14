@@ -7,7 +7,7 @@ import {
 import { 
   PieChart as LucidePieChart, DollarSign, TrendingUp, Plus, Edit2, Trash2, Eye, X, 
   Calendar, Filter, Search, FileDown, CheckCircle, ArrowUpRight, ArrowDownRight, 
-  AlertCircle, UploadCloud, Info, Check, Trash
+  AlertCircle, UploadCloud, Info, Check, Trash, Users, Printer, FileText
 } from 'lucide-react';
 import { uploadToCloudinary } from '../lib/cloudinary';
 
@@ -60,11 +60,273 @@ const Finance = () => {
     deleteExpense,
     addIncome,
     showToast,
-    members
+    members,
+    employees,
+    updateEmployee
   } = useDashboard();
 
   // Navigation states
   const [activeFinanceTab, setActiveFinanceTab] = useState('overview');
+
+  // Payroll Tab States
+  const [payrollSubTab, setPayrollSubTab] = useState('directory'); // 'directory', 'history', 'analytics'
+  const [payrollSearch, setPayrollSearch] = useState('');
+  const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
+  const [processingEmployee, setProcessingEmployee] = useState(null);
+  const [isPayslipModalOpen, setIsPayslipModalOpen] = useState(false);
+  const [selectedPayslip, setSelectedPayslip] = useState(null);
+
+  const [payrollForm, setPayrollForm] = useState({
+    month: new Date().toLocaleString('en-US', { month: 'long' }),
+    year: new Date().getFullYear().toString(),
+    basicSalary: '',
+    bonus: '0',
+    overtime: '0',
+    allowance: '0',
+    epf: '0',
+    tax: '0',
+    deduction: '0',
+    paymentMethod: 'bank_transfer',
+    reference: '',
+    date: new Date().toISOString().split('T')[0],
+    remarks: '',
+    nextSalaryDate: ''
+  });
+
+  const payrollMetrics = useMemo(() => {
+    if (!employees) return { totalStaff: 0, monthlyCommitment: 0, paidThisMonth: 0, pendingThisMonth: 0, activeStaff: [], paidSalaries: [] };
+    const activeStaff = employees.filter(emp => emp.status !== 'terminated');
+    const totalStaff = activeStaff.length;
+    const monthlyCommitment = activeStaff.reduce((sum, emp) => sum + (parseFloat(emp.salary) || 0), 0);
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const paidSalaries = expenses.filter(exp => 
+      exp.category === 'Salary' && 
+      exp.date && 
+      isWithinRange(exp.date, startOfMonth, endOfMonth)
+    );
+    const paidThisMonth = paidSalaries.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
+
+    // Find employees who have NOT been paid this month
+    const pendingStaff = activeStaff.filter(emp => {
+      const hasBeenPaid = paidSalaries.some(exp => exp.employee_id === emp.id || exp.title.includes(emp.full_name));
+      return !hasBeenPaid;
+    });
+    const pendingThisMonth = pendingStaff.reduce((sum, emp) => sum + (parseFloat(emp.salary) || 0), 0);
+
+    return {
+      totalStaff,
+      monthlyCommitment,
+      paidThisMonth,
+      pendingThisMonth,
+      activeStaff,
+      paidSalaries
+    };
+  }, [employees, expenses]);
+
+  const payrollHistory = useMemo(() => {
+    return expenses
+      .filter(exp => exp.category === 'Salary')
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [expenses]);
+
+  const filteredPayrollStaff = useMemo(() => {
+    if (!payrollMetrics.activeStaff) return [];
+    return payrollMetrics.activeStaff.filter(emp => 
+      emp.full_name.toLowerCase().includes(payrollSearch.toLowerCase()) ||
+      emp.role.toLowerCase().includes(payrollSearch.toLowerCase())
+    );
+  }, [payrollMetrics.activeStaff, payrollSearch]);
+
+  const filteredPayrollHistory = useMemo(() => {
+    return payrollHistory.filter(exp => 
+      (exp.employee_name && exp.employee_name.toLowerCase().includes(payrollSearch.toLowerCase())) ||
+      (exp.period && exp.period.toLowerCase().includes(payrollSearch.toLowerCase())) ||
+      (exp.title && exp.title.toLowerCase().includes(payrollSearch.toLowerCase()))
+    );
+  }, [payrollHistory, payrollSearch]);
+
+  const payrollRoleDistribution = useMemo(() => {
+    if (!payrollMetrics.activeStaff) return [];
+    const roles = {};
+    payrollMetrics.activeStaff.forEach(emp => {
+      roles[emp.role] = (roles[emp.role] || 0) + (parseFloat(emp.salary) || 0);
+    });
+    const COLORS = ['#f43f5e', '#f59e0b', '#06b6d4', '#8b5cf6', '#10b981', '#ec4899', '#ef4444', '#14b8a6', '#71717a'];
+    return Object.keys(roles).map((role, idx) => ({
+      name: role,
+      value: roles[role],
+      color: COLORS[idx % COLORS.length]
+    })).sort((a, b) => b.value - a.value);
+  }, [payrollMetrics.activeStaff]);
+
+  const payrollTrendData = useMemo(() => {
+    const data = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+      const end = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999);
+      const monthName = targetDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      
+      const monthlyPaidSalaries = expenses.filter(exp => 
+        exp.category === 'Salary' && 
+        exp.date && 
+        isWithinRange(exp.date, start, end)
+      );
+      const totalAmount = monthlyPaidSalaries.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
+      data.push({
+        name: monthName,
+        Payroll: totalAmount
+      });
+    }
+    return data;
+  }, [expenses]);
+
+
+  const getEmployeeLastPaidDate = (empId, empName) => {
+    const records = payrollHistory.filter(exp => exp.employee_id === empId || exp.title.includes(empName));
+    if (records.length === 0) return 'Never';
+    return records[0].date;
+  };
+
+  const isEmployeePaidThisMonth = (empId, empName) => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return expenses.some(exp => 
+      exp.category === 'Salary' && 
+      (exp.employee_id === empId || exp.title.includes(empName)) &&
+      exp.date && 
+      isWithinRange(exp.date, startOfMonth, endOfMonth)
+    );
+  };
+
+  const openProcessPayroll = (emp) => {
+    setProcessingEmployee(emp);
+    const today = new Date();
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 25);
+    const nextMonthStr = nextMonth.toISOString().split('T')[0];
+
+    const basic = parseFloat(emp.salary) || 0;
+    const defaultEpf = Math.round(basic * 0.08);
+
+    setPayrollForm({
+      month: today.toLocaleString('en-US', { month: 'long' }),
+      year: today.getFullYear().toString(),
+      basicSalary: emp.salary.toString(),
+      bonus: '0',
+      overtime: '0',
+      allowance: '0',
+      epf: defaultEpf.toString(),
+      tax: '0',
+      deduction: '0',
+      paymentMethod: 'bank_transfer',
+      reference: '',
+      date: today.toISOString().split('T')[0],
+      remarks: '',
+      nextSalaryDate: nextMonthStr
+    });
+    setIsProcessPayrollOpen(true);
+  };
+
+  const handleProcessPayrollSubmit = async (e) => {
+    e.preventDefault();
+    if (!processingEmployee) return;
+
+    const basic = parseFloat(payrollForm.basicSalary) || 0;
+    const bonus = parseFloat(payrollForm.bonus) || 0;
+    const overtime = parseFloat(payrollForm.overtime) || 0;
+    const allowance = parseFloat(payrollForm.allowance) || 0;
+    const epf = parseFloat(payrollForm.epf) || 0;
+    const tax = parseFloat(payrollForm.tax) || 0;
+    const deduction = parseFloat(payrollForm.deduction) || 0;
+
+    const netPayable = basic + bonus + overtime + allowance - epf - tax - deduction;
+
+    const payrollExpense = {
+      title: `Salary Payout - ${processingEmployee.full_name} (${payrollForm.month} ${payrollForm.year})`,
+      description: `Basic: LKR ${basic.toLocaleString()}, Allowances: LKR ${(bonus + overtime + allowance).toLocaleString()}, Deductions: LKR ${(epf + tax + deduction).toLocaleString()}`,
+      category: 'Salary',
+      amount: netPayable,
+      date: payrollForm.date,
+      payment_method: payrollForm.paymentMethod,
+      notes: payrollForm.remarks || `Payroll payment for ${processingEmployee.full_name}`,
+      is_payroll: true,
+      employee_id: processingEmployee.id,
+      employee_name: processingEmployee.full_name,
+      employee_role: processingEmployee.role,
+      basic_salary: basic,
+      bonus_pay: bonus,
+      overtime_pay: overtime,
+      allowance_pay: allowance,
+      epf_deduction: epf,
+      tax_deduction: tax,
+      other_deductions: deduction,
+      net_salary: netPayable,
+      period: `${payrollForm.month} ${payrollForm.year}`,
+      reference: payrollForm.reference
+    };
+
+    try {
+      const res = await addExpense(payrollExpense);
+      if (res.success) {
+        await updateEmployee(processingEmployee.id, {
+          next_salary_date: payrollForm.nextSalaryDate
+        });
+        showToast(`Payroll processed successfully for ${processingEmployee.full_name}! Net salary LKR ${netPayable.toLocaleString()} paid.`, 'success');
+        setIsProcessPayrollOpen(false);
+      } else {
+        showToast(`Failed to process payroll: ${res.message}`, 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error processing payroll.', 'error');
+    }
+  };
+
+  const numberToWords = (num) => {
+    const a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    const b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    
+    if ((num = Math.round(num)) === 0) return 'Zero';
+    
+    let n = ('000000000' + num).substr(-9);
+    let str = '';
+    
+    let millions = parseInt(n.substr(0, 3));
+    if (millions !== 0) {
+      str += (millions < 20 ? a[millions] : b[Math.floor(millions/10)] + ' ' + a[millions%10]) + 'Million ';
+    }
+    
+    let thousands = parseInt(n.substr(3, 3));
+    if (thousands !== 0) {
+      if (thousands < 20) {
+        str += a[thousands] + 'Thousand ';
+      } else {
+        str += b[Math.floor(thousands/10)] + ' ' + a[thousands%10] + 'Thousand ';
+      }
+    }
+    
+    let hundreds = parseInt(n.substr(6, 1));
+    if (hundreds !== 0) {
+      str += a[hundreds] + 'Hundred ';
+    }
+    
+    let tens = parseInt(n.substr(7, 2));
+    if (tens !== 0) {
+      if (tens < 20) {
+        str += a[tens];
+      } else {
+        str += b[Math.floor(tens/10)] + ' ' + a[tens%10];
+      }
+    }
+    
+    return str.trim() + ' LKR Only';
+  };
 
   // Overview Tab Timeline: 'monthly' (fixed for charts comparison)
   const [selectedOverviewPeriod, setSelectedOverviewPeriod] = useState('month');
@@ -116,6 +378,7 @@ const Finance = () => {
 
   // Expense Categories List
   const expenseCategories = ['Rent', 'Electricity', 'Water', 'Internet', 'Salary', 'Equipment', 'Maintenance', 'Marketing', 'Other'];
+  const userExpenseCategories = expenseCategories.filter(cat => cat !== 'Salary');
   const incomeSources = ['Registration Fees', 'Personal Training Sessions', 'Product Sales', 'Other'];
 
   // ─── 1. OVERVIEW METRICS CALCULATIONS ────────────────────────────────
@@ -331,7 +594,7 @@ const Finance = () => {
 
   const filteredExpensesList = useMemo(() => {
     const { start, end } = getStartAndEndOfTimeframe(expenseTimeframe, expenseCustomRange);
-    let list = expenses.filter(exp => exp.date && isWithinRange(exp.date, start, end));
+    let list = expenses.filter(exp => exp.date && isWithinRange(exp.date, start, end) && exp.category !== 'Salary');
     
     if (expenseCategoryFilter !== 'All') {
       list = list.filter(exp => exp.category === expenseCategoryFilter);
@@ -981,7 +1244,7 @@ const Finance = () => {
 
       {/* ─── SUB-MENU / NAVIGATION TABS ───────────────────────────────── */}
       <div className="tab-menu" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-        {['overview', 'income', 'expenses', 'reports', 'exports'].map((tab) => (
+        {['overview', 'income', 'expenses', 'payroll', 'reports', 'exports'].map((tab) => (
           <button
             key={tab}
             className={`btn ${activeFinanceTab === tab ? 'btn-primary' : 'btn-secondary'}`}
@@ -1415,7 +1678,7 @@ const Finance = () => {
                   onChange={(e) => setExpenseCategoryFilter(e.target.value)}
                 >
                   <option value="All">All Categories</option>
-                  {expenseCategories.map(cat => (
+                  {userExpenseCategories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -1815,6 +2078,335 @@ const Finance = () => {
         </div>
       )}
 
+      {/* ─── TAB CONTENT: PAYROLL ────────────────────────────────────── */}
+      {activeFinanceTab === 'payroll' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          {/* Payroll Dashboard Metrics */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+            
+            {/* Metric Card: Total Staff */}
+            <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Users size={20} style={{ color: '#8b5cf6' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Active Employees</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, fontFamily: 'var(--font-display)', margin: '0.1rem 0' }}>{payrollMetrics.totalStaff}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Staff with active profiles</div>
+              </div>
+            </div>
+
+            {/* Metric Card: Monthly Commitment */}
+            <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <DollarSign size={20} style={{ color: '#3b82f6' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Monthly Budget</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-display)', margin: '0.1rem 0' }}>LKR {payrollMetrics.monthlyCommitment.toLocaleString()}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Staff base salary commitments</div>
+              </div>
+            </div>
+
+            {/* Metric Card: Paid This Month */}
+            <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <TrendingUp size={20} style={{ color: '#10b981' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Released This Month</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-display)', margin: '0.1rem 0' }}>LKR {payrollMetrics.paidThisMonth.toLocaleString()}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Paid in {new Date().toLocaleString('en-US', { month: 'long' })}</div>
+              </div>
+            </div>
+
+            {/* Metric Card: Pending Payouts */}
+            <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <AlertCircle size={20} style={{ color: '#f59e0b' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pending Payroll</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-display)', margin: '0.1rem 0' }}>LKR {payrollMetrics.pendingThisMonth.toLocaleString()}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Outstanding salary payout</div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Section card with sub-tabs */}
+          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            
+            {/* Header & Sub Tabs */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {[
+                  { id: 'directory', label: 'Staff Directory' },
+                  { id: 'history', label: 'Payroll History' },
+                  { id: 'analytics', label: 'Reports & Analytics' }
+                ].map(sub => (
+                  <button
+                    key={sub.id}
+                    className={`btn ${payrollSubTab === sub.id ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem' }}
+                    onClick={() => {
+                      setPayrollSubTab(sub.id);
+                      setPayrollSearch(''); // reset search on tab change
+                    }}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sub-tab Search */}
+              {payrollSubTab !== 'analytics' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: '0.2rem 0.75rem', borderRadius: '8px', width: '260px' }}>
+                  <Search size={14} style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    className="glass-input"
+                    style={{ border: 'none', background: 'transparent', padding: '0.25rem 0', fontSize: '0.8rem', width: '100%' }}
+                    placeholder={payrollSubTab === 'directory' ? 'Search employee name or role...' : 'Search paid salaries...'}
+                    value={payrollSearch}
+                    onChange={(e) => setPayrollSearch(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Sub-Tab 1: Staff Directory */}
+            {payrollSubTab === 'directory' && (
+              <div className="table-container">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Job Role</th>
+                      <th>Monthly Salary</th>
+                      <th>Last Paid Date</th>
+                      <th>Next Pay Date</th>
+                      <th>Current Month Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPayrollStaff.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                          No employees found matching the search criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPayrollStaff.map(emp => {
+                        const paidThisMonth = isEmployeePaidThisMonth(emp.id, emp.full_name);
+                        const lastPaid = getEmployeeLastPaidDate(emp.id, emp.full_name);
+                        return (
+                          <tr key={emp.id}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{
+                                  width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)',
+                                  border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontWeight: 700, color: 'var(--color-primary)', fontSize: '0.8rem'
+                                }}>
+                                  {emp.full_name.charAt(0)}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{emp.full_name}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{emp.email}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: '0.85rem' }}>{emp.role}</span>
+                            </td>
+                            <td style={{ fontWeight: 700 }}>
+                              LKR {parseFloat(emp.salary).toLocaleString()}
+                            </td>
+                            <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                              {lastPaid === 'Never' ? 'Never' : lastPaid}
+                            </td>
+                            <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <Calendar size={12} /> {emp.next_salary_date}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`badge badge-${paidThisMonth ? 'active' : 'frozen'}`} style={{ fontSize: '0.65rem' }}>
+                                {paidThisMonth ? 'Paid' : 'Pending'}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className={`btn ${paidThisMonth ? 'btn-secondary' : 'btn-primary'}`}
+                                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                                onClick={() => openProcessPayroll(emp)}
+                              >
+                                {paidThisMonth ? 'Repay / Process' : 'Process Salary'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Sub-Tab 2: Payroll History */}
+            {payrollSubTab === 'history' && (
+              <div className="table-container">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Pay Date</th>
+                      <th>Employee Name</th>
+                      <th>Payroll Period</th>
+                      <th>Basic Salary</th>
+                      <th>Net Paid</th>
+                      <th>Payment Method</th>
+                      <th>Reference ID</th>
+                      <th style={{ textAlign: 'right' }}>Payslip</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPayrollHistory.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                          No payroll payouts recorded matching the search criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPayrollHistory.map(pay => (
+                        <tr key={pay.id}>
+                          <td style={{ fontSize: '0.85rem' }}>{pay.date}</td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{pay.employee_name || 'Legacy Payout'}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{pay.employee_role || 'Staff'}</div>
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{pay.period || 'N/A'}</span>
+                          </td>
+                          <td style={{ fontSize: '0.85rem' }}>
+                            LKR {(pay.basic_salary || pay.amount).toLocaleString()}
+                          </td>
+                          <td style={{ fontWeight: 700, color: 'var(--color-primary)' }}>
+                            LKR {pay.amount.toLocaleString()}
+                          </td>
+                          <td style={{ fontSize: '0.85rem', textTransform: 'capitalize' }}>
+                            {pay.payment_method?.replace('_', ' ') || 'Bank Wire'}
+                          </td>
+                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            {pay.reference || pay.id.substring(0, 10) + '...'}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              className="btn btn-secondary"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
+                              onClick={() => {
+                                setSelectedPayslip(pay);
+                                setIsPayslipModalOpen(true);
+                              }}
+                            >
+                              <FileText size={12} /> Payslip
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Sub-Tab 3: Analytics & Reports */}
+            {payrollSubTab === 'analytics' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  
+                  {/* Chart 1: Role Salary Distribution */}
+                  <div className="glass-card">
+                    <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 700, marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                      Payroll Budget by Department/Role
+                    </h4>
+                    {payrollRoleDistribution.length === 0 ? (
+                      <div style={{ height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                        No data available
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={250}>
+                        <PieChart>
+                          <Pie
+                            data={payrollRoleDistribution}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={75}
+                            paddingAngle={4}
+                            dataKey="value"
+                          >
+                            {payrollRoleDistribution.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            formatter={(val) => `LKR ${val.toLocaleString()}`} 
+                            contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid var(--border-color)' }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: '0.75rem', marginTop: '10px' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                  {/* Chart 2: Payroll Trend */}
+                  <div className="glass-card">
+                    <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 700, marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                      Payroll Payout Trend (Last 6 Months)
+                    </h4>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={payrollTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                        <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
+                        <YAxis stroke="var(--text-muted)" fontSize={11} formatter={(val) => `LKR ${val.toLocaleString()}`} />
+                        <Tooltip 
+                          formatter={(val) => `LKR ${val.toLocaleString()}`} 
+                          contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid var(--border-color)' }}
+                        />
+                        <Bar dataKey="Payroll" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                </div>
+
+                {/* Payroll Export Card */}
+                <div className="glass-card" style={{ background: 'rgba(255,255,255,0.01)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem' }}>Full Payroll Audit Log</h4>
+                      <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Generate a printed audit log of all employee salary transactions for tax purposes.</p>
+                    </div>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem' }}
+                      onClick={() => window.print()}
+                    >
+                      <Printer size={14} /> Print Payroll Summary
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+
+        </div>
+      )}
+
       {/* ─── ADD INCOME MODAL ────────────────────────────────────────── */}
       {isAddIncomeModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
@@ -1970,7 +2562,7 @@ const Finance = () => {
                     value={expenseForm.category}
                     onChange={(e) => setExpenseForm(prev => ({ ...prev, category: e.target.value }))}
                   >
-                    {expenseCategories.map(cat => (
+                    {userExpenseCategories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
@@ -2098,6 +2690,452 @@ const Finance = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PROCESS PAYROLL MODAL ────────────────────────────────────── */}
+      {isProcessPayrollOpen && processingEmployee && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: '720px', maxHeight: '90vh', overflowY: 'auto', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0 }}>Process Staff Payroll</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Employee: {processingEmployee.full_name} ({processingEmployee.role})</span>
+              </div>
+              <X size={18} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setIsProcessPayrollOpen(false)} />
+            </div>
+
+            <form onSubmit={handleProcessPayrollSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Payroll Period & Basic Info */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Payroll Month *</label>
+                  <select
+                    className="glass-select"
+                    style={{ width: '100%' }}
+                    value={payrollForm.month}
+                    onChange={(e) => setPayrollForm(prev => ({ ...prev, month: e.target.value }))}
+                  >
+                    {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Payroll Year *</label>
+                  <select
+                    className="glass-select"
+                    style={{ width: '100%' }}
+                    value={payrollForm.year}
+                    onChange={(e) => setPayrollForm(prev => ({ ...prev, year: e.target.value }))}
+                  >
+                    {['2025', '2026', '2027', '2028', '2029', '2030'].map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Basic Monthly Salary (LKR) *</label>
+                  <input
+                    type="number"
+                    required
+                    className="glass-input"
+                    value={payrollForm.basicSalary}
+                    onChange={(e) => setPayrollForm(prev => ({ ...prev, basicSalary: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Earnings vs Deductions */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', minWidth: 0 }}>
+                
+                {/* Column 1: Additional Earnings */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.35rem', color: '#10b981' }}>Additional Earnings</h4>
+                  
+                  <div>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Bonus / Incentives (LKR)</label>
+                    <input
+                      type="number"
+                      className="glass-input"
+                      value={payrollForm.bonus}
+                      onChange={(e) => setPayrollForm(prev => ({ ...prev, bonus: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Overtime / Commission (LKR)</label>
+                    <input
+                      type="number"
+                      className="glass-input"
+                      value={payrollForm.overtime}
+                      onChange={(e) => setPayrollForm(prev => ({ ...prev, overtime: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Transport & Other Allowances (LKR)</label>
+                    <input
+                      type="number"
+                      className="glass-input"
+                      value={payrollForm.allowance}
+                      onChange={(e) => setPayrollForm(prev => ({ ...prev, allowance: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Column 2: Deductions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.85rem', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.35rem', color: '#f43f5e' }}>Payroll Deductions</h4>
+                  
+                  <div>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>EPF Employee contribution (8%)</label>
+                    <input
+                      type="number"
+                      className="glass-input"
+                      value={payrollForm.epf}
+                      onChange={(e) => setPayrollForm(prev => ({ ...prev, epf: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>PAYE Income Tax (LKR)</label>
+                    <input
+                      type="number"
+                      className="glass-input"
+                      value={payrollForm.tax}
+                      onChange={(e) => setPayrollForm(prev => ({ ...prev, tax: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Unpaid Leaves / Penalties (LKR)</label>
+                    <input
+                      type="number"
+                      className="glass-input"
+                      value={payrollForm.deduction}
+                      onChange={(e) => setPayrollForm(prev => ({ ...prev, deduction: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Payout Details & Scheduling */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Payment Method *</label>
+                  <select
+                    className="glass-select"
+                    style={{ width: '100%' }}
+                    value={payrollForm.paymentMethod}
+                    onChange={(e) => setPayrollForm(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                  >
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cash">Cash</option>
+                    <option value="cheque">Cheque</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Reference / Receipt ID</label>
+                  <input
+                    type="text"
+                    className="glass-input"
+                    placeholder="e.g. TXN-1294819"
+                    value={payrollForm.reference}
+                    onChange={(e) => setPayrollForm(prev => ({ ...prev, reference: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Payment Date *</label>
+                  <input
+                    type="date"
+                    required
+                    className="glass-input"
+                    value={payrollForm.date}
+                    onChange={(e) => setPayrollForm(prev => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Next Payroll Date *</label>
+                  <input
+                    type="date"
+                    required
+                    className="glass-input"
+                    value={payrollForm.nextSalaryDate}
+                    onChange={(e) => setPayrollForm(prev => ({ ...prev, nextSalaryDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Remarks */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Remarks / Payslip Notes</label>
+                <textarea
+                  className="glass-input"
+                  style={{ height: '45px', resize: 'none' }}
+                  placeholder="Additional notes to be shown on the printable payslip..."
+                  value={payrollForm.remarks}
+                  onChange={(e) => setPayrollForm(prev => ({ ...prev, remarks: e.target.value }))}
+                />
+              </div>
+
+              {/* Real-time Calculation & Net Salary Display */}
+              <div style={{ 
+                background: 'linear-gradient(90deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1))',
+                border: '1px solid rgba(16,185,129,0.2)',
+                borderRadius: '8px', padding: '1rem',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Real-Time Calculation Summary</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    Gross (LKR {( (parseFloat(payrollForm.basicSalary) || 0) + (parseFloat(payrollForm.bonus) || 0) + (parseFloat(payrollForm.overtime) || 0) + (parseFloat(payrollForm.allowance) || 0) ).toLocaleString()})
+                    - Deductions (LKR {( (parseFloat(payrollForm.epf) || 0) + (parseFloat(payrollForm.tax) || 0) + (parseFloat(payrollForm.deduction) || 0) ).toLocaleString()})
+                  </span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>NET PAYABLE AMOUNT</span>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                    LKR {(
+                      (parseFloat(payrollForm.basicSalary) || 0) +
+                      (parseFloat(payrollForm.bonus) || 0) +
+                      (parseFloat(payrollForm.overtime) || 0) +
+                      (parseFloat(payrollForm.allowance) || 0) -
+                      (parseFloat(payrollForm.epf) || 0) -
+                      (parseFloat(payrollForm.tax) || 0) -
+                      (parseFloat(payrollForm.deduction) || 0)
+                    ).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer actions */}
+              <div style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flexGrow: 1 }}>
+                  Release Salary & Update Date
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsProcessPayrollOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PRINTABLE PAYSLIP RECEIPT MODAL ───────────────────────────── */}
+      {isPayslipModalOpen && selectedPayslip && (
+        <div className="print-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
+          
+          {/* Print CSS Rules injected specifically inside the modal */}
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              .print-modal-overlay {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                backdrop-filter: none !important;
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+              .print-modal-content {
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                background: white !important;
+                color: black !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 10px !important;
+                margin: 0 !important;
+              }
+              .print-modal-content * {
+                visibility: visible !important;
+                color: black !important;
+                border-color: #ccc !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
+
+          <div className="glass-card print-modal-content" style={{ width: '100%', maxWidth: '650px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', padding: '2rem' }}>
+            
+            {/* Header: Gym Info (Professional Payslip Look) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>ASCEND FITNESS CENTER</h2>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>HQ Operations - Colombo, Sri Lanka</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Email: finance@ascend.lk | Tel: +94 11 234 5678</span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', letterSpacing: '0.05em', color: '#fff' }}>PAYSLIP & RECEIPT</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Original Copy</span>
+              </div>
+            </div>
+
+            {/* Employee details grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+              <div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Employee ID:</span> <span style={{ fontWeight: 600 }}>{selectedPayslip.employee_id?.substring(0, 12) || 'N/A'}</span></div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Employee Name:</span> <span style={{ fontWeight: 600 }}>{selectedPayslip.employee_name || 'Legacy Record'}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Designation (Role):</span> <span style={{ fontWeight: 600 }}>{selectedPayslip.employee_role || 'Staff Member'}</span></div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Payroll Period:</span> <span style={{ fontWeight: 600 }}>{selectedPayslip.period || 'Monthly'}</span></div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Payment Date:</span> <span style={{ fontWeight: 600 }}>{selectedPayslip.date}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Payment Mode:</span> <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{selectedPayslip.payment_method?.replace('_', ' ') || 'Bank wire'}</span></div>
+              </div>
+            </div>
+
+            {/* Earnings & Deductions Breakdown Table */}
+            <div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', fontWeight: 700 }}>
+                    <th style={{ padding: '0.5rem' }}>Description</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>Earnings (LKR)</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right' }}>Deductions (LKR)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                    <td style={{ padding: '0.5rem' }}>Basic Salary</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>{(selectedPayslip.basic_salary || selectedPayslip.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>-</td>
+                  </tr>
+                  {selectedPayslip.bonus_pay > 0 && (
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <td style={{ padding: '0.5rem' }}>Performance Bonus / Incentives</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{parseFloat(selectedPayslip.bonus_pay).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>-</td>
+                    </tr>
+                  )}
+                  {selectedPayslip.overtime_pay > 0 && (
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <td style={{ padding: '0.5rem' }}>Overtime / Commission</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{parseFloat(selectedPayslip.overtime_pay).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>-</td>
+                    </tr>
+                  )}
+                  {selectedPayslip.allowance_pay > 0 && (
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <td style={{ padding: '0.5rem' }}>Transport & Allowances</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{parseFloat(selectedPayslip.allowance_pay).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>-</td>
+                    </tr>
+                  )}
+                  {selectedPayslip.epf_deduction > 0 && (
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <td style={{ padding: '0.5rem' }}>EPF Employee contribution (8%)</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>-</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{parseFloat(selectedPayslip.epf_deduction).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  )}
+                  {selectedPayslip.tax_deduction > 0 && (
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <td style={{ padding: '0.5rem' }}>PAYE Income Tax</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>-</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{parseFloat(selectedPayslip.tax_deduction).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  )}
+                  {selectedPayslip.other_deductions > 0 && (
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <td style={{ padding: '0.5rem' }}>Unpaid Leave & Penalties</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>-</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{parseFloat(selectedPayslip.other_deductions).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Calculations Totals Block */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', fontSize: '0.8rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span>Total Earnings:</span>
+                  <span style={{ fontWeight: 600 }}>
+                    LKR {(
+                      (parseFloat(selectedPayslip.basic_salary) || selectedPayslip.amount) +
+                      (parseFloat(selectedPayslip.bonus_pay) || 0) +
+                      (parseFloat(selectedPayslip.overtime_pay) || 0) +
+                      (parseFloat(selectedPayslip.allowance_pay) || 0)
+                    ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Total Deductions:</span>
+                  <span style={{ fontWeight: 600 }}>
+                    LKR {(
+                      (parseFloat(selectedPayslip.epf_deduction) || 0) +
+                      (parseFloat(selectedPayslip.tax_deduction) || 0) +
+                      (parseFloat(selectedPayslip.other_deductions) || 0)
+                    ).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>NET PAYABLE RELEASED</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)' }}>
+                  LKR {selectedPayslip.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            {/* Net Salary in Words */}
+            <div style={{ fontSize: '0.75rem', fontStyle: 'italic', background: 'rgba(255,255,255,0.01)', padding: '0.5rem', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.05)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Amount in Words:</span> <span style={{ fontWeight: 600 }}>{numberToWords(selectedPayslip.amount)}</span>
+            </div>
+
+            {/* Reference ID / Notes */}
+            <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '1rem', fontSize: '0.75rem' }}>
+              <div>
+                <span style={{ color: 'var(--text-muted)', display: 'block' }}>Payslip Remarks:</span>
+                <p style={{ margin: '0.2rem 0 0 0', lineHeight: 1.3 }}>{selectedPayslip.notes || 'No remarks recorded.'}</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Transaction Reference:</span>
+                <span style={{ fontWeight: 600, display: 'block', wordBreak: 'break-all' }}>{selectedPayslip.reference || selectedPayslip.id}</span>
+              </div>
+            </div>
+
+            {/* Bottom Signature area */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginTop: '2.5rem', fontSize: '0.75rem' }}>
+              <div style={{ borderTop: '1px solid var(--border-color)', textAlign: 'center', paddingTop: '0.5rem' }}>
+                <span>Employer Signature (Authorized)</span>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border-color)', textAlign: 'center', paddingTop: '0.5rem' }}>
+                <span>Employee Signature (Acknowledgment)</span>
+              </div>
+            </div>
+
+            {/* Actions for Modal */}
+            <div className="no-print" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ flexGrow: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                onClick={() => window.print()}
+              >
+                <Printer size={14} /> Print Payslip Receipt
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setIsPayslipModalOpen(false)}>
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
       )}
