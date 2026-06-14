@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer
+  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign
 } from 'lucide-react';
 
 const Members = () => {
@@ -26,6 +26,9 @@ const Members = () => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMedical, setShowMedical] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState('directory');
+  const [currentFinancialsPage, setCurrentFinancialsPage] = useState(1);
+  const financialItemsPerPage = 10;
 
   // Edit Member States
   const [showEditModal, setShowEditModal] = useState(false);
@@ -306,6 +309,63 @@ const Members = () => {
     return [...memberInvoices].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0];
   }, [selectedMember, invoices]);
 
+  // Calculate member-level financials
+  const memberFinancials = useMemo(() => {
+    return members.map(member => {
+      const memberInvoices = invoices.filter(inv => inv.member_id === member.id);
+      
+      const revenueCollected = memberInvoices
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + inv.total_amount, 0);
+        
+      const outstandingAmount = memberInvoices
+        .filter(inv => inv.status === 'open' || inv.status === 'overdue')
+        .reduce((sum, inv) => sum + inv.total_amount, 0);
+        
+      // Get latest payment date
+      const paidInvoices = memberInvoices.filter(inv => inv.status === 'paid' && inv.paid_at);
+      let lastPaymentDate = 'N/A';
+      if (paidInvoices.length > 0) {
+        const sortedPaid = [...paidInvoices].sort((a, b) => new Date(b.paid_at) - new Date(a.paid_at));
+        lastPaymentDate = new Date(sortedPaid[0].paid_at).toLocaleDateString();
+      }
+      
+      return {
+        ...member,
+        revenueCollected,
+        outstandingAmount,
+        lastPaymentDate
+      };
+    });
+  }, [members, invoices]);
+
+  const totalRevenueCollected = useMemo(() => {
+    return memberFinancials.reduce((sum, m) => sum + m.revenueCollected, 0);
+  }, [memberFinancials]);
+
+  const totalOutstandingAmount = useMemo(() => {
+    return memberFinancials.reduce((sum, m) => sum + m.outstandingAmount, 0);
+  }, [memberFinancials]);
+
+  const filteredFinancialsList = useMemo(() => {
+    return memberFinancials.filter(m => {
+      const search = searchTerm.toLowerCase();
+      return (
+        m.full_name.toLowerCase().includes(search) || 
+        m.email.toLowerCase().includes(search) || 
+        m.member_code.toLowerCase().includes(search) || 
+        m.phone.includes(search)
+      );
+    });
+  }, [memberFinancials, searchTerm]);
+
+  const totalFinancialsPages = Math.ceil(filteredFinancialsList.length / financialItemsPerPage);
+  
+  const displayedFinancials = useMemo(() => {
+    const start = (currentFinancialsPage - 1) * financialItemsPerPage;
+    return filteredFinancialsList.slice(start, start + financialItemsPerPage);
+  }, [filteredFinancialsList, currentFinancialsPage]);
+
   // Handle Add Member submit
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -410,7 +470,58 @@ const Members = () => {
         </button>
       </div>
 
-      {/* Filters bar */}
+      {/* Tab Switcher - only for Super Admin */}
+      {currentUser?.role === 'super_admin' && (
+        <div style={{ 
+          display: 'inline-flex', 
+          background: 'rgba(255, 255, 255, 0.03)', 
+          border: '1px solid var(--border-color)', 
+          padding: '0.25rem', 
+          borderRadius: '10px',
+          marginBottom: '1.5rem'
+        }}>
+          <button 
+            type="button"
+            className="btn"
+            onClick={() => setActiveSubTab('directory')}
+            style={{ 
+              padding: '0.4rem 1.25rem', 
+              fontSize: '0.8rem', 
+              fontWeight: 600,
+              background: activeSubTab === 'directory' ? 'var(--color-primary)' : 'transparent',
+              color: activeSubTab === 'directory' ? '#000' : 'var(--text-muted)',
+              borderRadius: '8px',
+              transition: 'var(--transition-fast)'
+            }}
+          >
+            DIRECTORY LIST
+          </button>
+          <button 
+            type="button"
+            className="btn"
+            onClick={() => {
+              setActiveSubTab('financials');
+              setCurrentFinancialsPage(1);
+            }}
+            style={{ 
+              padding: '0.4rem 1.25rem', 
+              fontSize: '0.8rem', 
+              fontWeight: 600,
+              background: activeSubTab === 'financials' ? 'var(--color-primary)' : 'transparent',
+              color: activeSubTab === 'financials' ? '#000' : 'var(--text-muted)',
+              borderRadius: '8px',
+              transition: 'var(--transition-fast)'
+            }}
+          >
+            REVENUE & OUTSTANDING
+          </button>
+        </div>
+      )}
+
+      {/* Conditionally render content based on activeSubTab */}
+      {activeSubTab === 'directory' ? (
+        <>
+          {/* Filters bar */}
       <div className="glass-card flex-gap-1" style={{ flexWrap: 'wrap', padding: '1rem' }}>
         {/* Search */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', flexGrow: 1, minWidth: '240px' }}>
@@ -613,6 +724,198 @@ const Members = () => {
           </div>
         )}
       </div>
+      </>
+      ) : (
+        <>
+          {/* Financial Metrics Cards */}
+          <div className="metrics-grid" style={{ marginBottom: '1.5rem' }}>
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-success)' }}>
+              <div className="metric-header">
+                <span>TOTAL REVENUE COLLECTED</span>
+                <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
+              </div>
+              <div className="metric-value">LKR {totalRevenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="metric-subtext">Sum of all paid member invoices</div>
+            </div>
+            
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
+              <div className="metric-header">
+                <span>TOTAL OUTSTANDING AMOUNT</span>
+                <DollarSign size={18} style={{ color: 'var(--color-primary)' }} />
+              </div>
+              <div className="metric-value">LKR {totalOutstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="metric-subtext">Awaiting payment (Open/Overdue status)</div>
+            </div>
+          </div>
+
+          {/* Search Filter for Financials */}
+          <div className="glass-card flex-gap-1" style={{ flexWrap: 'wrap', padding: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', flexGrow: 1, minWidth: '240px' }}>
+              <Search size={16} style={{ color: 'var(--text-muted)' }} />
+              <input 
+                type="text" 
+                placeholder="Search financials by name, email, code or phone..." 
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentFinancialsPage(1);
+                }}
+                style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%', fontSize: '0.875rem' }}
+              />
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Showing <strong>{filteredFinancialsList.length}</strong> records
+            </div>
+          </div>
+
+          {/* Financials Table */}
+          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="table-container">
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Attached Plan</th>
+                    <th>Status</th>
+                    <th>Revenue Collected</th>
+                    <th>Outstanding Amount</th>
+                    <th>Last Payment</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedFinancials.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                        No financial records matching search.
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedFinancials.map(member => {
+                      const plan = plans.find(p => p.id === member.plan_id);
+                      return (
+                        <tr key={member.id}>
+                          <td style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{member.member_code}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <img 
+                                src={member.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                                alt={member.full_name} 
+                                style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                              />
+                              <div>
+                                <div style={{ fontWeight: 600 }}>{member.full_name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{member.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>{plan ? plan.name : 'N/A'}</td>
+                          <td>
+                            <span className={`badge badge-${member.status}`}>
+                              {member.status}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 600, color: 'var(--color-success)' }}>
+                            LKR {member.revenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ fontWeight: 600, color: member.outstandingAmount > 0 ? 'var(--color-danger)' : 'var(--text-muted)' }}>
+                            LKR {member.outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td>{member.lastPaymentDate}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                              <button 
+                                type="button"
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.4rem', color: 'var(--color-success)' }}
+                                title="Collect Payment & Renew"
+                                onClick={() => {
+                                  setSelectedRenewMember(member);
+                                  setRenewPrice(plan ? plan.price : '');
+                                }}
+                              >
+                                <CreditCard size={14} />
+                              </button>
+                              <button 
+                                type="button"
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.4rem' }}
+                                title="View Profile Details"
+                                onClick={() => { setSelectedMember(member); setShowMedical(false); setShowFreezeForm(false); }}
+                              >
+                                <Eye size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Financials Pagination Footer */}
+            {filteredFinancialsList.length > 0 && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                padding: '1.2rem 1.5rem', 
+                borderTop: '1px solid var(--border-color)', 
+                background: 'rgba(0,0,0,0.15)',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Showing <strong>{Math.min(filteredFinancialsList.length, (currentFinancialsPage - 1) * financialItemsPerPage + 1)}</strong> to <strong>{Math.min(filteredFinancialsList.length, currentFinancialsPage * financialItemsPerPage)}</strong> of <strong>{filteredFinancialsList.length}</strong> records
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary" 
+                    onClick={() => setCurrentFinancialsPage(prev => Math.max(prev - 1, 1))} 
+                    disabled={currentFinancialsPage === 1}
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                  >
+                    Previous
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    {Array.from({ length: totalFinancialsPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        type="button"
+                        className={`btn ${currentFinancialsPage === page ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setCurrentFinancialsPage(page)}
+                        style={{ 
+                          padding: '0.4rem 0.6rem', 
+                          fontSize: '0.85rem', 
+                          minWidth: '32px',
+                          background: currentFinancialsPage === page ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                          borderColor: currentFinancialsPage === page ? 'var(--color-primary)' : 'var(--border-color)',
+                          boxShadow: currentFinancialsPage === page ? 'var(--neon-glow)' : 'none'
+                        }}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary" 
+                    onClick={() => setCurrentFinancialsPage(prev => Math.min(prev + 1, totalFinancialsPages))} 
+                    disabled={currentFinancialsPage === totalFinancialsPages || totalFinancialsPages === 0}
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Member Details Drawer View */}
       {selectedMember && (

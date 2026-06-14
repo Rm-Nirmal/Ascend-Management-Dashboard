@@ -5,7 +5,7 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 import { 
-  DollarSign, Calendar, UserCheck, AlertCircle, ArrowUpRight, Download
+  DollarSign, Calendar, UserCheck, AlertCircle, ArrowUpRight, ArrowDownRight, Download
 } from 'lucide-react';
 
 const Overview = () => {
@@ -29,7 +29,7 @@ const Overview = () => {
   const revenueStats = useMemo(() => {
     const paidInvoices = invoices.filter(i => i.status === 'paid' && i.paid_at);
     
-    let total, count, label, comparison;
+    let total, count, label, comparison, isTrendUp = true;
 
     if (timeframe === 'daily') {
       // Paid on selectedDate
@@ -45,6 +45,7 @@ const Overview = () => {
       const prevPaid = paidInvoices.filter(i => i.paid_at.startsWith(prevDateStr));
       const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0);
       const diff = total - prevTotal;
+      isTrendUp = diff >= 0;
       if (prevTotal > 0) {
         const pct = (diff / prevTotal) * 100;
         comparison = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs yesterday`;
@@ -64,6 +65,7 @@ const Overview = () => {
       const prevPaid = paidInvoices.filter(i => i.paid_at.startsWith(prevYearStr));
       const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0);
       const diff = total - prevTotal;
+      isTrendUp = diff >= 0;
       if (prevTotal > 0) {
         const pct = (diff / prevTotal) * 100;
         comparison = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs last year`;
@@ -87,6 +89,7 @@ const Overview = () => {
       const prevPaid = paidInvoices.filter(i => i.paid_at.startsWith(prevMonthStr));
       const prevTotal = prevPaid.reduce((sum, i) => sum + i.total_amount, 0);
       const diff = total - prevTotal;
+      isTrendUp = diff >= 0;
       if (prevTotal > 0) {
         const pct = (diff / prevTotal) * 100;
         comparison = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs last month`;
@@ -95,7 +98,7 @@ const Overview = () => {
       }
     }
 
-    return { total, count, label, comparison };
+    return { total, count, label, comparison, isTrendUp };
   }, [invoices, timeframe, selectedDate, selectedMonth, selectedYear]);
 
   // Overall counts (independent of selector)
@@ -144,12 +147,19 @@ const Overview = () => {
       const signups = hoursList.map(hourStr => {
         const hr = parseInt(hourStr.split(':')[0]);
         const newMembers = members.filter(m => {
-          if (!m.joined_at || m.joined_at !== selectedDate) return false;
-          if (hr === 12) return true; // mock peak signup at midday
-          return false;
+          if (!m.created_at || !m.created_at.startsWith(selectedDate)) return false;
+          const signupHour = new Date(m.created_at).getHours();
+          return signupHour >= hr && signupHour < hr + 2;
         }).length;
         
-        const totalSubscribers = members.filter(m => m.joined_at <= selectedDate).length;
+        const totalSubscribers = members.filter(m => {
+          if (m.joined_at < selectedDate) return true;
+          if (m.joined_at > selectedDate) return false;
+          if (!m.created_at) return true;
+          const signupHour = new Date(m.created_at).getHours();
+          return signupHour < hr + 2;
+        }).length;
+        
         return { name: hourStr, new: newMembers, total: totalSubscribers };
       });
 
@@ -242,17 +252,63 @@ const Overview = () => {
     }
   }, [timeframe, selectedDate, selectedMonth, selectedYear, accessEvents, invoices, members]);
 
-  // 3. MVP summary lists (inactive, overdue, expiring)
+  // 3. Dynamic lists based on telemetry
   const inactiveList = useMemo(() => {
-    return members.filter(m => m.status === 'active' && m.id !== 'm1' && m.id !== 'm2').slice(0, 3);
-  }, [members]);
+    const now = new Date();
+    
+    return members
+      .filter(m => m.status === 'active')
+      .map(m => {
+        const mEvents = accessEvents.filter(e => e.member_id === m.id && e.result === 'granted');
+        let lastCheckInDate = null;
+        if (mEvents.length > 0) {
+          lastCheckInDate = new Date(mEvents[0].occurred_at); // already sorted descending in context
+        } else if (m.joined_at) {
+          lastCheckInDate = new Date(m.joined_at);
+        }
+        
+        const daysInactive = lastCheckInDate 
+          ? Math.floor((now.getTime() - lastCheckInDate.getTime()) / (1000 * 60 * 60 * 24))
+          : 999;
+          
+        return {
+          ...m,
+          daysInactive,
+          lastCheckInDate
+        };
+      })
+      .filter(m => m.daysInactive > 14)
+      .sort((a, b) => b.daysInactive - a.daysInactive)
+      .slice(0, 5);
+  }, [members, accessEvents]);
 
   const overdueInvoices = useMemo(() => {
     return invoices.filter(i => i.status === 'overdue').slice(0, 3);
   }, [invoices]);
 
   const expiringMembers = useMemo(() => {
-    return members.filter(m => m.status === 'expired' || m.status === 'frozen').slice(0, 3);
+    const now = Date.now();
+    return members
+      .filter(m => {
+        if (m.status === 'expired' || m.status === 'frozen') return true;
+        if (m.status === 'active' && m.countdown_end) {
+          const diff = new Date(m.countdown_end).getTime() - now;
+          return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000;
+        }
+        return false;
+      })
+      .map(m => {
+        let text = '';
+        if (m.status === 'expired') text = 'Expired';
+        else if (m.status === 'frozen') text = 'Frozen';
+        else {
+          const diff = new Date(m.countdown_end).getTime() - now;
+          const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+          text = `Expires in ${days}d`;
+        }
+        return { ...m, expiringText: text };
+      })
+      .slice(0, 5);
   }, [members]);
 
   // Gender stats calculation for Pie Chart
@@ -436,8 +492,8 @@ const Overview = () => {
             <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
           </div>
           <div className="metric-value">LKR {revenueStats.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="metric-trend trend-up">
-            <ArrowUpRight size={14} /> {revenueStats.comparison}
+          <div className={`metric-trend ${revenueStats.isTrendUp ? 'trend-up' : 'trend-down'}`}>
+            {revenueStats.isTrendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />} {revenueStats.comparison}
           </div>
           <div className="metric-subtext" style={{ marginTop: '0.25rem' }}>
             Based on {revenueStats.count} payments processed
@@ -616,7 +672,9 @@ const Overview = () => {
                     <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.full_name}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-dark)' }}>Code: {m.member_code}</div>
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', fontWeight: 600 }}>18 Days Inactive</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)', fontWeight: 600 }}>
+                    {m.daysInactive >= 999 ? 'Never check-in' : `${m.daysInactive} Days Inactive`}
+                  </span>
                 </div>
               ))
             )}
@@ -662,8 +720,8 @@ const Overview = () => {
                     <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.full_name}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-dark)' }}>Status: {m.status}</div>
                   </div>
-                  <span className={`badge ${m.status === 'expired' ? 'badge-expired' : 'badge-frozen'}`} style={{ fontSize: '0.65rem' }}>
-                    {m.status}
+                  <span className={`badge badge-${m.status === 'active' ? 'pending' : m.status}`} style={{ fontSize: '0.65rem' }}>
+                    {m.expiringText}
                   </span>
                 </div>
               ))

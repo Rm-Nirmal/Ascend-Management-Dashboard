@@ -5,7 +5,7 @@ import Overview from './components/Overview';
 import Members from './components/Members';
 import Registrations from './components/Registrations';
 import AccessConsole from './components/AccessConsole';
-import Payments from './components/Payments';
+
 import AIInsights from './components/AIInsights';
 import AuditSettings from './components/AuditSettings';
 import Login from './components/Login';
@@ -176,8 +176,7 @@ const DashboardContentShell = () => {
         return <Employees />;
       case 'access':
         return <AccessConsole />;
-      case 'payments':
-        return <Payments />;
+
       case 'finance':
         return <Finance />;
       case 'ai':
