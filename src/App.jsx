@@ -14,6 +14,7 @@ import Employees from './components/Employees';
 import Finance from './components/Finance';
 import { Bell, ShieldCheck, HelpCircle, Loader2 } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
+import PublicReceipt from './components/PublicReceipt';
 import ToastContainer from './components/Toast';
 
 /**
@@ -136,11 +137,21 @@ const DashboardContentShell = () => {
 
   // Check if we are simulating the standalone public registration form
   const isPublicRegister = window.location.hash === '#register' || window.location.search.includes('view=register');
+  const isPublicReceipt = window.location.search.includes('view=receipt') || window.location.hash.startsWith('#receipt');
 
   if (isPublicRegister) {
     return (
       <>
         <PublicRegistrationForm isStandalone={true} />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+      </>
+    );
+  }
+
+  if (isPublicReceipt) {
+    return (
+      <>
+        <PublicReceipt />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </>
     );

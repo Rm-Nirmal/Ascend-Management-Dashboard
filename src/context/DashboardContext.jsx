@@ -1269,6 +1269,48 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [accessEvents, currentUser]);
 
+  const sendSMS = useCallback(async (toPhone, memberName, amount, sourceName, receiptLink, memberId = null) => {
+    try {
+      const fromPhone = '0779688582';
+      const message = `Welcome to Ascend Fit! Hello ${memberName}, your payment of LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} for ${sourceName} has been received. View your receipt: ${receiptLink}`;
+      
+      console.log("%c[SMS Gateway] Sending SMS...", "color: #10b981; font-weight: bold;", {
+        from: fromPhone,
+        to: toPhone,
+        message,
+      });
+
+      const smsLog = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        from: fromPhone,
+        to: toPhone,
+        member_name: memberName,
+        member_id: memberId,
+        amount,
+        source: sourceName,
+        message,
+        receipt_link: receiptLink,
+        sent_at: new Date().toISOString(),
+      };
+      
+      const docRef = await addDoc(collection(db, COLLECTIONS.SMS_LOGS), smsLog);
+      
+      await logAudit(
+        'member.sms_receipt', 
+        'member', 
+        memberId || 'unknown_member', 
+        `Sent SMS receipt from ${fromPhone} to ${memberName} (+${toPhone}) for LKR ${amount.toLocaleString()}`
+      );
+      
+      showToast(`SMS Receipt sent to ${memberName} (+${toPhone}) from ${fromPhone}`, 'success');
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('sendSMS error:', err);
+      showToast('Failed to send SMS receipt simulation.', 'error');
+      return { success: false, error: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
   // ═══════════════════════════════════════════════════════════════════
   // MEMBERSHIP RENEWAL
   // ═══════════════════════════════════════════════════════════════════
@@ -1305,14 +1347,22 @@ export const DashboardProvider = ({ children }) => {
         `Renewed membership for ${member.full_name} for 30 days (New Expiry: ${new Date(newCountdownEnd).toLocaleDateString()})`
       );
 
+      if (member.phone) {
+        const receiptLink = `${window.location.origin}/?view=receipt&type=invoice&id=${invRef.id}`;
+        try {
+          await sendSMS(member.phone, member.full_name, total, `Membership Renewal - ${plan.name}`, receiptLink, member.id);
+        } catch (smsErr) {
+          console.error('Failed to send SMS receipt during renewal:', smsErr);
+        }
+      }
+
       return { success: true, newCountdownEnd, invoice: { id: invRef.id, ...invoiceData } };
     } catch (err) {
       console.error('renewMemberMembership error:', err);
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [members, plans, currentUser]);
-  
+  }, [members, plans, currentUser, sendSMS]);
   // ═══════════════════════════════════════════════════════════════════
   // PLAN (MEMBERSHIP PACKAGE) CRUD ACTIONS
   // ═══════════════════════════════════════════════════════════════════
@@ -1535,6 +1585,7 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [logAudit]);
 
+
   const addIncome = useCallback(async (incomeData) => {
     try {
       const newInc = {
@@ -1545,13 +1596,26 @@ export const DashboardProvider = ({ children }) => {
       };
       const docRef = await addDoc(collection(db, COLLECTIONS.INCOME), newInc);
       await logAudit('income.create', 'income', docRef.id, `Recorded income: ${newInc.source} (LKR ${newInc.amount.toLocaleString()})`);
+
+      if (newInc.member_name) {
+        const member = members.find(m => m.full_name === newInc.member_name);
+        if (member && member.phone) {
+          const receiptLink = `${window.location.origin}/?view=receipt&type=income&id=${docRef.id}`;
+          try {
+            await sendSMS(member.phone, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
+          } catch (smsErr) {
+            console.error('Failed to send SMS receipt during addIncome:', smsErr);
+          }
+        }
+      }
+
       return { success: true, id: docRef.id };
     } catch (err) {
       console.error('addIncome error:', err);
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [currentUser, logAudit]);
+  }, [currentUser, logAudit, members, sendSMS]);
 
   const updateIncome = useCallback(async (id, updatedFields) => {
     try {
@@ -1648,6 +1712,7 @@ export const DashboardProvider = ({ children }) => {
       // Utility
       logAudit,
       renewMemberMembership,
+      sendSMS,
 
       // Plan CRUD
       addPlan,
