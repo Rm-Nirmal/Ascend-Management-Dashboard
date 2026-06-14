@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2
+  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer
 } from 'lucide-react';
 
 const Members = () => {
@@ -15,6 +15,7 @@ const Members = () => {
     freezeMembership,
     unfreezeMembership,
     renewMemberMembership,
+    invoices,
     currentUser,
     showToast
   } = useDashboard();
@@ -59,6 +60,47 @@ const Members = () => {
   const [selectedRenewMember, setSelectedRenewMember] = useState(null);
   const [renewPrice, setRenewPrice] = useState('');
   const [renewPaymentMethod, setRenewPaymentMethod] = useState('card');
+  const [viewingReceipt, setViewingReceipt] = useState(null);
+
+  const numberToWords = (num) => {
+    const a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    const b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    
+    if ((num = Math.round(num)) === 0) return 'Zero';
+    
+    let n = ('000000000' + num).substr(-9);
+    let str = '';
+    
+    let millions = parseInt(n.substr(0, 3));
+    if (millions !== 0) {
+      str += (millions < 20 ? a[millions] : b[Math.floor(millions/10)] + ' ' + a[millions%10]) + 'Million ';
+    }
+    
+    let thousands = parseInt(n.substr(3, 3));
+    if (thousands !== 0) {
+      if (thousands < 20) {
+        str += a[thousands] + 'Thousand ';
+      } else {
+        str += b[Math.floor(thousands/10)] + ' ' + a[thousands%10] + 'Thousand ';
+      }
+    }
+    
+    let hundreds = parseInt(n.substr(6, 1));
+    if (hundreds !== 0) {
+      str += a[hundreds] + 'Hundred ';
+    }
+    
+    let tens = parseInt(n.substr(7, 2));
+    if (tens !== 0) {
+      if (tens < 20) {
+        str += a[tens];
+      } else {
+        str += b[Math.floor(tens/10)] + ' ' + a[tens%10];
+      }
+    }
+    
+    return str.trim() + ' LKR Only';
+  };
 
 
 
@@ -68,8 +110,15 @@ const Members = () => {
     try {
       const res = await renewMemberMembership(selectedRenewMember.id, renewPaymentMethod, renewPrice);
       if (res.success) {
-        alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for 30 days! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
+        if (showToast) {
+          showToast(`Membership for ${selectedRenewMember.full_name} renewed successfully!`, 'success');
+        } else {
+          alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for 30 days! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
+        }
         setSelectedRenewMember(null);
+        if (res.invoice) {
+          setViewingReceipt(res.invoice);
+        }
         // Keep detail drawer profile updated
         if (selectedMember && selectedMember.id === selectedRenewMember.id) {
           setSelectedMember(prev => ({
@@ -249,6 +298,13 @@ const Members = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredMembersList.slice(start, start + itemsPerPage);
   }, [filteredMembersList, currentPage]);
+
+  const latestInvoice = useMemo(() => {
+    if (!selectedMember || !invoices) return null;
+    const memberInvoices = invoices.filter(inv => inv.member_id === selectedMember.id);
+    if (memberInvoices.length === 0) return null;
+    return [...memberInvoices].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0];
+  }, [selectedMember, invoices]);
 
   // Handle Add Member submit
   const handleAddSubmit = async (e) => {
@@ -645,6 +701,27 @@ const Members = () => {
                 <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', marginTop: '0.25rem' }}>
                   {getCountdownDisplay(selectedMember)}
                 </div>
+                {latestInvoice && (
+                  <div style={{ marginTop: '0.35rem' }}>
+                    <button 
+                      onClick={() => setViewingReceipt(latestInvoice)}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'var(--color-primary)', 
+                        cursor: 'pointer', 
+                        fontSize: '0.75rem', 
+                        padding: 0, 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem', 
+                        textDecoration: 'underline' 
+                      }}
+                    >
+                      <Printer size={12} /> View Latest Receipt
+                    </button>
+                  </div>
+                )}
               </div>
               <button 
                 onClick={() => {
@@ -1340,6 +1417,165 @@ const Members = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PRINTABLE MEMBERSHIP RECEIPT MODAL ───────────────────────────── */}
+      {viewingReceipt && (
+        <div className="print-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
+          
+          {/* Print CSS Rules injected specifically inside the modal */}
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              .print-modal-overlay {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                backdrop-filter: none !important;
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+              .print-modal-content {
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                background: white !important;
+                color: black !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 10px !important;
+                margin: 0 !important;
+              }
+              .print-modal-content * {
+                visibility: visible !important;
+                color: black !important;
+                border-color: #ccc !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
+
+          <div className="glass-card print-modal-content" style={{ width: '100%', maxWidth: '650px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', padding: '2rem' }}>
+            
+            {/* Header: Gym Info */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>ASCEND FITNESS CENTER</h2>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>HQ Operations - Colombo, Sri Lanka</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Email: billing@ascend.lk | Tel: +94 11 234 5678</span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', letterSpacing: '0.05em', color: '#fff' }}>MEMBERSHIP RECEIPT</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Original Copy</span>
+              </div>
+            </div>
+
+            {/* Member & Invoice details grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+              <div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Member Code:</span> <span style={{ fontWeight: 600 }}>{members.find(m => m.id === viewingReceipt.member_id)?.member_code || 'N/A'}</span></div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Member Name:</span> <span style={{ fontWeight: 600 }}>{viewingReceipt.member_name}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Email:</span> <span style={{ fontWeight: 600 }}>{members.find(m => m.id === viewingReceipt.member_id)?.email || 'N/A'}</span></div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Invoice Number:</span> <span style={{ fontWeight: 600 }}>{viewingReceipt.invoice_number}</span></div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Payment Date:</span> <span style={{ fontWeight: 600 }}>{new Date(viewingReceipt.paid_at || viewingReceipt.issued_at).toLocaleDateString()}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Payment Mode:</span> <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{viewingReceipt.payment_method?.replace('_', ' ') || 'Card'}</span></div>
+              </div>
+            </div>
+
+            {/* Plan details table */}
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.5rem', color: 'var(--text-muted)' }}>Description</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Qty</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--text-muted)' }}>Rate</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--text-muted)' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                    <td style={{ padding: '0.5rem' }}>
+                      <strong style={{ color: '#fff' }}>
+                        {plans.find(p => p.id === viewingReceipt.plan_id)?.name || 'Gym Membership Plan'}
+                      </strong>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                        30-day recurring gym facility access & trainer guidance
+                      </div>
+                    </td>
+                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>1</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Calculations Totals Block */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', fontSize: '0.8rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span>Subtotal:</span>
+                  <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Tax & Fees:</span>
+                  <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.tax_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>TOTAL AMOUNT PAID</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-success)' }}>
+                  LKR {viewingReceipt.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                </span>
+              </div>
+            </div>
+
+            {/* Net Amount in Words */}
+            <div style={{ fontSize: '0.75rem', fontStyle: 'italic', background: 'rgba(255,255,255,0.01)', padding: '0.5rem', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.05)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Amount in Words:</span> <span style={{ fontWeight: 600 }}>{numberToWords(viewingReceipt.total_amount || 0)}</span>
+            </div>
+
+            {/* Bottom Signature area */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginTop: '2rem', fontSize: '0.75rem' }}>
+              <div style={{ borderTop: '1px solid var(--border-color)', textAlign: 'center', paddingTop: '0.5rem' }}>
+                <span>Authorized Representative</span>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border-color)', textAlign: 'center', paddingTop: '0.5rem' }}>
+                <span>Member Signature</span>
+              </div>
+            </div>
+
+            {/* Actions for Modal */}
+            <div className="no-print" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ flexGrow: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                onClick={() => window.print()}
+              >
+                <Printer size={14} /> Print Receipt
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setViewingReceipt(null)}>
+                Close
+              </button>
+            </div>
+
           </div>
         </div>
       )}

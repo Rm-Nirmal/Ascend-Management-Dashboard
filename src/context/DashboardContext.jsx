@@ -1305,7 +1305,7 @@ export const DashboardProvider = ({ children }) => {
         `Renewed membership for ${member.full_name} for 30 days (New Expiry: ${new Date(newCountdownEnd).toLocaleDateString()})`
       );
 
-      return { success: true, newCountdownEnd };
+      return { success: true, newCountdownEnd, invoice: { id: invRef.id, ...invoiceData } };
     } catch (err) {
       console.error('renewMemberMembership error:', err);
       setError(friendlyFirestoreError(err));
