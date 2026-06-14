@@ -498,43 +498,56 @@ const Finance = () => {
   // Unified Recent Transactions List
   const recentTransactions = useMemo(() => {
     let trans = [];
+    const seenTx = new Set();
     
     // Paid invoices (Membership payments)
     invoices.forEach(inv => {
       if (inv.status === 'paid' && inv.paid_at) {
-        trans.push({
-          id: inv.id,
-          date: inv.paid_at.split('T')[0],
-          type: 'Income',
-          description: `Membership - ${inv.member_name}`,
-          category: 'Membership Payments',
-          amount: inv.total_amount
-        });
+        const key = `invoice-${inv.invoice_number || inv.id}`;
+        if (!seenTx.has(key)) {
+          seenTx.add(key);
+          trans.push({
+            id: inv.id,
+            date: inv.paid_at.split('T')[0],
+            type: 'Income',
+            description: `Membership - ${inv.member_name}`,
+            category: 'Membership Payments',
+            amount: inv.total_amount
+          });
+        }
       }
     });
     
     // Manual income logs
     income.forEach(inc => {
-      trans.push({
-        id: inc.id,
-        date: inc.date,
-        type: 'Income',
-        description: inc.member_name ? `${inc.source} - ${inc.member_name}` : inc.source,
-        category: inc.source,
-        amount: inc.amount
-      });
+      const key = `income-${inc.source}-${inc.amount}-${inc.date}-${inc.member_name || ''}`;
+      if (!seenTx.has(key)) {
+        seenTx.add(key);
+        trans.push({
+          id: inc.id,
+          date: inc.date,
+          type: 'Income',
+          description: inc.member_name ? `${inc.source} - ${inc.member_name}` : inc.source,
+          category: inc.source,
+          amount: inc.amount
+        });
+      }
     });
     
     // Expenses
     expenses.forEach(exp => {
-      trans.push({
-        id: exp.id,
-        date: exp.date,
-        type: 'Expense',
-        description: exp.title,
-        category: exp.category,
-        amount: exp.amount
-      });
+      const key = `expense-${exp.title}-${exp.amount}-${exp.date}-${exp.category}`;
+      if (!seenTx.has(key)) {
+        seenTx.add(key);
+        trans.push({
+          id: exp.id,
+          date: exp.date,
+          type: 'Expense',
+          description: exp.title,
+          category: exp.category,
+          amount: exp.amount
+        });
+      }
     });
     
     // Filter by specific date if selected

@@ -26,10 +26,51 @@ const Overview = () => {
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().substring(0, 7));
   const [selectedYear, setSelectedYear] = useState(() => new Date().toISOString().substring(0, 4));
 
+  // Deduplicate Firestore collections to avoid duplicates from seed scripts / double writes
+  const uniqueInvoices = useMemo(() => {
+    const seen = new Set();
+    return (invoices || []).filter(i => {
+      if (!i.invoice_number) return true;
+      if (seen.has(i.invoice_number)) return false;
+      seen.add(i.invoice_number);
+      return true;
+    });
+  }, [invoices]);
+
+  const uniqueIncome = useMemo(() => {
+    const seen = new Set();
+    return (income || []).filter(inc => {
+      const key = `${inc.source}-${inc.amount}-${inc.date}-${inc.member_name || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [income]);
+
+  const uniqueMembers = useMemo(() => {
+    const seen = new Set();
+    return (members || []).filter(m => {
+      if (!m.member_code) return true;
+      if (seen.has(m.member_code)) return false;
+      seen.add(m.member_code);
+      return true;
+    });
+  }, [members]);
+
+  const uniqueAccessEvents = useMemo(() => {
+    const seen = new Set();
+    return (accessEvents || []).filter(e => {
+      const key = `${e.member_code}-${e.result}-${e.occurred_at}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [accessEvents]);
+
   // 1. Metric Calculations per Timeframe & Date/Month Selection
   const revenueStats = useMemo(() => {
-    const paidInvoices = invoices.filter(i => i.status === 'paid' && i.paid_at);
-    const validIncome = income || [];
+    const paidInvoices = uniqueInvoices.filter(i => i.status === 'paid' && i.paid_at);
+    const validIncome = uniqueIncome;
     
     let total, count, label, comparison, isTrendUp = true;
 
@@ -59,10 +100,11 @@ const Overview = () => {
 
     } else if (timeframe === 'yearly') {
       // Paid in selectedYear
-      const yearPaid = paidInvoices.filter(i => i.paid_at.startsWith(selectedYear));
+      const yearPaid = yearPaid => yearPaid; // placeholder to prevent unused
+      const yearPaidList = paidInvoices.filter(i => i.paid_at.startsWith(selectedYear));
       const yearManual = validIncome.filter(inc => inc.date && inc.date.startsWith(selectedYear));
-      total = yearPaid.reduce((sum, i) => sum + i.total_amount, 0) + yearManual.reduce((sum, inc) => sum + inc.amount, 0);
-      count = yearPaid.length + yearManual.length;
+      total = yearPaidList.reduce((sum, i) => sum + i.total_amount, 0) + yearManual.reduce((sum, inc) => sum + inc.amount, 0);
+      count = yearPaidList.length + yearManual.length;
       label = `Yearly Revenue`;
       
       // Calculate comparison vs last year
@@ -107,21 +149,21 @@ const Overview = () => {
     }
 
     return { total, count, label, comparison, isTrendUp };
-  }, [invoices, income, timeframe, selectedDate, selectedMonth, selectedYear]);
+  }, [uniqueInvoices, uniqueIncome, timeframe, selectedDate, selectedMonth, selectedYear]);
 
   // Overall counts (independent of selector)
-  const totalMembersCount = members.length;
-  const activeMembersCount = members.filter(m => m.status === 'active').length;
+  const totalMembersCount = uniqueMembers.length;
+  const activeMembersCount = uniqueMembers.filter(m => m.status === 'active').length;
   
   const activeAttendanceCount = useMemo(() => {
     if (timeframe === 'daily') {
-      return accessEvents.filter(e => e.result === 'granted' && e.occurred_at.startsWith(selectedDate)).length;
+      return uniqueAccessEvents.filter(e => e.result === 'granted' && e.occurred_at.startsWith(selectedDate)).length;
     } else if (timeframe === 'yearly') {
-      return accessEvents.filter(e => e.result === 'granted' && e.occurred_at.startsWith(selectedYear)).length;
+      return uniqueAccessEvents.filter(e => e.result === 'granted' && e.occurred_at.startsWith(selectedYear)).length;
     } else {
-      return accessEvents.filter(e => e.result === 'granted' && e.occurred_at.startsWith(selectedMonth)).length;
+      return uniqueAccessEvents.filter(e => e.result === 'granted' && e.occurred_at.startsWith(selectedMonth)).length;
     }
-  }, [accessEvents, timeframe, selectedDate, selectedMonth, selectedYear]);
+  }, [uniqueAccessEvents, timeframe, selectedDate, selectedMonth, selectedYear]);
 
   const pendingRegistrationsCount = registrations.filter(r => r.status === 'pending_approval').length;
 
@@ -133,7 +175,7 @@ const Overview = () => {
       
       const attendance = hoursList.map(hourStr => {
         const hr = parseInt(hourStr.split(':')[0]);
-        const hourlyAtt = accessEvents.filter(e => {
+        const hourlyAtt = uniqueAccessEvents.filter(e => {
           if (e.result !== 'granted' || !e.occurred_at.startsWith(selectedDate)) return false;
           const attHour = new Date(e.occurred_at).getHours();
           return attHour >= hr && attHour < hr + 2;
@@ -143,7 +185,7 @@ const Overview = () => {
 
       const revenue = hoursList.map(hourStr => {
         const hr = parseInt(hourStr.split(':')[0]);
-        const hourlyPaid = invoices.filter(i => {
+        const hourlyPaid = uniqueInvoices.filter(i => {
           if (i.status !== 'paid' || !i.paid_at || !i.paid_at.startsWith(selectedDate)) return false;
           const paidHour = new Date(i.paid_at).getHours();
           return paidHour >= hr && paidHour < hr + 2;
@@ -154,13 +196,13 @@ const Overview = () => {
 
       const signups = hoursList.map(hourStr => {
         const hr = parseInt(hourStr.split(':')[0]);
-        const newMembers = members.filter(m => {
+        const newMembers = uniqueMembers.filter(m => {
           if (!m.created_at || !m.created_at.startsWith(selectedDate)) return false;
           const signupHour = new Date(m.created_at).getHours();
           return signupHour >= hr && signupHour < hr + 2;
         }).length;
         
-        const totalSubscribers = members.filter(m => {
+        const totalSubscribers = uniqueMembers.filter(m => {
           if (m.joined_at < selectedDate) return true;
           if (m.joined_at > selectedDate) return false;
           if (!m.created_at) return true;
@@ -179,7 +221,7 @@ const Overview = () => {
       
       const attendance = monthsList.map((monthName, idx) => {
         const monthPrefix = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
-        const monthlyAtt = accessEvents.filter(e => {
+        const monthlyAtt = uniqueAccessEvents.filter(e => {
           return e.result === 'granted' && e.occurred_at && e.occurred_at.startsWith(monthPrefix);
         });
         return { name: monthName, value: monthlyAtt.length };
@@ -187,7 +229,7 @@ const Overview = () => {
 
       const revenue = monthsList.map((monthName, idx) => {
         const monthPrefix = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
-        const monthlyPaid = invoices.filter(i => {
+        const monthlyPaid = uniqueInvoices.filter(i => {
           return i.status === 'paid' && i.paid_at && i.paid_at.startsWith(monthPrefix);
         });
         const value = monthlyPaid.reduce((sum, i) => sum + i.total_amount, 0);
@@ -196,13 +238,13 @@ const Overview = () => {
 
       const signups = monthsList.map((monthName, idx) => {
         const monthPrefix = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
-        const newMembers = members.filter(m => {
+        const newMembers = uniqueMembers.filter(m => {
           return m.joined_at && m.joined_at.startsWith(monthPrefix);
         }).length;
         
         const nextMonthDate = new Date(parseInt(selectedYear), idx + 1, 0);
         const lastDayStr = nextMonthDate.toISOString().split('T')[0];
-        const totalSubscribers = members.filter(m => m.joined_at <= lastDayStr).length;
+        const totalSubscribers = uniqueMembers.filter(m => m.joined_at <= lastDayStr).length;
 
         return { name: monthName, new: newMembers, total: totalSubscribers };
       });
@@ -216,7 +258,7 @@ const Overview = () => {
       const attendance = weeks.map((weekStr, idx) => {
         const startDay = idx * 7 + 1;
         const endDay = idx === 3 ? 31 : (idx + 1) * 7;
-        const weeklyAtt = accessEvents.filter(e => {
+        const weeklyAtt = uniqueAccessEvents.filter(e => {
           if (e.result !== 'granted' || !e.occurred_at.startsWith(selectedMonth)) return false;
           const dateNum = new Date(e.occurred_at).getDate();
           return dateNum >= startDay && dateNum <= endDay;
@@ -227,7 +269,7 @@ const Overview = () => {
       const revenue = weeks.map((weekStr, idx) => {
         const startDay = idx * 7 + 1;
         const endDay = idx === 3 ? 31 : (idx + 1) * 7;
-        const weeklyPaid = invoices.filter(i => {
+        const weeklyPaid = uniqueInvoices.filter(i => {
           if (i.status !== 'paid' || !i.paid_at || !i.paid_at.startsWith(selectedMonth)) return false;
           const dateNum = new Date(i.paid_at).getDate();
           return dateNum >= startDay && dateNum <= endDay;
@@ -239,7 +281,7 @@ const Overview = () => {
       const signups = weeks.map((weekStr, idx) => {
         const startDay = idx * 7 + 1;
         const endDay = idx === 3 ? 31 : (idx + 1) * 7;
-        const newMembers = members.filter(m => {
+        const newMembers = uniqueMembers.filter(m => {
           if (!m.joined_at || !m.joined_at.startsWith(selectedMonth)) return false;
           const dateNum = new Date(m.joined_at).getDate();
           return dateNum >= startDay && dateNum <= endDay;
@@ -251,23 +293,23 @@ const Overview = () => {
         const endDayDate = new Date(currentYear, currentMonth - 1, endDay);
         const endDayStr = endDayDate.toISOString().split('T')[0];
         
-        const totalSubscribers = members.filter(m => m.joined_at <= endDayStr).length;
+        const totalSubscribers = uniqueMembers.filter(m => m.joined_at <= endDayStr).length;
 
         return { name: weekStr, new: newMembers, total: totalSubscribers };
       });
 
       return { attendance, revenue, signups };
     }
-  }, [timeframe, selectedDate, selectedMonth, selectedYear, accessEvents, invoices, members]);
+  }, [timeframe, selectedDate, selectedMonth, selectedYear, uniqueAccessEvents, uniqueInvoices, uniqueMembers]);
 
   // 3. Dynamic lists based on telemetry
   const inactiveList = useMemo(() => {
     const now = new Date();
     
-    return members
+    return uniqueMembers
       .filter(m => m.status === 'active')
       .map(m => {
-        const mEvents = accessEvents.filter(e => e.member_id === m.id && e.result === 'granted');
+        const mEvents = uniqueAccessEvents.filter(e => e.member_id === m.id && e.result === 'granted');
         let lastCheckInDate = null;
         if (mEvents.length > 0) {
           lastCheckInDate = new Date(mEvents[0].occurred_at); // already sorted descending in context
@@ -288,15 +330,15 @@ const Overview = () => {
       .filter(m => m.daysInactive > 14)
       .sort((a, b) => b.daysInactive - a.daysInactive)
       .slice(0, 5);
-  }, [members, accessEvents]);
+  }, [uniqueMembers, uniqueAccessEvents]);
 
   const overdueInvoices = useMemo(() => {
-    return invoices.filter(i => i.status === 'overdue').slice(0, 3);
-  }, [invoices]);
+    return uniqueInvoices.filter(i => i.status === 'overdue').slice(0, 3);
+  }, [uniqueInvoices]);
 
   const expiringMembers = useMemo(() => {
     const now = Date.now();
-    return members
+    return uniqueMembers
       .filter(m => {
         if (m.status === 'expired' || m.status === 'frozen') return true;
         if (m.status === 'active' && m.countdown_end) {
@@ -317,12 +359,12 @@ const Overview = () => {
         return { ...m, expiringText: text };
       })
       .slice(0, 5);
-  }, [members]);
+  }, [uniqueMembers]);
 
   // Gender stats calculation for Pie Chart
   const genderStats = useMemo(() => {
     const stats = { male: 0, female: 0, other: 0, unspecified: 0 };
-    members.forEach(m => {
+    uniqueMembers.forEach(m => {
       const g = (m.gender || '').toLowerCase().trim();
       if (g === 'male') stats.male++;
       else if (g === 'female') stats.female++;
@@ -345,7 +387,7 @@ const Overview = () => {
     }
 
     return data;
-  }, [members]);
+  }, [uniqueMembers]);
 
   const hasGenderData = useMemo(() => {
     return genderStats.some(d => d.value > 0);
