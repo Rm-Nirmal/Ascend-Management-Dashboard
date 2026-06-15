@@ -275,11 +275,30 @@ const Members = () => {
     trainer_id: ''
   });
 
+  const uniqueMembers = useMemo(() => {
+    const seen = new Set();
+    return (members || []).filter(m => {
+      if (!m.member_code) return true;
+      if (seen.has(m.member_code)) return false;
+      seen.add(m.member_code);
+      return true;
+    });
+  }, [members]);
+
+  const getResolvedStatus = (m) => {
+    if (!m) return 'active';
+    if (m.status === 'frozen') return 'frozen';
+    const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now());
+    if (isExpired) return 'expired';
+    return 'active';
+  };
+
   // Filter members list based on filters
   const filteredMembersList = useMemo(() => {
-    return members.filter(m => {
+    return uniqueMembers.filter(m => {
       // Status filter
-      const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+      const resolvedStatus = getResolvedStatus(m);
+      const matchesStatus = statusFilter === 'all' || resolvedStatus === statusFilter;
       
       // Search term filter
       const search = searchTerm.toLowerCase();
@@ -291,7 +310,7 @@ const Members = () => {
         
       return matchesStatus && matchesSearch;
     });
-  }, [members, statusFilter, searchTerm]);
+  }, [uniqueMembers, statusFilter, searchTerm]);
 
 
 
@@ -311,7 +330,7 @@ const Members = () => {
 
   // Calculate member-level financials
   const memberFinancials = useMemo(() => {
-    return members.map(member => {
+    return uniqueMembers.map(member => {
       const memberInvoices = invoices.filter(inv => inv.member_id === member.id);
       
       const revenueCollected = memberInvoices
@@ -337,15 +356,30 @@ const Members = () => {
         lastPaymentDate
       };
     });
-  }, [members, invoices]);
+  }, [uniqueMembers, invoices]);
 
   const totalRevenueCollected = useMemo(() => {
-    return memberFinancials.reduce((sum, m) => sum + m.revenueCollected, 0);
-  }, [memberFinancials]);
+    const currentMonthStr = new Date().toISOString().substring(0, 7); // 'YYYY-MM'
+    return uniqueMembers
+      .filter(m => getResolvedStatus(m) === 'active')
+      .reduce((sum, m) => {
+        const memberInvoices = invoices.filter(inv => inv.member_id === m.id);
+        const thisMonthPaid = memberInvoices
+          .filter(inv => inv.status === 'paid' && inv.paid_at && inv.paid_at.startsWith(currentMonthStr))
+          .reduce((s, inv) => s + inv.total_amount, 0);
+        return sum + thisMonthPaid;
+      }, 0);
+  }, [uniqueMembers, invoices]);
 
   const totalOutstandingAmount = useMemo(() => {
-    return memberFinancials.reduce((sum, m) => sum + m.outstandingAmount, 0);
-  }, [memberFinancials]);
+    return uniqueMembers
+      .filter(m => getResolvedStatus(m) === 'active')
+      .reduce((sum, m) => {
+        const memberInvoices = invoices.filter(inv => inv.member_id === m.id);
+        const memberTotal = memberInvoices.reduce((s, inv) => s + inv.total_amount, 0);
+        return sum + memberTotal;
+      }, 0);
+  }, [uniqueMembers, invoices]);
 
   const filteredFinancialsList = useMemo(() => {
     return memberFinancials.filter(m => {
@@ -604,8 +638,8 @@ const Members = () => {
                       </td>
                       <td>{plan ? plan.name : 'N/A'}</td>
                       <td>
-                        <span className={`badge badge-${member.status}`}>
-                          {member.status}
+                        <span className={`badge badge-${getResolvedStatus(member)}`}>
+                          {getResolvedStatus(member)}
                         </span>
                       </td>
                       <td>
@@ -731,20 +765,20 @@ const Members = () => {
           <div className="metrics-grid" style={{ marginBottom: '1.5rem' }}>
             <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-success)' }}>
               <div className="metric-header">
-                <span>TOTAL REVENUE COLLECTED</span>
+                <span>TOTAL REVENUE COLLECTED (THIS MONTH)</span>
                 <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
               </div>
               <div className="metric-value">LKR {totalRevenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-              <div className="metric-subtext">Sum of all paid member invoices</div>
+              <div className="metric-subtext">Sum of this month's paid invoices for active members</div>
             </div>
             
             <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
               <div className="metric-header">
-                <span>TOTAL OUTSTANDING AMOUNT</span>
+                <span>TOTAL BILLING FOR ACTIVE MEMBERS</span>
                 <DollarSign size={18} style={{ color: 'var(--color-primary)' }} />
               </div>
               <div className="metric-value">LKR {totalOutstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-              <div className="metric-subtext">Awaiting payment (Open/Overdue status)</div>
+              <div className="metric-subtext">Paid + unpaid/expired whole amount for active members</div>
             </div>
           </div>
 
@@ -812,8 +846,8 @@ const Members = () => {
                           </td>
                           <td>{plan ? plan.name : 'N/A'}</td>
                           <td>
-                            <span className={`badge badge-${member.status}`}>
-                              {member.status}
+                            <span className={`badge badge-${getResolvedStatus(member)}`}>
+                              {getResolvedStatus(member)}
                             </span>
                           </td>
                           <td style={{ fontWeight: 600, color: 'var(--color-success)' }}>
@@ -944,8 +978,8 @@ const Members = () => {
                 />
                 <div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{selectedMember.full_name}</h3>
-                  <span className={`badge badge-${selectedMember.status}`} style={{ fontSize: '0.65rem' }}>
-                    {selectedMember.status}
+                  <span className={`badge badge-${getResolvedStatus(selectedMember)}`} style={{ fontSize: '0.65rem' }}>
+                    {getResolvedStatus(selectedMember)}
                   </span>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                     Code: <strong>{selectedMember.member_code}</strong>
@@ -1789,9 +1823,9 @@ const Members = () => {
             {/* Member & Invoice details grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
               <div>
-                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Member Code:</span> <span style={{ fontWeight: 600 }}>{members.find(m => m.id === viewingReceipt.member_id)?.member_code || 'N/A'}</span></div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Member Code:</span> <span style={{ fontWeight: 600 }}>{uniqueMembers.find(m => m.id === viewingReceipt.member_id)?.member_code || 'N/A'}</span></div>
                 <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Member Name:</span> <span style={{ fontWeight: 600 }}>{viewingReceipt.member_name}</span></div>
-                <div><span style={{ color: 'var(--text-muted)' }}>Email:</span> <span style={{ fontWeight: 600 }}>{members.find(m => m.id === viewingReceipt.member_id)?.email || 'N/A'}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Email:</span> <span style={{ fontWeight: 600 }}>{uniqueMembers.find(m => m.id === viewingReceipt.member_id)?.email || 'N/A'}</span></div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Invoice Number:</span> <span style={{ fontWeight: 600 }}>{viewingReceipt.invoice_number}</span></div>

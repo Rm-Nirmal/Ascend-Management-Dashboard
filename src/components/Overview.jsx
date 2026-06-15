@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  LineChart, Line, AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell
 } from 'recharts';
 import { 
@@ -15,6 +15,7 @@ const Overview = () => {
     invoices, 
     registrations,
     income,
+    expenses,
     showToast
   } = useDashboard();
 
@@ -56,6 +57,16 @@ const Overview = () => {
       return true;
     });
   }, [members]);
+
+  const uniqueExpenses = useMemo(() => {
+    const seen = new Set();
+    return (expenses || []).filter(exp => {
+      const key = `${exp.category}-${exp.amount}-${exp.date}-${exp.description || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [expenses]);
 
   const uniqueAccessEvents = useMemo(() => {
     const seen = new Set();
@@ -153,7 +164,12 @@ const Overview = () => {
 
   // Overall counts (independent of selector)
   const totalMembersCount = uniqueMembers.length;
-  const activeMembersCount = uniqueMembers.filter(m => m.status === 'active').length;
+  const activeMembersCount = useMemo(() => {
+    return uniqueMembers.filter(m => {
+      const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now());
+      return m.status === 'active' && !isExpired;
+    }).length;
+  }, [uniqueMembers]);
   
   const activeAttendanceCount = useMemo(() => {
     if (timeframe === 'daily') {
@@ -185,13 +201,38 @@ const Overview = () => {
 
       const revenue = hoursList.map(hourStr => {
         const hr = parseInt(hourStr.split(':')[0]);
+        
+        // Paid invoices (Membership payments)
         const hourlyPaid = uniqueInvoices.filter(i => {
           if (i.status !== 'paid' || !i.paid_at || !i.paid_at.startsWith(selectedDate)) return false;
           const paidHour = new Date(i.paid_at).getHours();
           return paidHour >= hr && paidHour < hr + 2;
         });
-        const value = hourlyPaid.reduce((sum, i) => sum + i.total_amount, 0);
-        return { name: hourStr, value };
+        const membership = hourlyPaid.reduce((sum, i) => sum + i.total_amount, 0);
+
+        // Manual income (Other income)
+        const hourlyManual = uniqueIncome.filter(inc => {
+          if (!inc.date || !inc.date.startsWith(selectedDate)) return false;
+          const incHour = new Date(inc.date).getHours();
+          return incHour >= hr && incHour < hr + 2;
+        });
+        const otherInc = hourlyManual.reduce((sum, inc) => sum + inc.amount, 0);
+        const totalInc = membership + otherInc;
+
+        // Expenses
+        const hourlyExpenses = uniqueExpenses.filter(exp => {
+          if (!exp.date || !exp.date.startsWith(selectedDate)) return false;
+          const expHour = new Date(exp.date).getHours();
+          return expHour >= hr && expHour < hr + 2;
+        });
+        const totalExp = hourlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+        return { 
+          name: hourStr, 
+          Income: totalInc,
+          Expenses: totalExp,
+          Profit: totalInc - totalExp
+        };
       });
 
       const signups = hoursList.map(hourStr => {
@@ -229,11 +270,32 @@ const Overview = () => {
 
       const revenue = monthsList.map((monthName, idx) => {
         const monthPrefix = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
+        
+        // Paid invoices
         const monthlyPaid = uniqueInvoices.filter(i => {
           return i.status === 'paid' && i.paid_at && i.paid_at.startsWith(monthPrefix);
         });
-        const value = monthlyPaid.reduce((sum, i) => sum + i.total_amount, 0);
-        return { name: monthName, value };
+        const membership = monthlyPaid.reduce((sum, i) => sum + i.total_amount, 0);
+
+        // Manual income
+        const monthlyManual = uniqueIncome.filter(inc => {
+          return inc.date && inc.date.startsWith(monthPrefix);
+        });
+        const otherInc = monthlyManual.reduce((sum, inc) => sum + inc.amount, 0);
+        const totalInc = membership + otherInc;
+
+        // Expenses
+        const monthlyExpenses = uniqueExpenses.filter(exp => {
+          return exp.date && exp.date.startsWith(monthPrefix);
+        });
+        const totalExp = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+        return { 
+          name: monthName, 
+          Income: totalInc,
+          Expenses: totalExp,
+          Profit: totalInc - totalExp
+        };
       });
 
       const signups = monthsList.map((monthName, idx) => {
@@ -269,13 +331,38 @@ const Overview = () => {
       const revenue = weeks.map((weekStr, idx) => {
         const startDay = idx * 7 + 1;
         const endDay = idx === 3 ? 31 : (idx + 1) * 7;
+        
+        // Paid invoices
         const weeklyPaid = uniqueInvoices.filter(i => {
           if (i.status !== 'paid' || !i.paid_at || !i.paid_at.startsWith(selectedMonth)) return false;
           const dateNum = new Date(i.paid_at).getDate();
           return dateNum >= startDay && dateNum <= endDay;
         });
-        const value = weeklyPaid.reduce((sum, i) => sum + i.total_amount, 0);
-        return { name: weekStr, value };
+        const membership = weeklyPaid.reduce((sum, i) => sum + i.total_amount, 0);
+
+        // Manual income
+        const weeklyManual = uniqueIncome.filter(inc => {
+          if (!inc.date || !inc.date.startsWith(selectedMonth)) return false;
+          const dateNum = new Date(inc.date).getDate();
+          return dateNum >= startDay && dateNum <= endDay;
+        });
+        const otherInc = weeklyManual.reduce((sum, inc) => sum + inc.amount, 0);
+        const totalInc = membership + otherInc;
+
+        // Expenses
+        const weeklyExpenses = uniqueExpenses.filter(exp => {
+          if (!exp.date || !exp.date.startsWith(selectedMonth)) return false;
+          const dateNum = new Date(exp.date).getDate();
+          return dateNum >= startDay && dateNum <= endDay;
+        });
+        const totalExp = weeklyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+        return { 
+          name: weekStr, 
+          Income: totalInc,
+          Expenses: totalExp,
+          Profit: totalInc - totalExp
+        };
       });
 
       const signups = weeks.map((weekStr, idx) => {
@@ -300,7 +387,7 @@ const Overview = () => {
 
       return { attendance, revenue, signups };
     }
-  }, [timeframe, selectedDate, selectedMonth, selectedYear, uniqueAccessEvents, uniqueInvoices, uniqueMembers]);
+  }, [timeframe, selectedDate, selectedMonth, selectedYear, uniqueAccessEvents, uniqueInvoices, uniqueMembers, uniqueIncome, uniqueExpenses]);
 
   // 3. Dynamic lists based on telemetry
   const inactiveList = useMemo(() => {
@@ -332,32 +419,15 @@ const Overview = () => {
       .slice(0, 5);
   }, [uniqueMembers, uniqueAccessEvents]);
 
-  const overdueInvoices = useMemo(() => {
-    return uniqueInvoices.filter(i => i.status === 'overdue').slice(0, 3);
-  }, [uniqueInvoices]);
-
-  const expiringMembers = useMemo(() => {
-    const now = Date.now();
+  const expiredMembersList = useMemo(() => {
     return uniqueMembers
-      .filter(m => {
-        if (m.status === 'expired' || m.status === 'frozen') return true;
-        if (m.status === 'active' && m.countdown_end) {
-          const diff = new Date(m.countdown_end).getTime() - now;
-          return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000;
-        }
-        return false;
-      })
-      .map(m => {
-        let text = '';
-        if (m.status === 'expired') text = 'Expired';
-        else if (m.status === 'frozen') text = 'Frozen';
-        else {
-          const diff = new Date(m.countdown_end).getTime() - now;
-          const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-          text = `Expires in ${days}d`;
-        }
-        return { ...m, expiringText: text };
-      })
+      .filter(m => m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now())
+      .slice(0, 5);
+  }, [uniqueMembers]);
+
+  const frozenMembersList = useMemo(() => {
+    return uniqueMembers
+      .filter(m => m.status === 'frozen')
       .slice(0, 5);
   }, [uniqueMembers]);
 
@@ -414,16 +484,18 @@ const Overview = () => {
         
         // Detailed breakdown list
         csvContent += `Trend Telemetry Breakdown\n`;
-        csvContent += `Period Interval,Gate Attendance Volume,Revenue (LKR),New Signups,Cumulative Subscribers\n`;
+        csvContent += `Period Interval,Gate Attendance Volume,Income (LKR),Expenses (LKR),Net Profit (LKR),New Signups,Cumulative Subscribers\n`;
         
         const length = chartData.attendance.length;
         for (let i = 0; i < length; i++) {
           const intervalName = chartData.attendance[i].name;
           const attVal = chartData.attendance[i].value;
-          const revVal = chartData.revenue[i].value;
+          const incVal = chartData.revenue[i].Income;
+          const expVal = chartData.revenue[i].Expenses;
+          const profVal = chartData.revenue[i].Profit;
           const newSig = chartData.signups[i].new;
           const cumSub = chartData.signups[i].total;
-          csvContent += `"${intervalName}",${attVal},${revVal.toFixed(2)},${newSig},${cumSub}\n`;
+          csvContent += `"${intervalName}",${attVal},${incVal.toFixed(2)},${expVal.toFixed(2)},${profVal.toFixed(2)},${newSig},${cumSub}\n`;
         }
         
         // Trigger file download
@@ -613,14 +685,14 @@ const Overview = () => {
           </div>
         </div>
 
-        {/* Revenue Growth Line Chart */}
+        {/* Revenue Trends Composed Chart */}
         <div className="glass-card">
           <h3 style={{ fontFamily: 'var(--font-display)', marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 600 }}>
             Revenue Trends ({timeframe === 'daily' ? 'Hourly on ' + selectedDate : timeframe === 'yearly' ? 'Monthly ' + selectedYear : 'Weekly ' + selectedMonth})
           </h3>
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
-              <LineChart data={chartData.revenue} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <ComposedChart data={chartData.revenue} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
                 <YAxis 
@@ -632,10 +704,13 @@ const Overview = () => {
                 <Tooltip 
                   contentStyle={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', borderRadius: '8px' }}
                   labelStyle={{ color: '#fff', fontWeight: 600 }}
-                  formatter={(value) => [`LKR ${value.toLocaleString()}`, 'Revenue']}
+                  formatter={(value, name) => [`LKR ${value.toLocaleString()}`, name]}
                 />
-                <Line type="monotone" dataKey="value" stroke="#e5e7eb" strokeWidth={3} dot={{ fill: '#e5e7eb', r: 4 }} name="Revenue (LKR)" />
-              </LineChart>
+                <Legend fontSize={10} wrapperStyle={{ paddingTop: 10 }} />
+                <Bar dataKey="Income" fill="#ffffff" radius={[4, 4, 0, 0]} name="Income" />
+                <Bar dataKey="Expenses" fill="#404040" radius={[4, 4, 0, 0]} name="Expenses" />
+                <Line type="monotone" dataKey="Profit" stroke="#a3a3a3" strokeWidth={2} dot={{ fill: '#a3a3a3', r: 4 }} name="Net Profit" />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -731,23 +806,23 @@ const Overview = () => {
           </div>
         </div>
 
-        {/* Overdue Payments */}
+        {/* Expired Memberships */}
         <div className="glass-card">
           <h4 style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>
-            Overdue Payments
+            Expired Memberships
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {overdueInvoices.length === 0 ? (
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-dark)' }}>No outstanding overdue invoices.</span>
+            {expiredMembersList.length === 0 ? (
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-dark)' }}>No expired memberships.</span>
             ) : (
-              overdueInvoices.map(inv => (
-                <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+              expiredMembersList.map(m => (
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{inv.member_name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dark)' }}>Invoice: {inv.invoice_number}</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.full_name}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dark)' }}>Code: {m.member_code}</div>
                   </div>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--color-danger)', fontWeight: 700 }}>
-                    LKR {inv.total_amount.toLocaleString()}
+                  <span className="badge badge-expired" style={{ fontSize: '0.65rem' }}>
+                    Expired
                   </span>
                 </div>
               ))
@@ -755,23 +830,23 @@ const Overview = () => {
           </div>
         </div>
 
-        {/* Expiring memberships */}
+        {/* Frozen Memberships */}
         <div className="glass-card">
           <h4 style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>
-            Expiring / Action Items
+            Frozen Memberships
           </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {expiringMembers.length === 0 ? (
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-dark)' }}>No current action items.</span>
+            {frozenMembersList.length === 0 ? (
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-dark)' }}>No frozen memberships.</span>
             ) : (
-              expiringMembers.map(m => (
+              frozenMembersList.map(m => (
                 <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{m.full_name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dark)' }}>Status: {m.status}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dark)' }}>Code: {m.member_code}</div>
                   </div>
-                  <span className={`badge badge-${m.status === 'active' ? 'pending' : m.status}`} style={{ fontSize: '0.65rem' }}>
-                    {m.expiringText}
+                  <span className="badge badge-frozen" style={{ fontSize: '0.65rem' }}>
+                    Frozen
                   </span>
                 </div>
               ))
