@@ -290,7 +290,8 @@ const Members = () => {
     if (m.status === 'frozen') return 'frozen';
     const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now());
     if (isExpired) return 'expired';
-    return 'active';
+    if (m.status === 'active') return 'active';
+    return m.status || 'inactive';
   };
 
   // Filter members list based on filters
