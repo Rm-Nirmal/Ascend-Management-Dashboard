@@ -59,16 +59,6 @@ const Members = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync renewal price based on plan and selected period
-  useEffect(() => {
-    if (selectedRenewMember) {
-      const plan = plans.find(p => p.id === selectedRenewMember.plan_id) || plans[0];
-      if (plan) {
-        setRenewPrice(plan.price * parseInt(renewPeriod));
-      }
-    }
-  }, [renewPeriod, selectedRenewMember, plans]);
-
   // Membership Renewal States
   const [selectedRenewMember, setSelectedRenewMember] = useState(null);
   const [renewPrice, setRenewPrice] = useState('');
@@ -671,6 +661,7 @@ const Members = () => {
                             title="Collect Payment & Renew"
                             onClick={() => {
                               setSelectedRenewMember(member);
+                              setRenewPeriod(1);
                               const plan = plans.find(p => p.id === member.plan_id);
                               setRenewPrice(plan ? plan.price : '');
                             }}
@@ -883,6 +874,7 @@ const Members = () => {
                                 title="Collect Payment & Renew"
                                 onClick={() => {
                                   setSelectedRenewMember(member);
+                                  setRenewPeriod(1);
                                   setRenewPrice(plan ? plan.price : '');
                                 }}
                               >
@@ -1536,7 +1528,14 @@ const Members = () => {
                       className="glass-select"
                       style={{ marginTop: '0.35rem', width: '100%', padding: '0.5rem 0.75rem' }}
                       value={renewPeriod}
-                      onChange={(e) => setRenewPeriod(parseInt(e.target.value))}
+                      onChange={(e) => {
+                        const newPeriod = parseInt(e.target.value);
+                        setRenewPeriod(newPeriod);
+                        const plan = plans.find(p => p.id === selectedRenewMember.plan_id) || plans[0];
+                        if (plan) {
+                          setRenewPrice(plan.price * newPeriod);
+                        }
+                      }}
                     >
                       <option value={1}>1 Month (Standard)</option>
                       <option value={3}>3 Months (Quarterly)</option>
