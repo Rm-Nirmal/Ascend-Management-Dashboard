@@ -14,12 +14,9 @@ const Overview = () => {
     accessEvents, 
     invoices, 
     registrations,
-<<<<<<< HEAD
     trainers,
-=======
     income,
     expenses,
->>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
     showToast
   } = useDashboard();
 

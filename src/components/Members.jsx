@@ -73,9 +73,7 @@ const Members = () => {
   const [selectedRenewMember, setSelectedRenewMember] = useState(null);
   const [renewPrice, setRenewPrice] = useState('');
   const [renewPaymentMethod, setRenewPaymentMethod] = useState('card');
-<<<<<<< HEAD
   const [renewPeriod, setRenewPeriod] = useState(1);
-=======
   const [viewingReceipt, setViewingReceipt] = useState(null);
 
   const numberToWords = (num) => {
@@ -118,24 +116,17 @@ const Members = () => {
     return str.trim() + ' LKR Only';
   };
 
-
->>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
-
   const handleRenewSubmit = async (e) => {
     e.preventDefault();
     if (!renewPrice || !selectedRenewMember) return;
     try {
       const res = await renewMemberMembership(selectedRenewMember.id, renewPaymentMethod, renewPrice, renewPeriod);
       if (res.success) {
-<<<<<<< HEAD
-        alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for ${renewPeriod} month(s)! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
-=======
         if (showToast) {
-          showToast(`Membership for ${selectedRenewMember.full_name} renewed successfully!`, 'success');
+          showToast(`Membership for ${selectedRenewMember.full_name} renewed successfully for ${renewPeriod} month(s)!`, 'success');
         } else {
-          alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for 30 days! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
+          alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for ${renewPeriod} month(s)! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
         }
->>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
         setSelectedRenewMember(null);
         if (res.invoice) {
           setViewingReceipt(res.invoice);
@@ -1064,7 +1055,6 @@ const Members = () => {
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', marginTop: '0.25rem' }}>
                   {getCountdownDisplay(selectedMember)}
                 </div>
-<<<<<<< HEAD
                 <div style={{ fontSize: '0.8rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
                   Next Payment: <strong style={{ color: 'var(--color-primary)' }}>
                     {selectedMember.next_payment_date 
@@ -1072,7 +1062,6 @@ const Members = () => {
                       : new Date(selectedMember.countdown_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </strong>
                 </div>
-=======
                 {latestInvoice && (
                   <div style={{ marginTop: '0.35rem' }}>
                     <button 
@@ -1094,7 +1083,6 @@ const Members = () => {
                     </button>
                   </div>
                 )}
->>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
               </div>
               <button 
                 onClick={() => {
@@ -1620,12 +1608,8 @@ const Members = () => {
               </form>
             </div>
           </div>
-<<<<<<< HEAD
         );
       })()}
-=======
-        </div>
-      )}
 
       {/* Edit Member Modal */}
       {showEditModal && (
@@ -2015,7 +1999,6 @@ const Members = () => {
           </div>
         </div>
       )}
->>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
     </div>
   );
 };

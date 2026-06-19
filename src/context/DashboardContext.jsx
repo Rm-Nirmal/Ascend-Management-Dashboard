@@ -1351,16 +1351,10 @@ export const DashboardProvider = ({ children }) => {
       const plan = plans.find(p => p.id === member.plan_id) || plans[0];
       if (!plan) return { success: false, message: 'No plan found.' };
 
-<<<<<<< HEAD
       const isCustom = customPrice !== null && parseFloat(customPrice) !== plan.price * parseInt(periodMonths);
       const priceToCharge = isCustom ? parseFloat(customPrice) : plan.price * parseInt(periodMonths);
       const tax = isCustom ? 0 : priceToCharge * (plan.tax_rate / 100);
       const total = priceToCharge + tax;
-=======
-      const priceToCharge = customPrice !== null ? parseFloat(customPrice) : plan.price;
-      const tax = 0.0;
-      const total = priceToCharge;
->>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
 
       const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end, periodMonths);
 
@@ -1796,9 +1790,7 @@ export const DashboardProvider = ({ children }) => {
       // Utility
       logAudit,
       renewMemberMembership,
-<<<<<<< HEAD
       processStaffPayroll,
-=======
       sendSMS,
 
       // Plan CRUD
@@ -1822,7 +1814,6 @@ export const DashboardProvider = ({ children }) => {
       addIncome,
       updateIncome,
       deleteIncome,
->>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
     }}>
       {children}
     </DashboardContext.Provider>
