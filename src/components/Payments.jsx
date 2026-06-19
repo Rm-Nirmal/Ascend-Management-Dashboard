@@ -1,7 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
+<<<<<<< HEAD
   DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye, Calendar 
+=======
+  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye, Dumbbell, Share2 
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
 } from 'lucide-react';
 
 const createManualReminderLog = (invoice) => {
@@ -20,8 +24,12 @@ const Payments = () => {
   const {
     invoices,
     recordPayment,
+<<<<<<< HEAD
     trainers,
     processStaffPayroll
+=======
+    members
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
   } = useDashboard();
 
   // Component states
@@ -142,6 +150,7 @@ const Payments = () => {
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Tab Selector */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
         <button 
@@ -176,6 +185,175 @@ const Payments = () => {
         >
           Staff Payroll
         </button>
+=======
+      {/* Stats row */}
+      <div className="metrics-grid">
+        <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-success)' }}>
+          <div className="metric-header">
+            <span>REVENUE COLLECTED</span>
+            <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
+          </div>
+          <div className="metric-value">LKR {revenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+          <div className="metric-subtext">Paid memberships MTD</div>
+        </div>
+
+        <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
+          <div className="metric-header">
+            <span>OUTSTANDING ACCOUNT</span>
+            <Landmark size={18} style={{ color: 'var(--color-primary)' }} />
+          </div>
+          <div className="metric-value">LKR {outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+          <div className="metric-subtext">Awaiting payment (Open status)</div>
+        </div>
+
+      </div>
+  
+      {/* Revenue Breakdowns (FR-PAY-03) */}
+      <div className="glass-card grid-2" style={{ gap: '2.5rem', marginBottom: '2rem', padding: '1.5rem 2rem' }}>
+        <div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <CreditCard size={16} style={{ color: 'var(--color-primary)' }} />
+            Revenue by Payment Method
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Card */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Credit/Debit Card</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {methodRevenue.stats.card.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.card / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.card / methodRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-primary)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-primary)' 
+                }} />
+              </div>
+            </div>
+            {/* Cash */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Cash Punch</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {methodRevenue.stats.cash.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.cash / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.cash / methodRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-success)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-success)' 
+                }} />
+              </div>
+            </div>
+            {/* UPI */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Mobile UPI</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {methodRevenue.stats.upi.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.upi / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.upi / methodRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-warning)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-warning)' 
+                }} />
+              </div>
+            </div>
+            {/* Bank Wire */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Bank Wire</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {methodRevenue.stats.bank_transfer.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.bank_transfer / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.bank_transfer / methodRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-ai)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-ai)' 
+                }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <DollarSign size={16} style={{ color: 'var(--color-success)' }} />
+            Revenue by Membership Plan
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+            {/* Starter (p1) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Basic Starter (LKR 4,500)</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {planRevenue.stats.p1.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p1 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p1 / planRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: '#38bdf8', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px #38bdf8' 
+                }} />
+              </div>
+            </div>
+            {/* Elite (p2) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>Ascend Elite (LKR 8,500)</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {planRevenue.stats.p2.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p2 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p2 / planRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: 'var(--color-primary)', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px var(--color-primary)' 
+                }} />
+              </div>
+            </div>
+            {/* VIP (p3) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontWeight: 600 }}>VIP Platinum (LKR 15,000)</span>
+                <span style={{ color: 'var(--text-muted)' }}>
+                  LKR {planRevenue.stats.p3.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p3 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                </span>
+              </div>
+              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ 
+                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p3 / planRevenue.total) * 100 : 0}%`, 
+                  height: '100%', 
+                  background: '#a855f7', 
+                  borderRadius: '4px',
+                  boxShadow: '0 0 8px #a855f7' 
+                }} />
+              </div>
+            </div>
+          </div>
+        </div>
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
       </div>
 
       {billingTab === 'members' ? (
@@ -685,10 +863,6 @@ const Payments = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                     <span>Membership Subtotal:</span>
                     <span>LKR {selectedInvoice.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                    <span>Tax (8.5%):</span>
-                    <span>+LKR {selectedInvoice.tax_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
                   {selectedInvoice.discount_amount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', color: 'var(--color-success)' }}>

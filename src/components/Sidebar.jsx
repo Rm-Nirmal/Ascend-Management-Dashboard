@@ -8,7 +8,10 @@ import {
   Sparkles, 
   ClipboardList,
   Shield,
-  LogOut
+  LogOut,
+  Briefcase,
+  Dumbbell,
+  DollarSign
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -19,8 +22,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'overview', name: 'Dashboard Overview', icon: LayoutDashboard },
     { id: 'members', name: 'Members Directory', icon: Users },
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
+    { id: 'employees', name: 'Employees Desk', icon: Briefcase },
     { id: 'access', name: 'Access Console', icon: QrCode },
-    { id: 'payments', name: 'Invoices & Payments', icon: CreditCard },
+    { id: 'finance', name: 'Finance', icon: DollarSign },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
     { id: 'audit', name: 'System Audit Logs', icon: ClipboardList },
     { id: 'admin_management', name: 'Admin Console', icon: Shield }
@@ -44,7 +48,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       <div>
         {/* Brand Logo */}
         <div className="sidebar-logo" style={{ marginBottom: '2.5rem' }}>
-          <Sparkles className="icon" style={{ color: 'var(--color-primary)' }} />
+          <Dumbbell className="icon" style={{ color: 'var(--color-primary)' }} />
           <span className="logo-text">ASCEND FITNESS</span>
         </div>
 

@@ -8,6 +8,7 @@ import {
   doc,
   addDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -20,6 +21,7 @@ import {
   signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
+  updatePassword,
 } from 'firebase/auth';
 
 const DashboardContext = createContext();
@@ -56,8 +58,8 @@ const helperCreateMemberObject = (memberData, memberCode) => {
  * Build an invoice object for a new member enrollment.
  */
 const helperCreateInvoiceForMember = (memberId, memberName, plan) => {
-  const tax = plan.price * (plan.tax_rate / 100);
-  const total = plan.price + tax;
+  const tax = 0.0;
+  const total = plan.price;
   const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
   return {
     organization_id: DEFAULT_ORG_ID,
@@ -165,6 +167,10 @@ export const DashboardProvider = ({ children }) => {
   const [invoices, setInvoices] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [admins, setAdmins] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [employeeRegistrations, setEmployeeRegistrations] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [income, setIncome] = useState([]);
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE A: Firebase Auth Listener
@@ -236,6 +242,258 @@ export const DashboardProvider = ({ children }) => {
     return () => unsubscribe();
   }, [currentUser]);
 
+  // ─── Seeding Helpers for Employees & Employee Registrations ─────────
+  const seedMockEmployees = async () => {
+    const orgId = currentUser?.organization_id || DEFAULT_ORG_ID;
+    const initialEmployees = [
+      {
+        organization_id: orgId,
+        full_name: 'Sarah Jenkins',
+        email: 'superadmin@ascend.com',
+        phone: '+94 77 111 2222',
+        role: 'Manager',
+        salary: 125000,
+        next_salary_date: '2026-06-25',
+        status: 'active',
+        joined_at: '2025-01-10',
+        created_at: new Date().toISOString(),
+      },
+      {
+        organization_id: orgId,
+        full_name: 'Marcus Rivera',
+        email: 'marcus@ascend.com',
+        phone: '+94 77 333 4444',
+        role: 'Head Trainer',
+        salary: 95000,
+        next_salary_date: '2026-06-25',
+        status: 'active',
+        joined_at: '2025-03-15',
+        created_at: new Date().toISOString(),
+      },
+      {
+        organization_id: orgId,
+        full_name: 'Priya Chandrasekhar',
+        email: 'priya@ascend.com',
+        phone: '+94 77 555 6666',
+        role: 'Yoga Coach',
+        salary: 80000,
+        next_salary_date: '2026-06-25',
+        status: 'active',
+        joined_at: '2025-04-01',
+        created_at: new Date().toISOString(),
+      }
+    ];
+    for (const emp of initialEmployees) {
+      await addDoc(collection(db, COLLECTIONS.EMPLOYEES), emp);
+    }
+  };
+
+  const seedMockEmployeeRegistrations = async () => {
+    const orgId = currentUser?.organization_id || DEFAULT_ORG_ID;
+    const initialRegs = [
+      {
+        organization_id: orgId,
+        full_name: 'Dilan Perera',
+        email: 'dilan.p@gmail.com',
+        phone: '+94 77 777 8888',
+        date_of_birth: '1998-05-12',
+        role: 'Front Desk',
+        expected_salary: 45000,
+        cover_note: 'I have 2 years of receptionist experience. Excited to apply at Ascend!',
+        status: 'pending_approval',
+        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        organization_id: orgId,
+        full_name: 'Nisansala Silva',
+        email: 'nisansala@gmail.com',
+        phone: '+94 71 222 3333',
+        date_of_birth: '1995-11-20',
+        role: 'Personal Trainer',
+        expected_salary: 75000,
+        cover_note: 'Certified fitness coach specializing in female hypertrophy and strength training.',
+        status: 'pending_approval',
+        created_at: new Date().toISOString(),
+      }
+    ];
+    for (const reg of initialRegs) {
+      await addDoc(collection(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS), reg);
+    }
+  };
+
+  const seedMockFinanceData = async () => {
+    const orgId = currentUser?.organization_id || DEFAULT_ORG_ID;
+    const now = new Date();
+    
+    // Generate data for the last 12 months
+    for (let i = 11; i >= 0; i--) {
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 15);
+      const year = targetDate.getFullYear();
+      const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+      const monthStr = `${year}-${month}`;
+      
+      const monthlyExpenses = [
+        {
+          organization_id: orgId,
+          title: `Monthly Gym Rent - ${monthStr}`,
+          description: 'Gym facility rental fee',
+          category: 'Rent',
+          amount: 150000,
+          date: `${year}-${month}-01`,
+          payment_method: 'bank_transfer',
+          receipt_url: '',
+          notes: 'Paid on time',
+          created_at: new Date(`${year}-${month}-01T08:00:00Z`).toISOString()
+        },
+        {
+          organization_id: orgId,
+          title: `Electricity Bill - ${monthStr}`,
+          description: 'Electricity bill for the gym complex',
+          category: 'Electricity',
+          amount: Math.floor(30000 + Math.random() * 15000),
+          date: `${year}-${month}-10`,
+          payment_method: 'card',
+          receipt_url: '',
+          notes: 'Standard commercial tariff',
+          created_at: new Date(`${year}-${month}-10T10:00:00Z`).toISOString()
+        },
+        {
+          organization_id: orgId,
+          title: `Water Utility Bill - ${monthStr}`,
+          description: 'Water utility bill',
+          category: 'Water',
+          amount: Math.floor(6000 + Math.random() * 4000),
+          date: `${year}-${month}-12`,
+          payment_method: 'cash',
+          receipt_url: '',
+          notes: '',
+          created_at: new Date(`${year}-${month}-12T11:00:00Z`).toISOString()
+        },
+        {
+          organization_id: orgId,
+          title: `High-Speed Fiber Internet - ${monthStr}`,
+          description: 'Dialog Broadband billing',
+          category: 'Internet',
+          amount: 12500,
+          date: `${year}-${month}-05`,
+          payment_method: 'card',
+          receipt_url: '',
+          notes: '100 Mbps unlimited plan',
+          created_at: new Date(`${year}-${month}-05T09:30:00Z`).toISOString()
+        },
+        {
+          organization_id: orgId,
+          title: `Staff Salaries - ${monthStr}`,
+          description: 'Salaries for trainers and front desk staff',
+          category: 'Salary',
+          amount: 300000,
+          date: `${year}-${month}-25`,
+          payment_method: 'bank_transfer',
+          receipt_url: '',
+          notes: 'Transferred to employee accounts',
+          created_at: new Date(`${year}-${month}-25T15:00:00Z`).toISOString()
+        },
+        {
+          organization_id: orgId,
+          title: `Marketing Campaigns - ${monthStr}`,
+          description: 'Social media ads and local flyers',
+          category: 'Marketing',
+          amount: Math.floor(15000 + Math.random() * 10000),
+          date: `${year}-${month}-18`,
+          payment_method: 'card',
+          receipt_url: '',
+          notes: 'Facebook and Instagram ads',
+          created_at: new Date(`${year}-${month}-18T14:00:00Z`).toISOString()
+        }
+      ];
+
+      if (Math.random() > 0.4) {
+        monthlyExpenses.push({
+          organization_id: orgId,
+          title: `Gym Maintenance and Cleaning Supplies - ${monthStr}`,
+          description: 'Cleaning liquids, towels, and minor repairs',
+          category: 'Maintenance',
+          amount: Math.floor(8000 + Math.random() * 12000),
+          date: `${year}-${month}-20`,
+          payment_method: 'cash',
+          receipt_url: '',
+          notes: '',
+          created_at: new Date(`${year}-${month}-20T12:00:00Z`).toISOString()
+        });
+      }
+
+      if (i % 4 === 0) {
+        monthlyExpenses.push({
+          organization_id: orgId,
+          title: `New Gym Equipment - ${monthStr}`,
+          description: 'Bought new dumbbells and resistance bands',
+          category: 'Equipment',
+          amount: Math.floor(60000 + Math.random() * 40000),
+          date: `${year}-${month}-15`,
+          payment_method: 'bank_transfer',
+          receipt_url: '',
+          notes: 'Supplier: Fitness Solutions',
+          created_at: new Date(`${year}-${month}-15T10:30:00Z`).toISOString()
+        });
+      }
+
+      for (const exp of monthlyExpenses) {
+        if (new Date(exp.date) <= now) {
+          await addDoc(collection(db, COLLECTIONS.EXPENSES), exp);
+        }
+      }
+
+      const monthlyIncome = [
+        {
+          organization_id: orgId,
+          member_name: 'Emma Watson',
+          source: 'Personal Training Sessions',
+          amount: Math.floor(25000 + Math.random() * 15000),
+          date: `${year}-${month}-08`,
+          payment_method: 'card',
+          payment_reference: `PT-${year}-${month}-08`,
+          created_at: new Date(`${year}-${month}-08T10:00:00Z`).toISOString()
+        },
+        {
+          organization_id: orgId,
+          member_name: 'Carlos Mendez',
+          source: 'Product Sales',
+          amount: Math.floor(12000 + Math.random() * 8000),
+          date: `${year}-${month}-14`,
+          payment_method: 'cash',
+          payment_reference: `PS-${year}-${month}-14`,
+          created_at: new Date(`${year}-${month}-14T15:00:00Z`).toISOString()
+        },
+        {
+          organization_id: orgId,
+          member_name: 'Sarah Connor',
+          source: 'Registration Fees',
+          amount: 5000,
+          date: `${year}-${month}-02`,
+          payment_method: 'upi',
+          payment_reference: `REG-${year}-${month}-02`,
+          created_at: new Date(`${year}-${month}-02T09:00:00Z`).toISOString()
+        },
+        {
+          organization_id: orgId,
+          member_name: '',
+          source: 'Other',
+          amount: Math.floor(5000 + Math.random() * 5000),
+          date: `${year}-${month}-22`,
+          payment_method: 'cash',
+          payment_reference: `OTH-${year}-${month}-22`,
+          created_at: new Date(`${year}-${month}-22T16:00:00Z`).toISOString()
+        }
+      ];
+
+      for (const inc of monthlyIncome) {
+        if (new Date(inc.date) <= now) {
+          await addDoc(collection(db, COLLECTIONS.INCOME), inc);
+        }
+      }
+    }
+  };
+
   // ═══════════════════════════════════════════════════════════════════
   // PHASE D: Real-time Firestore Listeners (only when authenticated)
   // ═══════════════════════════════════════════════════════════════════
@@ -250,6 +508,10 @@ export const DashboardProvider = ({ children }) => {
       setPlans([]);
       setTrainers([]);
       setAdmins([]);
+      setEmployees([]);
+      setEmployeeRegistrations([]);
+      setExpenses([]);
+      setIncome([]);
       setDataLoaded(false);
       return;
     }
@@ -257,7 +519,7 @@ export const DashboardProvider = ({ children }) => {
     const orgId = currentUser.organization_id || DEFAULT_ORG_ID;
     const unsubscribers = [];
     let loadedCount = 0;
-    const totalCollections = 7; // Removed plans from counting since loaded separately
+    const totalCollections = 11; // Added employees, employeeRegistrations, expenses, and income
 
     const markLoaded = () => {
       loadedCount++;
@@ -382,6 +644,69 @@ export const DashboardProvider = ({ children }) => {
       }, (err) => { console.error('Admins listener error:', err); markLoaded(); })
     );
 
+    // 9. Employees (org-scoped)
+    const employeesQ = query(
+      collection(db, COLLECTIONS.EMPLOYEES),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(employeesQ, (snap) => {
+        setEmployees(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+        if (snap.empty) {
+          seedMockEmployees();
+        }
+      }, (err) => { console.error('Employees listener error:', err); markLoaded(); })
+    );
+
+    // 10. Employee Registrations (org-scoped)
+    const empRegsQ = query(
+      collection(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(empRegsQ, (snap) => {
+        setEmployeeRegistrations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        markLoaded();
+        if (snap.empty) {
+          seedMockEmployeeRegistrations();
+        }
+      }, (err) => { console.error('Employee registrations listener error:', err); markLoaded(); })
+    );
+
+    // 11. Expenses (org-scoped)
+    const expensesQ = query(
+      collection(db, COLLECTIONS.EXPENSES),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(expensesQ, (snap) => {
+        const exp = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Sort client-side
+        exp.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setExpenses(exp);
+        markLoaded();
+        if (snap.empty) {
+          seedMockFinanceData();
+        }
+      }, (err) => { console.error('Expenses listener error:', err); markLoaded(); })
+    );
+
+    // 12. Income (org-scoped)
+    const incomeQ = query(
+      collection(db, COLLECTIONS.INCOME),
+      where('organization_id', '==', orgId)
+    );
+    unsubscribers.push(
+      onSnapshot(incomeQ, (snap) => {
+        const inc = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Sort client-side
+        inc.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setIncome(inc);
+        markLoaded();
+      }, (err) => { console.error('Income listener error:', err); markLoaded(); })
+    );
+
     // Cleanup all listeners on unmount or user change
     return () => {
       unsubscribers.forEach(unsub => unsub());
@@ -463,6 +788,7 @@ export const DashboardProvider = ({ children }) => {
         name,
         email: email.trim().toLowerCase(),
         role,
+        password, // Save password in Firestore for advanced Super Admin actions
         organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
         photo_url: role === 'super_admin'
           ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
@@ -724,6 +1050,132 @@ export const DashboardProvider = ({ children }) => {
   }, [registrations, currentUser]);
 
   // ═══════════════════════════════════════════════════════════════════
+  // EMPLOYEE CRUD & PAYROLL ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const addEmployee = useCallback(async (employeeData) => {
+    try {
+      const newEmp = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        status: 'active',
+        joined_at: employeeData.joined_at || new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString(),
+        ...employeeData,
+        salary: parseFloat(employeeData.salary),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.EMPLOYEES), newEmp);
+      await logAudit('employee.create', 'employee', docRef.id, `Hired employee: ${newEmp.full_name} (${newEmp.role})`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addEmployee error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updateEmployee = useCallback(async (id, updatedFields) => {
+    try {
+      const empRef = doc(db, COLLECTIONS.EMPLOYEES, id);
+      const updated = { ...updatedFields };
+      if (updated.salary !== undefined) updated.salary = parseFloat(updated.salary);
+      await updateDoc(empRef, updated);
+      await logAudit('employee.update', 'employee', id, `Updated employee fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateEmployee error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deleteEmployee = useCallback(async (id) => {
+    try {
+      const employee = employees.find(e => e.id === id);
+      const empRef = doc(db, COLLECTIONS.EMPLOYEES, id);
+      await updateDoc(empRef, {
+        status: 'terminated',
+        terminated_at: new Date().toISOString(),
+      });
+      if (employee) {
+        await logAudit('employee.terminate', 'employee', id, `Terminated employee profile for ${employee.full_name}`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('deleteEmployee error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [employees, logAudit]);
+
+  const addEmployeeRegistrationRequest = useCallback(async (formData) => {
+    try {
+      const newReq = {
+        organization_id: DEFAULT_ORG_ID,
+        status: 'pending_approval',
+        created_at: new Date().toISOString(),
+        ...formData,
+        expected_salary: parseFloat(formData.expected_salary),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS), newReq);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addEmployeeRegistrationRequest error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, []);
+
+  const approveEmployeeRegistration = useCallback(async (requestId, finalSalary, nextSalaryDate) => {
+    try {
+      const req = employeeRegistrations.find(r => r.id === requestId);
+      if (req) {
+        // Create full employee profile
+        const empRes = await addEmployee({
+          full_name: req.full_name,
+          email: req.email,
+          phone: req.phone,
+          role: req.role,
+          salary: finalSalary,
+          next_salary_date: nextSalaryDate,
+          joined_at: new Date().toISOString().split('T')[0],
+        });
+
+        if (empRes.success) {
+          // Update registration status
+          const regRef = doc(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS, requestId);
+          await updateDoc(regRef, { status: 'approved' });
+          await logAudit('employee_registration.approve', 'employee_registration', requestId, `Approved job application and hired ${req.full_name} as ${req.role}`);
+          return { success: true };
+        }
+      }
+      return { success: false, message: 'Application not found or hiring failed.' };
+    } catch (err) {
+      console.error('approveEmployeeRegistration error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [employeeRegistrations, addEmployee, logAudit]);
+
+  const rejectEmployeeRegistration = useCallback(async (requestId, reason) => {
+    try {
+      const req = employeeRegistrations.find(r => r.id === requestId);
+      const regRef = doc(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS, requestId);
+      await updateDoc(regRef, {
+        status: 'rejected',
+        rejection_reason: reason,
+      });
+      if (req) {
+        await logAudit('employee_registration.reject', 'employee_registration', requestId, `Rejected application for ${req.full_name}. Reason: ${reason}`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('rejectEmployeeRegistration error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [employeeRegistrations, logAudit]);
+
+  // ═══════════════════════════════════════════════════════════════════
   // INVOICING & PAYMENTS
   // ═══════════════════════════════════════════════════════════════════
 
@@ -845,6 +1297,48 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [accessEvents, currentUser]);
 
+  const sendSMS = useCallback(async (toPhone, memberName, amount, sourceName, receiptLink, memberId = null) => {
+    try {
+      const fromPhone = '0779688582';
+      const message = `Welcome to Ascend Fit! Hello ${memberName}, your payment of LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} for ${sourceName} has been received. View your receipt: ${receiptLink}`;
+      
+      console.log("%c[SMS Gateway] Sending SMS...", "color: #10b981; font-weight: bold;", {
+        from: fromPhone,
+        to: toPhone,
+        message,
+      });
+
+      const smsLog = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        from: fromPhone,
+        to: toPhone,
+        member_name: memberName,
+        member_id: memberId,
+        amount,
+        source: sourceName,
+        message,
+        receipt_link: receiptLink,
+        sent_at: new Date().toISOString(),
+      };
+      
+      const docRef = await addDoc(collection(db, COLLECTIONS.SMS_LOGS), smsLog);
+      
+      await logAudit(
+        'member.sms_receipt', 
+        'member', 
+        memberId || 'unknown_member', 
+        `Sent SMS receipt from ${fromPhone} to ${memberName} (+${toPhone}) for LKR ${amount.toLocaleString()}`
+      );
+      
+      showToast(`SMS Receipt sent to ${memberName} (+${toPhone}) from ${fromPhone}`, 'success');
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('sendSMS error:', err);
+      showToast('Failed to send SMS receipt simulation.', 'error');
+      return { success: false, error: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
   // ═══════════════════════════════════════════════════════════════════
   // MEMBERSHIP RENEWAL
   // ═══════════════════════════════════════════════════════════════════
@@ -857,10 +1351,16 @@ export const DashboardProvider = ({ children }) => {
       const plan = plans.find(p => p.id === member.plan_id) || plans[0];
       if (!plan) return { success: false, message: 'No plan found.' };
 
+<<<<<<< HEAD
       const isCustom = customPrice !== null && parseFloat(customPrice) !== plan.price * parseInt(periodMonths);
       const priceToCharge = isCustom ? parseFloat(customPrice) : plan.price * parseInt(periodMonths);
       const tax = isCustom ? 0 : priceToCharge * (plan.tax_rate / 100);
       const total = priceToCharge + tax;
+=======
+      const priceToCharge = customPrice !== null ? parseFloat(customPrice) : plan.price;
+      const tax = 0.0;
+      const total = priceToCharge;
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
 
       const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end, periodMonths);
 
@@ -900,13 +1400,303 @@ export const DashboardProvider = ({ children }) => {
         `Renewed membership for ${member.full_name} for ${periodMonths} months (New Expiry: ${new Date(newCountdownEnd).toLocaleDateString()})`
       );
 
-      return { success: true, newCountdownEnd };
+      if (member.phone) {
+        const receiptLink = `${window.location.origin}/?view=receipt&type=invoice&id=${invRef.id}`;
+        try {
+          await sendSMS(member.phone, member.full_name, total, `Membership Renewal - ${plan.name}`, receiptLink, member.id);
+        } catch (smsErr) {
+          console.error('Failed to send SMS receipt during renewal:', smsErr);
+        }
+      }
+
+      return { success: true, newCountdownEnd, invoice: { id: invRef.id, ...invoiceData } };
     } catch (err) {
       console.error('renewMemberMembership error:', err);
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [members, plans, currentUser]);
+  }, [members, plans, currentUser, sendSMS]);
+  // ═══════════════════════════════════════════════════════════════════
+  // PLAN (MEMBERSHIP PACKAGE) CRUD ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const addPlan = useCallback(async (planData) => {
+    try {
+      const newPlan = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        name: planData.name,
+        price: parseFloat(planData.price),
+        tax_rate: parseFloat(planData.tax_rate || 5),
+        duration_days: parseInt(planData.duration_days || 30),
+        features: planData.features || [],
+        created_at: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.PLANS), newPlan);
+      await logAudit('plan.create', 'plan', docRef.id, `Created membership package: ${newPlan.name}`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addPlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updatePlan = useCallback(async (id, planFields) => {
+    try {
+      const planRef = doc(db, COLLECTIONS.PLANS, id);
+      const updated = {
+        ...planFields,
+        price: planFields.price ? parseFloat(planFields.price) : undefined,
+        tax_rate: planFields.tax_rate ? parseFloat(planFields.tax_rate) : undefined,
+        duration_days: planFields.duration_days ? parseInt(planFields.duration_days) : undefined,
+      };
+      // remove undefined values
+      Object.keys(updated).forEach(key => updated[key] === undefined && delete updated[key]);
+
+      await updateDoc(planRef, updated);
+      await logAudit('plan.update', 'plan', id, `Updated membership package fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updatePlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deletePlan = useCallback(async (id) => {
+    try {
+      const plan = plans.find(p => p.id === id);
+      const planRef = doc(db, COLLECTIONS.PLANS, id);
+      await deleteDoc(planRef);
+      if (plan) {
+        await logAudit('plan.delete', 'plan', id, `Deleted membership package: ${plan.name}`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('deletePlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [plans, logAudit]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PERSONAL TRAINER CRUD ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const addTrainer = useCallback(async (trainerData) => {
+    try {
+      const newTrainer = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        name: trainerData.name,
+        specialization: trainerData.specialization,
+        bio: trainerData.bio || '',
+        hourly_rate: parseFloat(trainerData.hourly_rate),
+        photo_url: trainerData.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        created_at: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.TRAINERS), newTrainer);
+      await logAudit('trainer.create', 'trainer', docRef.id, `Added personal trainer: ${newTrainer.name}`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addTrainer error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updateTrainer = useCallback(async (id, trainerFields) => {
+    try {
+      const trainerRef = doc(db, COLLECTIONS.TRAINERS, id);
+      const updated = {
+        ...trainerFields,
+        hourly_rate: trainerFields.hourly_rate ? parseFloat(trainerFields.hourly_rate) : undefined,
+      };
+      Object.keys(updated).forEach(key => updated[key] === undefined && delete updated[key]);
+
+      await updateDoc(trainerRef, updated);
+      await logAudit('trainer.update', 'trainer', id, `Updated personal trainer fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateTrainer error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deleteTrainer = useCallback(async (id) => {
+    try {
+      const trainer = trainers.find(t => t.id === id);
+      const trainerRef = doc(db, COLLECTIONS.TRAINERS, id);
+      await deleteDoc(trainerRef);
+      if (trainer) {
+        await logAudit('trainer.delete', 'trainer', id, `Deleted personal trainer: ${trainer.name}`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('deleteTrainer error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [trainers, logAudit]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ADVANCED ADMINISTRATOR ACTIONS
+  // ═══════════════════════════════════════════════════════════════════
+
+  const updateAdminPassword = useCallback(async (adminId, newPassword) => {
+    try {
+      const admin = admins.find(a => a.id === adminId);
+      if (!admin) return { success: false, message: 'Admin not found.' };
+
+      // Update Firestore admin doc
+      const adminRef = doc(db, COLLECTIONS.ADMINS, adminId);
+      await updateDoc(adminRef, { password: newPassword });
+
+      // If it is the current user logged in, also update in Firebase Auth
+      if (currentUser && currentUser.id === adminId && auth.currentUser) {
+        await updatePassword(auth.currentUser, newPassword);
+      }
+
+      await logAudit('admin.password_update', 'admin', adminId, `Updated password for administrator: ${admin.name}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateAdminPassword error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [admins, currentUser, logAudit]);
+
+  const deleteAdmin = useCallback(async (adminId) => {
+    try {
+      const admin = admins.find(a => a.id === adminId);
+      if (!admin) return { success: false, message: 'Admin not found.' };
+
+      // Delete from Firestore
+      const adminRef = doc(db, COLLECTIONS.ADMINS, adminId);
+      await deleteDoc(adminRef);
+
+      await logAudit('admin.delete', 'admin', adminId, `Deleted administrator account: ${admin.name}`);
+
+      // If they deleted themselves, sign out
+      if (currentUser && currentUser.id === adminId) {
+        await logout();
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('deleteAdmin error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [admins, currentUser, logout, logAudit]);
+
+  // ─── Finance CRUD Actions ───────────────────────────────────────────
+
+  const addExpense = useCallback(async (expenseData) => {
+    try {
+      const newExp = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        created_at: new Date().toISOString(),
+        ...expenseData,
+        amount: parseFloat(expenseData.amount),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.EXPENSES), newExp);
+      await logAudit('expense.create', 'expense', docRef.id, `Recorded expense: ${newExp.title} (LKR ${newExp.amount.toLocaleString()})`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addExpense error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updateExpense = useCallback(async (id, updatedFields) => {
+    try {
+      const expRef = doc(db, COLLECTIONS.EXPENSES, id);
+      const updated = { ...updatedFields };
+      if (updated.amount !== undefined) updated.amount = parseFloat(updated.amount);
+      await updateDoc(expRef, updated);
+      await logAudit('expense.update', 'expense', id, `Updated expense fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateExpense error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deleteExpense = useCallback(async (id) => {
+    try {
+      const expRef = doc(db, COLLECTIONS.EXPENSES, id);
+      await deleteDoc(expRef);
+      await logAudit('expense.delete', 'expense', id, `Deleted expense record`);
+      return { success: true };
+    } catch (err) {
+      console.error('deleteExpense error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+
+  const addIncome = useCallback(async (incomeData) => {
+    try {
+      const newInc = {
+        organization_id: currentUser?.organization_id || DEFAULT_ORG_ID,
+        created_at: new Date().toISOString(),
+        ...incomeData,
+        amount: parseFloat(incomeData.amount),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.INCOME), newInc);
+      await logAudit('income.create', 'income', docRef.id, `Recorded income: ${newInc.source} (LKR ${newInc.amount.toLocaleString()})`);
+
+      if (newInc.member_name) {
+        const member = members.find(m => m.full_name === newInc.member_name);
+        if (member && member.phone) {
+          const receiptLink = `${window.location.origin}/?view=receipt&type=income&id=${docRef.id}`;
+          try {
+            await sendSMS(member.phone, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
+          } catch (smsErr) {
+            console.error('Failed to send SMS receipt during addIncome:', smsErr);
+          }
+        }
+      }
+
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addIncome error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit, members, sendSMS]);
+
+  const updateIncome = useCallback(async (id, updatedFields) => {
+    try {
+      const incRef = doc(db, COLLECTIONS.INCOME, id);
+      const updated = { ...updatedFields };
+      if (updated.amount !== undefined) updated.amount = parseFloat(updated.amount);
+      await updateDoc(incRef, updated);
+      await logAudit('income.update', 'income', id, `Updated income fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateIncome error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deleteIncome = useCallback(async (id) => {
+    try {
+      const incRef = doc(db, COLLECTIONS.INCOME, id);
+      await deleteDoc(incRef);
+      await logAudit('income.delete', 'income', id, `Deleted income record`);
+      return { success: true };
+    } catch (err) {
+      console.error('deleteIncome error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
 
   const processStaffPayroll = useCallback(async (trainerId, amount, paymentMethod) => {
     try {
@@ -953,6 +1743,10 @@ export const DashboardProvider = ({ children }) => {
       invoices,
       auditLogs,
       admins,
+      employees,
+      employeeRegistrations,
+      expenses,
+      income,
       currentUser,
       toasts,
 
@@ -984,6 +1778,14 @@ export const DashboardProvider = ({ children }) => {
       approveRegistration,
       rejectRegistration,
 
+      // Employee Actions
+      addEmployee,
+      updateEmployee,
+      deleteEmployee,
+      addEmployeeRegistrationRequest,
+      approveEmployeeRegistration,
+      rejectEmployeeRegistration,
+
       // Payment Actions
       recordPayment,
 
@@ -994,7 +1796,33 @@ export const DashboardProvider = ({ children }) => {
       // Utility
       logAudit,
       renewMemberMembership,
+<<<<<<< HEAD
       processStaffPayroll,
+=======
+      sendSMS,
+
+      // Plan CRUD
+      addPlan,
+      updatePlan,
+      deletePlan,
+
+      // Trainer CRUD
+      addTrainer,
+      updateTrainer,
+      deleteTrainer,
+
+      // Admin Management Actions
+      updateAdminPassword,
+      deleteAdmin,
+
+      // Finance Actions
+      addExpense,
+      updateExpense,
+      deleteExpense,
+      addIncome,
+      updateIncome,
+      deleteIncome,
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
     }}>
       {children}
     </DashboardContext.Provider>

@@ -5,13 +5,16 @@ import Overview from './components/Overview';
 import Members from './components/Members';
 import Registrations from './components/Registrations';
 import AccessConsole from './components/AccessConsole';
-import Payments from './components/Payments';
+
 import AIInsights from './components/AIInsights';
 import AuditSettings from './components/AuditSettings';
 import Login from './components/Login';
 import AdminManagement from './components/AdminManagement';
+import Employees from './components/Employees';
+import Finance from './components/Finance';
 import { Bell, ShieldCheck, HelpCircle, Loader2 } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
+import PublicReceipt from './components/PublicReceipt';
 import ToastContainer from './components/Toast';
 
 /**
@@ -134,11 +137,21 @@ const DashboardContentShell = () => {
 
   // Check if we are simulating the standalone public registration form
   const isPublicRegister = window.location.hash === '#register' || window.location.search.includes('view=register');
+  const isPublicReceipt = window.location.search.includes('view=receipt') || window.location.hash.startsWith('#receipt');
 
   if (isPublicRegister) {
     return (
       <>
         <PublicRegistrationForm isStandalone={true} />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+      </>
+    );
+  }
+
+  if (isPublicReceipt) {
+    return (
+      <>
+        <PublicReceipt />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </>
     );
@@ -170,10 +183,13 @@ const DashboardContentShell = () => {
         return <Members />;
       case 'registrations':
         return <Registrations />;
+      case 'employees':
+        return <Employees />;
       case 'access':
         return <AccessConsole />;
-      case 'payments':
-        return <Payments />;
+
+      case 'finance':
+        return <Finance />;
       case 'ai':
         return <AIInsights />;
       case 'audit':

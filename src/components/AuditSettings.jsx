@@ -8,18 +8,31 @@ import {
 const AuditSettings = () => {
   const { auditLogs, showToast } = useDashboard();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
   
   // Scoped logs filter
   const filteredLogs = useMemo(() => {
     return auditLogs.filter(log => {
       const search = searchTerm.toLowerCase();
-      return (
+      const matchesSearch = (
         log.action.toLowerCase().includes(search) || 
         log.details.toLowerCase().includes(search) || 
         log.user_name.toLowerCase().includes(search)
       );
+
+      let matchesDate = true;
+      if (selectedDate && log.occurred_at) {
+        try {
+          const logDateStr = new Date(log.occurred_at).toISOString().split('T')[0];
+          matchesDate = (logDateStr === selectedDate);
+        } catch (e) {
+          matchesDate = false;
+        }
+      }
+
+      return matchesSearch && matchesDate;
     });
-  }, [auditLogs, searchTerm]);
+  }, [auditLogs, searchTerm, selectedDate]);
 
   // Action class color badge mapper (NFR-05)
   const getActionBadgeStyle = (action) => {
@@ -98,16 +111,39 @@ const AuditSettings = () => {
               Security Audit Trail (NFR-05)
             </h3>
             
-            {/* Search */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)', width: '220px' }}>
-              <Search size={14} style={{ color: 'var(--text-muted)' }} />
-              <input 
-                type="text" 
-                placeholder="Search audit logs..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%', fontSize: '0.75rem' }}
-              />
+            {/* Filters toolbar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {/* Date Filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Date:</span>
+                <input
+                  type="date"
+                  style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', color: '#fff', width: '120px', outline: 'none', cursor: 'pointer' }}
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
+                {selectedDate && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate('')}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem', padding: '0 0.2rem', display: 'flex', alignItems: 'center' }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* Search */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--border-color)', width: '200px' }}>
+                <Search size={14} style={{ color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search audit logs..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%', fontSize: '0.75rem' }}
+                />
+              </div>
             </div>
           </div>
 

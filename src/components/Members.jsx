@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock
+  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign
 } from 'lucide-react';
 
 const Members = () => {
@@ -14,7 +14,10 @@ const Members = () => {
     deleteMember,
     freezeMembership,
     unfreezeMembership,
-    renewMemberMembership
+    renewMemberMembership,
+    invoices,
+    currentUser,
+    showToast
   } = useDashboard();
 
   // Component States
@@ -23,6 +26,29 @@ const Members = () => {
   const [selectedMember, setSelectedMember] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showMedical, setShowMedical] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState('directory');
+  const [currentFinancialsPage, setCurrentFinancialsPage] = useState(1);
+  const financialItemsPerPage = 10;
+
+  // Edit Member States
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
+  const [editMemberForm, setEditMemberForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    gender: 'male',
+    date_of_birth: '',
+    plan_id: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    medical_notes: '',
+    fitness_goals: '',
+    weight_kg: '',
+    height_cm: '',
+    body_fat_pct: '',
+    trainer_id: ''
+  });
   
   // Ticking state for live countdowns
   const [time, setTime] = useState(() => Date.now());
@@ -47,7 +73,53 @@ const Members = () => {
   const [selectedRenewMember, setSelectedRenewMember] = useState(null);
   const [renewPrice, setRenewPrice] = useState('');
   const [renewPaymentMethod, setRenewPaymentMethod] = useState('card');
+<<<<<<< HEAD
   const [renewPeriod, setRenewPeriod] = useState(1);
+=======
+  const [viewingReceipt, setViewingReceipt] = useState(null);
+
+  const numberToWords = (num) => {
+    const a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    const b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    
+    if ((num = Math.round(num)) === 0) return 'Zero';
+    
+    let n = ('000000000' + num).substr(-9);
+    let str = '';
+    
+    let millions = parseInt(n.substr(0, 3));
+    if (millions !== 0) {
+      str += (millions < 20 ? a[millions] : b[Math.floor(millions/10)] + ' ' + a[millions%10]) + 'Million ';
+    }
+    
+    let thousands = parseInt(n.substr(3, 3));
+    if (thousands !== 0) {
+      if (thousands < 20) {
+        str += a[thousands] + 'Thousand ';
+      } else {
+        str += b[Math.floor(thousands/10)] + ' ' + a[thousands%10] + 'Thousand ';
+      }
+    }
+    
+    let hundreds = parseInt(n.substr(6, 1));
+    if (hundreds !== 0) {
+      str += a[hundreds] + 'Hundred ';
+    }
+    
+    let tens = parseInt(n.substr(7, 2));
+    if (tens !== 0) {
+      if (tens < 20) {
+        str += a[tens];
+      } else {
+        str += b[Math.floor(tens/10)] + ' ' + a[tens%10];
+      }
+    }
+    
+    return str.trim() + ' LKR Only';
+  };
+
+
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
 
   const handleRenewSubmit = async (e) => {
     e.preventDefault();
@@ -55,8 +127,19 @@ const Members = () => {
     try {
       const res = await renewMemberMembership(selectedRenewMember.id, renewPaymentMethod, renewPrice, renewPeriod);
       if (res.success) {
+<<<<<<< HEAD
         alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for ${renewPeriod} month(s)! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
+=======
+        if (showToast) {
+          showToast(`Membership for ${selectedRenewMember.full_name} renewed successfully!`, 'success');
+        } else {
+          alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for 30 days! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
+        }
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
         setSelectedRenewMember(null);
+        if (res.invoice) {
+          setViewingReceipt(res.invoice);
+        }
         // Keep detail drawer profile updated
         if (selectedMember && selectedMember.id === selectedRenewMember.id) {
           setSelectedMember(prev => ({
@@ -71,6 +154,67 @@ const Members = () => {
       }
     } catch (err) {
       alert('An error occurred during renewal. Please try again.');
+    }
+  };
+
+  const handleEditClick = (member) => {
+    setEditingMember(member);
+    setEditMemberForm({
+      full_name: member.full_name || '',
+      email: member.email || '',
+      phone: member.phone || '',
+      gender: member.gender || 'male',
+      date_of_birth: member.date_of_birth || '',
+      plan_id: member.plan_id || '',
+      emergency_contact_name: member.emergency_contact_name || '',
+      emergency_contact_phone: member.emergency_contact_phone || '',
+      medical_notes: member.medical_notes || '',
+      fitness_goals: member.fitness_goals || '',
+      weight_kg: member.weight_kg !== undefined && member.weight_kg !== null ? member.weight_kg.toString() : '',
+      height_cm: member.height_cm !== undefined && member.height_cm !== null ? member.height_cm.toString() : '',
+      body_fat_pct: member.body_fat_pct !== undefined && member.body_fat_pct !== null ? member.body_fat_pct.toString() : '',
+      trainer_id: member.trainer_id || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editMemberForm.full_name || !editMemberForm.email || !editMemberForm.plan_id) {
+      alert('Please fill out all required fields.');
+      return;
+    }
+
+    try {
+      const updatedFields = {
+        ...editMemberForm,
+        plan_id: editMemberForm.plan_id,
+        trainer_id: editMemberForm.trainer_id || null,
+        weight_kg: editMemberForm.weight_kg ? parseFloat(editMemberForm.weight_kg) : null,
+        height_cm: editMemberForm.height_cm ? parseInt(editMemberForm.height_cm) : null,
+        body_fat_pct: editMemberForm.body_fat_pct ? parseFloat(editMemberForm.body_fat_pct) : null,
+      };
+
+      await updateMember(editingMember.id, updatedFields);
+
+      setShowEditModal(false);
+      
+      // Update selectedMember view if currently open
+      if (selectedMember && selectedMember.id === editingMember.id) {
+        setSelectedMember(prev => ({
+          ...prev,
+          ...updatedFields,
+        }));
+      }
+
+      setEditingMember(null);
+      if (showToast) {
+        showToast('Member details updated successfully!', 'success');
+      } else {
+        alert('Member details updated successfully!');
+      }
+    } catch (err) {
+      alert('Failed to update member. Please try again.');
     }
   };
 
@@ -150,11 +294,31 @@ const Members = () => {
     trainer_id: ''
   });
 
+  const uniqueMembers = useMemo(() => {
+    const seen = new Set();
+    return (members || []).filter(m => {
+      if (!m.member_code) return true;
+      if (seen.has(m.member_code)) return false;
+      seen.add(m.member_code);
+      return true;
+    });
+  }, [members]);
+
+  const getResolvedStatus = (m) => {
+    if (!m) return 'active';
+    if (m.status === 'frozen') return 'frozen';
+    const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now());
+    if (isExpired) return 'expired';
+    if (m.status === 'active') return 'active';
+    return m.status || 'inactive';
+  };
+
   // Filter members list based on filters
   const filteredMembersList = useMemo(() => {
-    return members.filter(m => {
+    return uniqueMembers.filter(m => {
       // Status filter
-      const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+      const resolvedStatus = getResolvedStatus(m);
+      const matchesStatus = statusFilter === 'all' || resolvedStatus === statusFilter;
       
       // Search term filter
       const search = searchTerm.toLowerCase();
@@ -166,7 +330,7 @@ const Members = () => {
         
       return matchesStatus && matchesSearch;
     });
-  }, [members, statusFilter, searchTerm]);
+  }, [uniqueMembers, statusFilter, searchTerm]);
 
 
 
@@ -176,6 +340,85 @@ const Members = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredMembersList.slice(start, start + itemsPerPage);
   }, [filteredMembersList, currentPage]);
+
+  const latestInvoice = useMemo(() => {
+    if (!selectedMember || !invoices) return null;
+    const memberInvoices = invoices.filter(inv => inv.member_id === selectedMember.id);
+    if (memberInvoices.length === 0) return null;
+    return [...memberInvoices].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0];
+  }, [selectedMember, invoices]);
+
+  // Calculate member-level financials
+  const memberFinancials = useMemo(() => {
+    return uniqueMembers.map(member => {
+      const memberInvoices = invoices.filter(inv => inv.member_id === member.id);
+      
+      const revenueCollected = memberInvoices
+        .filter(inv => inv.status === 'paid')
+        .reduce((sum, inv) => sum + inv.total_amount, 0);
+        
+      const outstandingAmount = memberInvoices
+        .filter(inv => inv.status === 'open' || inv.status === 'overdue')
+        .reduce((sum, inv) => sum + inv.total_amount, 0);
+        
+      // Get latest payment date
+      const paidInvoices = memberInvoices.filter(inv => inv.status === 'paid' && inv.paid_at);
+      let lastPaymentDate = 'N/A';
+      if (paidInvoices.length > 0) {
+        const sortedPaid = [...paidInvoices].sort((a, b) => new Date(b.paid_at) - new Date(a.paid_at));
+        lastPaymentDate = new Date(sortedPaid[0].paid_at).toLocaleDateString();
+      }
+      
+      return {
+        ...member,
+        revenueCollected,
+        outstandingAmount,
+        lastPaymentDate
+      };
+    });
+  }, [uniqueMembers, invoices]);
+
+  const totalRevenueCollected = useMemo(() => {
+    const currentMonthStr = new Date().toISOString().substring(0, 7); // 'YYYY-MM'
+    return uniqueMembers
+      .filter(m => getResolvedStatus(m) === 'active')
+      .reduce((sum, m) => {
+        const memberInvoices = invoices.filter(inv => inv.member_id === m.id);
+        const thisMonthPaid = memberInvoices
+          .filter(inv => inv.status === 'paid' && inv.paid_at && inv.paid_at.startsWith(currentMonthStr))
+          .reduce((s, inv) => s + inv.total_amount, 0);
+        return sum + thisMonthPaid;
+      }, 0);
+  }, [uniqueMembers, invoices]);
+
+  const totalOutstandingAmount = useMemo(() => {
+    return uniqueMembers
+      .filter(m => getResolvedStatus(m) === 'active')
+      .reduce((sum, m) => {
+        const memberInvoices = invoices.filter(inv => inv.member_id === m.id);
+        const memberTotal = memberInvoices.reduce((s, inv) => s + inv.total_amount, 0);
+        return sum + memberTotal;
+      }, 0);
+  }, [uniqueMembers, invoices]);
+
+  const filteredFinancialsList = useMemo(() => {
+    return memberFinancials.filter(m => {
+      const search = searchTerm.toLowerCase();
+      return (
+        m.full_name.toLowerCase().includes(search) || 
+        m.email.toLowerCase().includes(search) || 
+        m.member_code.toLowerCase().includes(search) || 
+        m.phone.includes(search)
+      );
+    });
+  }, [memberFinancials, searchTerm]);
+
+  const totalFinancialsPages = Math.ceil(filteredFinancialsList.length / financialItemsPerPage);
+  
+  const displayedFinancials = useMemo(() => {
+    const start = (currentFinancialsPage - 1) * financialItemsPerPage;
+    return filteredFinancialsList.slice(start, start + financialItemsPerPage);
+  }, [filteredFinancialsList, currentFinancialsPage]);
 
   // Handle Add Member submit
   const handleAddSubmit = async (e) => {
@@ -281,7 +524,58 @@ const Members = () => {
         </button>
       </div>
 
-      {/* Filters bar */}
+      {/* Tab Switcher - only for Super Admin */}
+      {currentUser?.role === 'super_admin' && (
+        <div style={{ 
+          display: 'inline-flex', 
+          background: 'rgba(255, 255, 255, 0.03)', 
+          border: '1px solid var(--border-color)', 
+          padding: '0.25rem', 
+          borderRadius: '10px',
+          marginBottom: '1.5rem'
+        }}>
+          <button 
+            type="button"
+            className="btn"
+            onClick={() => setActiveSubTab('directory')}
+            style={{ 
+              padding: '0.4rem 1.25rem', 
+              fontSize: '0.8rem', 
+              fontWeight: 600,
+              background: activeSubTab === 'directory' ? 'var(--color-primary)' : 'transparent',
+              color: activeSubTab === 'directory' ? '#000' : 'var(--text-muted)',
+              borderRadius: '8px',
+              transition: 'var(--transition-fast)'
+            }}
+          >
+            DIRECTORY LIST
+          </button>
+          <button 
+            type="button"
+            className="btn"
+            onClick={() => {
+              setActiveSubTab('financials');
+              setCurrentFinancialsPage(1);
+            }}
+            style={{ 
+              padding: '0.4rem 1.25rem', 
+              fontSize: '0.8rem', 
+              fontWeight: 600,
+              background: activeSubTab === 'financials' ? 'var(--color-primary)' : 'transparent',
+              color: activeSubTab === 'financials' ? '#000' : 'var(--text-muted)',
+              borderRadius: '8px',
+              transition: 'var(--transition-fast)'
+            }}
+          >
+            REVENUE & OUTSTANDING
+          </button>
+        </div>
+      )}
+
+      {/* Conditionally render content based on activeSubTab */}
+      {activeSubTab === 'directory' ? (
+        <>
+          {/* Filters bar */}
       <div className="glass-card flex-gap-1" style={{ flexWrap: 'wrap', padding: '1rem' }}>
         {/* Search */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', flexGrow: 1, minWidth: '240px' }}>
@@ -365,8 +659,8 @@ const Members = () => {
                       </td>
                       <td>{plan ? plan.name : 'N/A'}</td>
                       <td>
-                        <span className={`badge badge-${member.status}`}>
-                          {member.status}
+                        <span className={`badge badge-${getResolvedStatus(member)}`}>
+                          {getResolvedStatus(member)}
                         </span>
                       </td>
                       <td>
@@ -400,6 +694,16 @@ const Members = () => {
                           >
                             <Eye size={14} />
                           </button>
+                          {currentUser?.role === 'super_admin' && (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
+                              title="Edit Member Details"
+                              onClick={() => handleEditClick(member)}
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                          )}
                           <button 
                             className="btn btn-secondary" 
                             style={{ padding: '0.4rem', color: 'var(--color-danger)' }}
@@ -480,6 +784,198 @@ const Members = () => {
           </div>
         )}
       </div>
+      </>
+      ) : (
+        <>
+          {/* Financial Metrics Cards */}
+          <div className="metrics-grid" style={{ marginBottom: '1.5rem' }}>
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-success)' }}>
+              <div className="metric-header">
+                <span>TOTAL REVENUE COLLECTED (THIS MONTH)</span>
+                <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
+              </div>
+              <div className="metric-value">LKR {totalRevenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="metric-subtext">Sum of this month's paid invoices for active members</div>
+            </div>
+            
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
+              <div className="metric-header">
+                <span>TOTAL BILLING FOR ACTIVE MEMBERS</span>
+                <DollarSign size={18} style={{ color: 'var(--color-primary)' }} />
+              </div>
+              <div className="metric-value">LKR {totalOutstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="metric-subtext">Paid + unpaid/expired whole amount for active members</div>
+            </div>
+          </div>
+
+          {/* Search Filter for Financials */}
+          <div className="glass-card flex-gap-1" style={{ flexWrap: 'wrap', padding: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', flexGrow: 1, minWidth: '240px' }}>
+              <Search size={16} style={{ color: 'var(--text-muted)' }} />
+              <input 
+                type="text" 
+                placeholder="Search financials by name, email, code or phone..." 
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentFinancialsPage(1);
+                }}
+                style={{ background: 'transparent', border: 'none', color: '#fff', outline: 'none', width: '100%', fontSize: '0.875rem' }}
+              />
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Showing <strong>{filteredFinancialsList.length}</strong> records
+            </div>
+          </div>
+
+          {/* Financials Table */}
+          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="table-container">
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Attached Plan</th>
+                    <th>Status</th>
+                    <th>Revenue Collected</th>
+                    <th>Outstanding Amount</th>
+                    <th>Last Payment</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedFinancials.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                        No financial records matching search.
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedFinancials.map(member => {
+                      const plan = plans.find(p => p.id === member.plan_id);
+                      return (
+                        <tr key={member.id}>
+                          <td style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{member.member_code}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <img 
+                                src={member.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                                alt={member.full_name} 
+                                style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                              />
+                              <div>
+                                <div style={{ fontWeight: 600 }}>{member.full_name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{member.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td>{plan ? plan.name : 'N/A'}</td>
+                          <td>
+                            <span className={`badge badge-${getResolvedStatus(member)}`}>
+                              {getResolvedStatus(member)}
+                            </span>
+                          </td>
+                          <td style={{ fontWeight: 600, color: 'var(--color-success)' }}>
+                            LKR {member.revenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ fontWeight: 600, color: member.outstandingAmount > 0 ? 'var(--color-danger)' : 'var(--text-muted)' }}>
+                            LKR {member.outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td>{member.lastPaymentDate}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                              <button 
+                                type="button"
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.4rem', color: 'var(--color-success)' }}
+                                title="Collect Payment & Renew"
+                                onClick={() => {
+                                  setSelectedRenewMember(member);
+                                  setRenewPrice(plan ? plan.price : '');
+                                }}
+                              >
+                                <CreditCard size={14} />
+                              </button>
+                              <button 
+                                type="button"
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.4rem' }}
+                                title="View Profile Details"
+                                onClick={() => { setSelectedMember(member); setShowMedical(false); setShowFreezeForm(false); }}
+                              >
+                                <Eye size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Financials Pagination Footer */}
+            {filteredFinancialsList.length > 0 && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                padding: '1.2rem 1.5rem', 
+                borderTop: '1px solid var(--border-color)', 
+                background: 'rgba(0,0,0,0.15)',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Showing <strong>{Math.min(filteredFinancialsList.length, (currentFinancialsPage - 1) * financialItemsPerPage + 1)}</strong> to <strong>{Math.min(filteredFinancialsList.length, currentFinancialsPage * financialItemsPerPage)}</strong> of <strong>{filteredFinancialsList.length}</strong> records
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary" 
+                    onClick={() => setCurrentFinancialsPage(prev => Math.max(prev - 1, 1))} 
+                    disabled={currentFinancialsPage === 1}
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                  >
+                    Previous
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    {Array.from({ length: totalFinancialsPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        type="button"
+                        className={`btn ${currentFinancialsPage === page ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setCurrentFinancialsPage(page)}
+                        style={{ 
+                          padding: '0.4rem 0.6rem', 
+                          fontSize: '0.85rem', 
+                          minWidth: '32px',
+                          background: currentFinancialsPage === page ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                          borderColor: currentFinancialsPage === page ? 'var(--color-primary)' : 'var(--border-color)',
+                          boxShadow: currentFinancialsPage === page ? 'var(--neon-glow)' : 'none'
+                        }}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary" 
+                    onClick={() => setCurrentFinancialsPage(prev => Math.min(prev + 1, totalFinancialsPages))} 
+                    disabled={currentFinancialsPage === totalFinancialsPages || totalFinancialsPages === 0}
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Member Details Drawer View */}
       {selectedMember && (
@@ -499,21 +995,32 @@ const Members = () => {
             </div>
 
             {/* Profile Info Header */}
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <img 
-                src={selectedMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
-                alt={selectedMember.full_name} 
-                style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--color-primary)', objectFit: 'cover' }}
-              />
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{selectedMember.full_name}</h3>
-                <span className={`badge badge-${selectedMember.status}`} style={{ fontSize: '0.65rem' }}>
-                  {selectedMember.status}
-                </span>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Code: <strong>{selectedMember.member_code}</strong>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <img 
+                  src={selectedMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                  alt={selectedMember.full_name} 
+                  style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--color-primary)', objectFit: 'cover' }}
+                />
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{selectedMember.full_name}</h3>
+                  <span className={`badge badge-${getResolvedStatus(selectedMember)}`} style={{ fontSize: '0.65rem' }}>
+                    {getResolvedStatus(selectedMember)}
+                  </span>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    Code: <strong>{selectedMember.member_code}</strong>
+                  </div>
                 </div>
               </div>
+              {currentUser?.role === 'super_admin' && (
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
+                  onClick={() => handleEditClick(selectedMember)}
+                >
+                  <Edit2 size={12} /> Edit Details
+                </button>
+              )}
             </div>
 
             {/* Core details */}
@@ -557,6 +1064,7 @@ const Members = () => {
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', marginTop: '0.25rem' }}>
                   {getCountdownDisplay(selectedMember)}
                 </div>
+<<<<<<< HEAD
                 <div style={{ fontSize: '0.8rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
                   Next Payment: <strong style={{ color: 'var(--color-primary)' }}>
                     {selectedMember.next_payment_date 
@@ -564,6 +1072,29 @@ const Members = () => {
                       : new Date(selectedMember.countdown_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </strong>
                 </div>
+=======
+                {latestInvoice && (
+                  <div style={{ marginTop: '0.35rem' }}>
+                    <button 
+                      onClick={() => setViewingReceipt(latestInvoice)}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'var(--color-primary)', 
+                        cursor: 'pointer', 
+                        fontSize: '0.75rem', 
+                        padding: 0, 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem', 
+                        textDecoration: 'underline' 
+                      }}
+                    >
+                      <Printer size={12} /> View Latest Receipt
+                    </button>
+                  </div>
+                )}
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
               </div>
               <button 
                 onClick={() => {
@@ -1089,8 +1620,402 @@ const Members = () => {
               </form>
             </div>
           </div>
+<<<<<<< HEAD
         );
       })()}
+=======
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700 }}>
+                Edit Member Profile
+              </h2>
+              <button 
+                onClick={() => { setShowEditModal(false); setEditingMember(null); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Section: Credentials */}
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
+                  1. Personal & Contact Details
+                </h4>
+                <div className="grid-2">
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="Jane Austin"
+                      value={editMemberForm.full_name}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, full_name: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address *</label>
+                    <input 
+                      type="email" 
+                      required
+                      placeholder="jane@example.com"
+                      value={editMemberForm.email}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, email: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phone Number</label>
+                    <input 
+                      type="tel" 
+                      placeholder="+1 (555) 012-3456"
+                      value={editMemberForm.phone}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, phone: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div className="grid-2">
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gender</label>
+                      <select 
+                        value={editMemberForm.gender} 
+                        onChange={(e) => setEditMemberForm({...editMemberForm, gender: e.target.value})}
+                        className="glass-select"
+                        style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                      >
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer_not_to_say">Declined</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Date of Birth</label>
+                      <input 
+                        type="date" 
+                        value={editMemberForm.date_of_birth}
+                        onChange={(e) => setEditMemberForm({...editMemberForm, date_of_birth: e.target.value})}
+                        className="glass-input"
+                        style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Plan Details */}
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
+                  2. Membership & Trainer Assignment
+                </h4>
+                <div className="grid-2">
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Membership Plan *</label>
+                    <select 
+                      required
+                      value={editMemberForm.plan_id}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, plan_id: e.target.value})}
+                      className="glass-select"
+                      style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                    >
+                      <option value="">Select Plan...</option>
+                      {plans.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} (LKR {p.price.toLocaleString()}/mo)</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Personal Trainer Assignment</label>
+                    <select 
+                      value={editMemberForm.trainer_id}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, trainer_id: e.target.value})}
+                      className="glass-select"
+                      style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                    >
+                      <option value="">Unassigned (Self-guided)</option>
+                      {trainers.map(t => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.specialization})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Medical / Goals */}
+              <div>
+                <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
+                  3. Health Metrics & Notes
+                </h4>
+                <div className="grid-3" style={{ marginBottom: '0.75rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Weight (kg)</label>
+                    <input 
+                      type="number" step="0.1"
+                      placeholder="72.5"
+                      value={editMemberForm.weight_kg}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, weight_kg: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Height (cm)</label>
+                    <input 
+                      type="number"
+                      placeholder="178"
+                      value={editMemberForm.height_cm}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, height_cm: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Body Fat %</label>
+                    <input 
+                      type="number" step="0.1"
+                      placeholder="18.5"
+                      value={editMemberForm.body_fat_pct}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, body_fat_pct: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid-2">
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="John Smith"
+                      value={editMemberForm.emergency_contact_name}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, emergency_contact_name: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Phone</label>
+                    <input 
+                      type="text" 
+                      placeholder="+1 (555) 987-6543"
+                      value={editMemberForm.emergency_contact_phone}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, emergency_contact_phone: e.target.value})}
+                      className="glass-input"
+                      style={{ marginTop: '0.25rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Confidential Medical Notes</label>
+                  <textarea 
+                    placeholder="Allergies, chronic conditions, structural constraints..."
+                    value={editMemberForm.medical_notes}
+                    onChange={(e) => setEditMemberForm({...editMemberForm, medical_notes: e.target.value})}
+                    className="glass-input"
+                    style={{ marginTop: '0.25rem', resize: 'none', height: '60px', padding: '0.5rem' }}
+                  />
+                </div>
+
+                <div style={{ marginTop: '0.75rem' }}>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fitness Goals</label>
+                  <input 
+                    type="text" 
+                    placeholder="Strength progression, fat reduction..."
+                    value={editMemberForm.fitness_goals}
+                    onChange={(e) => setEditMemberForm({...editMemberForm, fitness_goals: e.target.value})}
+                    className="glass-input"
+                    style={{ marginTop: '0.25rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Submit panel */}
+              <div className="flex-gap-1" style={{ justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowEditModal(false); setEditingMember(null); }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PRINTABLE MEMBERSHIP RECEIPT MODAL ───────────────────────────── */}
+      {viewingReceipt && (
+        <div className="print-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
+          
+          {/* Print CSS Rules injected specifically inside the modal */}
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              .print-modal-overlay {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                backdrop-filter: none !important;
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+              .print-modal-content {
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                background: white !important;
+                color: black !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 10px !important;
+                margin: 0 !important;
+              }
+              .print-modal-content * {
+                visibility: visible !important;
+                color: black !important;
+                border-color: #ccc !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
+
+          <div className="glass-card print-modal-content" style={{ width: '100%', maxWidth: '650px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', padding: '2rem' }}>
+            
+            {/* Header: Gym Info */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>ASCEND FITNESS CENTER</h2>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>HQ Operations - Colombo, Sri Lanka</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Email: billing@ascend.lk | Tel: +94 11 234 5678</span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', letterSpacing: '0.05em', color: '#fff' }}>MEMBERSHIP RECEIPT</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Original Copy</span>
+              </div>
+            </div>
+
+            {/* Member & Invoice details grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+              <div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Member Code:</span> <span style={{ fontWeight: 600 }}>{uniqueMembers.find(m => m.id === viewingReceipt.member_id)?.member_code || 'N/A'}</span></div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Member Name:</span> <span style={{ fontWeight: 600 }}>{viewingReceipt.member_name}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Email:</span> <span style={{ fontWeight: 600 }}>{uniqueMembers.find(m => m.id === viewingReceipt.member_id)?.email || 'N/A'}</span></div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Invoice Number:</span> <span style={{ fontWeight: 600 }}>{viewingReceipt.invoice_number}</span></div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Payment Date:</span> <span style={{ fontWeight: 600 }}>{new Date(viewingReceipt.paid_at || viewingReceipt.issued_at).toLocaleDateString()}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Payment Mode:</span> <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{viewingReceipt.payment_method?.replace('_', ' ') || 'Card'}</span></div>
+              </div>
+            </div>
+
+            {/* Plan details table */}
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.5rem', color: 'var(--text-muted)' }}>Description</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Qty</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--text-muted)' }}>Rate</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--text-muted)' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                    <td style={{ padding: '0.5rem' }}>
+                      <strong style={{ color: '#fff' }}>
+                        {plans.find(p => p.id === viewingReceipt.plan_id)?.name || 'Gym Membership Plan'}
+                      </strong>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                        30-day recurring gym facility access & trainer guidance
+                      </div>
+                    </td>
+                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>1</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Calculations Totals Block */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', fontSize: '0.8rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                  <span>Subtotal:</span>
+                  <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Tax & Fees:</span>
+                  <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.tax_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>TOTAL AMOUNT PAID</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-success)' }}>
+                  LKR {viewingReceipt.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                </span>
+              </div>
+            </div>
+
+            {/* Net Amount in Words */}
+            <div style={{ fontSize: '0.75rem', fontStyle: 'italic', background: 'rgba(255,255,255,0.01)', padding: '0.5rem', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.05)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Amount in Words:</span> <span style={{ fontWeight: 600 }}>{numberToWords(viewingReceipt.total_amount || 0)}</span>
+            </div>
+
+            {/* Bottom Signature area */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginTop: '2rem', fontSize: '0.75rem' }}>
+              <div style={{ borderTop: '1px solid var(--border-color)', textAlign: 'center', paddingTop: '0.5rem' }}>
+                <span>Authorized Representative</span>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border-color)', textAlign: 'center', paddingTop: '0.5rem' }}>
+                <span>Member Signature</span>
+              </div>
+            </div>
+
+            {/* Actions for Modal */}
+            <div className="no-print" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ flexGrow: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                onClick={() => window.print()}
+              >
+                <Printer size={14} /> Print Receipt
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setViewingReceipt(null)}>
+                Close
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+>>>>>>> ba9b39ed472199540a4e7624972e3cd9f01c43a7
     </div>
   );
 };
