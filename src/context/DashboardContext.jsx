@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 // ─── Firebase Imports ────────────────────────────────────────────────
 import { db, auth, COLLECTIONS, DEFAULT_ORG_ID } from '../lib/firebase';
@@ -133,10 +133,22 @@ export const getBaseUrl = () => {
   return `${origin}${basePath}`;
 };
 
+// Check if the current URL is the bare root URL (i.e. no query parameters or hash, and matching the root paths)
+export const isBareRootUrl = () => {
+  const search = window.location.search;
+  const hash = window.location.hash;
+  if (search || hash) return false;
+
+  const path = window.location.pathname;
+  return path === '/' || path === '/Ascend-Management-Dashboard' || path === '/Ascend-Management-Dashboard/';
+};
+
 // ═══════════════════════════════════════════════════════════════════════
 // PROVIDER COMPONENT
 // ═══════════════════════════════════════════════════════════════════════
 export const DashboardProvider = ({ children }) => {
+  const hasCheckedAutoLogin = useRef(false);
+
   // ─── Loading & Error State ──────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -216,6 +228,22 @@ export const DashboardProvider = ({ children }) => {
   // ═══════════════════════════════════════════════════════════════════
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // If user is auto-logged in but visiting the bare root URL on initial load, force sign out.
+      if (user && isBareRootUrl() && !hasCheckedAutoLogin.current) {
+        hasCheckedAutoLogin.current = true;
+        try {
+          await signOut(auth);
+        } catch (e) {
+          console.error("Signout error on bare root initial load:", e);
+        }
+        setFirebaseUser(null);
+        setCurrentUser(null);
+        setAuthReady(true);
+        setIsLoading(false);
+        return;
+      }
+
+      hasCheckedAutoLogin.current = true;
       setFirebaseUser(user);
       if (user) {
         // User is signed in — we'll fetch their admin profile from Firestore
@@ -262,6 +290,24 @@ export const DashboardProvider = ({ children }) => {
 
     return () => unsubscribe();
   }, [firebaseUser]);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE B.5: Dynamically update URL with gymId on login to prevent logouts on refresh
+  // ═══════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (currentUser) {
+      const params = new URLSearchParams(window.location.search);
+      let targetGymId = currentUser.gymId;
+      if (currentUser.role === 'super_admin') {
+        targetGymId = 'super_admin';
+      }
+      if (targetGymId && !params.has('gymId')) {
+        params.set('gymId', targetGymId);
+        const newUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+        window.history.replaceState(null, '', newUrl);
+      }
+    }
+  }, [currentUser]);
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE C: Public Plans Firestore Listener (runs for guest too)
@@ -628,6 +674,12 @@ export const DashboardProvider = ({ children }) => {
       }
       await signOut(auth);
       // onAuthStateChanged will clear currentUser
+
+      // Clear query params & hash to return cleanly to the login screen
+      const url = new URL(window.location.href);
+      url.search = '';
+      url.hash = '';
+      window.history.replaceState(null, '', url.pathname);
     } catch (err) {
       console.error('Logout error:', err);
     }
