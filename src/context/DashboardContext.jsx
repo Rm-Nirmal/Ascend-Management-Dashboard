@@ -120,8 +120,17 @@ export const getUrlGymId = () => {
 
   // Check pathname
   const parts = window.location.pathname.split('/').filter(Boolean);
-  const pathGymId = parts[0] && parts[0].startsWith('gym_') ? parts[0] : null;
+  const pathGymId = parts.find(p => p.startsWith('gym_')) || null;
   return pathGymId || DEFAULT_ORG_ID;
+};
+
+// Get the base URL, preserving the repository name subdirectory for GitHub Pages
+export const getBaseUrl = () => {
+  const origin = window.location.origin;
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  const nonGymParts = parts.filter(p => !p.startsWith('gym_'));
+  const basePath = nonGymParts.length > 0 ? '/' + nonGymParts.join('/') + '/' : '/';
+  return `${origin}${basePath}`;
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -756,7 +765,7 @@ export const DashboardProvider = ({ children }) => {
         maxMembers: 500,
         status: 'active',
         createdAt: new Date().toISOString(),
-        dashboardUrl: `${window.location.origin}/?gymId=gym_ascend_hq`
+        dashboardUrl: `${getBaseUrl()}?gymId=gym_ascend_hq`
       };
       const gymPowerPlace = {
         gymId: 'gym_power_place',
@@ -772,7 +781,7 @@ export const DashboardProvider = ({ children }) => {
         maxMembers: 100,
         status: 'active',
         createdAt: new Date().toISOString(),
-        dashboardUrl: `${window.location.origin}/?gymId=gym_power_place`
+        dashboardUrl: `${getBaseUrl()}?gymId=gym_power_place`
       };
       await addDoc(gymsRef, defaultGym);
       await addDoc(gymsRef, gymPowerPlace);
@@ -1063,7 +1072,7 @@ export const DashboardProvider = ({ children }) => {
         maxMembers: gymData.subscriptionPlan === 'Starter' ? 100 : (gymData.subscriptionPlan === 'Professional' ? 500 : 99999),
         status: 'trial',
         createdAt: new Date().toISOString(),
-        dashboardUrl: `${window.location.origin}/?gymId=${generatedGymId}`
+        dashboardUrl: `${getBaseUrl()}?gymId=${generatedGymId}`
       };
       await addDoc(collection(db, COLLECTIONS.GYMS), newGymDoc);
 
@@ -1920,7 +1929,7 @@ export const DashboardProvider = ({ children }) => {
       );
 
       if (member.phone) {
-        const receiptLink = `${window.location.origin}/?view=receipt&type=invoice&id=${invRef.id}`;
+        const receiptLink = `${getBaseUrl()}?view=receipt&type=invoice&id=${invRef.id}`;
         try {
           await sendSMS(member.phone, member.full_name, total, `Membership Renewal - ${plan.name}`, receiptLink, member.id);
         } catch (smsErr) {
@@ -2172,7 +2181,7 @@ export const DashboardProvider = ({ children }) => {
       if (newInc.member_name) {
         const member = members.find(m => m.full_name === newInc.member_name);
         if (member && member.phone) {
-          const receiptLink = `${window.location.origin}/?view=receipt&type=income&id=${docRef.id}`;
+          const receiptLink = `${getBaseUrl()}?view=receipt&type=income&id=${docRef.id}`;
           try {
             await sendSMS(member.phone, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
           } catch (smsErr) {
