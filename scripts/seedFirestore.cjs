@@ -124,6 +124,10 @@ const TRAINERS_DATA = [
     hourly_rate: 3500,
     organization_id: ORG_ID,
     photo_url: AVATARS.male[0],
+    date_of_birth: '1988-06-21',
+    last_payment_date: '2026-05-30',
+    next_payment_date: '2026-06-30',
+    payment_status: 'pending',
     created_at: new Date().toISOString(),
   },
   {
@@ -133,6 +137,10 @@ const TRAINERS_DATA = [
     hourly_rate: 3000,
     organization_id: ORG_ID,
     photo_url: AVATARS.female[0],
+    date_of_birth: '1992-06-25',
+    last_payment_date: '2026-05-30',
+    next_payment_date: '2026-06-30',
+    payment_status: 'pending',
     created_at: new Date().toISOString(),
   },
   {
@@ -142,6 +150,10 @@ const TRAINERS_DATA = [
     hourly_rate: 2800,
     organization_id: ORG_ID,
     photo_url: AVATARS.male[1],
+    date_of_birth: '1990-06-19', // June 19th - Today!
+    last_payment_date: '2026-05-30',
+    next_payment_date: '2026-06-30',
+    payment_status: 'pending',
     created_at: new Date().toISOString(),
   },
   {
@@ -151,6 +163,10 @@ const TRAINERS_DATA = [
     hourly_rate: 3200,
     organization_id: ORG_ID,
     photo_url: AVATARS.female[1],
+    date_of_birth: '1994-07-02',
+    last_payment_date: '2026-05-30',
+    next_payment_date: '2026-06-30',
+    payment_status: 'pending',
     created_at: new Date().toISOString(),
   },
 ];

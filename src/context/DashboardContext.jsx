@@ -32,6 +32,7 @@ const DashboardContext = createContext();
  */
 const helperCreateMemberObject = (memberData, memberCode) => {
   const now = new Date();
+  const countdownEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   return {
     organization_id: DEFAULT_ORG_ID,
     member_code: memberCode,
@@ -41,7 +42,8 @@ const helperCreateMemberObject = (memberData, memberCode) => {
     weight_kg: memberData.weight_kg ? parseFloat(memberData.weight_kg) : 75.0,
     height_cm: memberData.height_cm ? parseInt(memberData.height_cm) : 175,
     body_fat_pct: memberData.body_fat_pct ? parseFloat(memberData.body_fat_pct) : 18.0,
-    countdown_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    countdown_end: countdownEnd,
+    next_payment_date: countdownEnd,
     auto_renew: false,
     trainer_id: null,
     photo_url: '',
@@ -79,11 +81,11 @@ const helperCreateInvoiceForMember = (memberId, memberName, plan) => {
  * Calculate new countdown_end for a membership renewal.
  * Extends from current countdown_end (if still in future) or from now.
  */
-const helperCalculateRenewalCountdownEnd = (countdownEnd) => {
+const helperCalculateRenewalCountdownEnd = (countdownEnd, months = 1) => {
   const baseDate = countdownEnd && new Date(countdownEnd).getTime() > Date.now()
     ? new Date(countdownEnd)
     : new Date();
-  baseDate.setDate(baseDate.getDate() + 30);
+  baseDate.setMonth(baseDate.getMonth() + parseInt(months));
   return baseDate.toISOString();
 };
 
@@ -271,7 +273,33 @@ export const DashboardProvider = ({ children }) => {
     );
     unsubscribers.push(
       onSnapshot(trainersQ, (snap) => {
-        setTrainers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const trainersData = snap.docs.map(d => {
+          const data = d.data();
+          // Fallback date_of_birth
+          let dob = data.date_of_birth;
+          if (!dob) {
+            const mockDOBs = {
+              'Marcus Rivera': '1988-06-21',
+              'Priya Chandrasekhar': '1992-06-25',
+              'Daniel Okonkwo': '1990-06-19', // Today!
+              'Sofia Hernandez': '1994-07-02'
+            };
+            dob = mockDOBs[data.name] || '1990-01-01';
+          }
+          const lastPay = data.last_payment_date || '2026-05-30';
+          const nextPay = data.next_payment_date || '2026-06-30';
+          const payStatus = data.payment_status || 'pending';
+          
+          return { 
+            id: d.id, 
+            ...data, 
+            date_of_birth: dob,
+            last_payment_date: lastPay,
+            next_payment_date: nextPay,
+            payment_status: payStatus
+          };
+        });
+        setTrainers(trainersData);
         markLoaded();
       }, (err) => { console.error('Trainers listener error:', err); markLoaded(); })
     );
@@ -821,7 +849,7 @@ export const DashboardProvider = ({ children }) => {
   // MEMBERSHIP RENEWAL
   // ═══════════════════════════════════════════════════════════════════
 
-  const renewMemberMembership = useCallback(async (memberId, paymentMethod, customPrice = null) => {
+  const renewMemberMembership = useCallback(async (memberId, paymentMethod, customPrice = null, periodMonths = 1) => {
     try {
       const member = members.find(m => m.id === memberId);
       if (!member) return { success: false, message: 'Member not found.' };
@@ -829,30 +857,47 @@ export const DashboardProvider = ({ children }) => {
       const plan = plans.find(p => p.id === member.plan_id) || plans[0];
       if (!plan) return { success: false, message: 'No plan found.' };
 
-      const priceToCharge = customPrice !== null ? parseFloat(customPrice) : plan.price;
-      // When a custom price is entered, treat it as the final amount (no tax added).
-      // Tax is only auto-calculated when using the plan's default price.
-      const tax = customPrice !== null ? 0 : priceToCharge * (plan.tax_rate / 100);
+      const isCustom = customPrice !== null && parseFloat(customPrice) !== plan.price * parseInt(periodMonths);
+      const priceToCharge = isCustom ? parseFloat(customPrice) : plan.price * parseInt(periodMonths);
+      const tax = isCustom ? 0 : priceToCharge * (plan.tax_rate / 100);
       const total = priceToCharge + tax;
 
-      const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end);
+      const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end, periodMonths);
 
       // Update member in Firestore
       const memberRef = doc(db, COLLECTIONS.MEMBERS, memberId);
       await updateDoc(memberRef, {
         status: 'active',
         countdown_end: newCountdownEnd,
+        next_payment_date: newCountdownEnd,
       });
 
       // Create paid renewal invoice
-      const invoiceData = helperCreateRenewalInvoice(member.id, member.full_name, plan, priceToCharge, tax, total, paymentMethod);
+      const invoiceData = {
+        organization_id: DEFAULT_ORG_ID,
+        member_id: member.id,
+        member_name: member.full_name,
+        invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+        subtotal: priceToCharge,
+        tax_amount: tax,
+        discount_amount: 0.0,
+        total_amount: total,
+        status: 'paid',
+        due_date: new Date().toISOString().split('T')[0],
+        issued_at: new Date().toISOString(),
+        paid_at: new Date().toISOString(),
+        payment_method: paymentMethod,
+        plan_id: plan.id,
+        created_at: new Date().toISOString(),
+        billing_period: `${periodMonths} Month${parseInt(periodMonths) > 1 ? 's' : ''}`
+      };
       const invRef = await addDoc(collection(db, COLLECTIONS.INVOICES), invoiceData);
 
       await logAudit('payment.receive', 'invoice', invRef.id,
-        `Collected LKR ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} via ${paymentMethod.toUpperCase()} for membership renewal of ${member.full_name}`
+        `Collected LKR ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} via ${paymentMethod.toUpperCase()} for membership renewal (${periodMonths}m) of ${member.full_name}`
       );
       await logAudit('member.renew', 'member', memberId,
-        `Renewed membership for ${member.full_name} for 30 days (New Expiry: ${new Date(newCountdownEnd).toLocaleDateString()})`
+        `Renewed membership for ${member.full_name} for ${periodMonths} months (New Expiry: ${new Date(newCountdownEnd).toLocaleDateString()})`
       );
 
       return { success: true, newCountdownEnd };
@@ -862,6 +907,37 @@ export const DashboardProvider = ({ children }) => {
       return { success: false, message: friendlyFirestoreError(err) };
     }
   }, [members, plans, currentUser]);
+
+  const processStaffPayroll = useCallback(async (trainerId, amount, paymentMethod) => {
+    try {
+      const trainer = trainers.find(t => t.id === trainerId);
+      if (!trainer) return { success: false, message: 'Staff member not found.' };
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const nextPay = new Date();
+      nextPay.setMonth(nextPay.getMonth() + 1);
+      const nextPayStr = nextPay.toISOString().split('T')[0];
+
+      // Update in Firestore
+      const trainerRef = doc(db, COLLECTIONS.TRAINERS, trainerId);
+      await updateDoc(trainerRef, {
+        last_payment_date: todayStr,
+        next_payment_date: nextPayStr,
+        payment_status: 'paid'
+      });
+
+      // Log audit event
+      await logAudit('payroll.process', 'trainer', trainerId,
+        `Processed payroll of LKR ${amount.toLocaleString()} via ${paymentMethod.toUpperCase()} for ${trainer.name}`
+      );
+
+      return { success: true };
+    } catch (err) {
+      console.error('processStaffPayroll error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [trainers, currentUser]);
 
   // ═══════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
@@ -918,6 +994,7 @@ export const DashboardProvider = ({ children }) => {
       // Utility
       logAudit,
       renewMemberMembership,
+      processStaffPayroll,
     }}>
       {children}
     </DashboardContext.Provider>

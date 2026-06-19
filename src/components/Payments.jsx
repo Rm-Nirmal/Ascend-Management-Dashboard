@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye 
+  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye, Calendar 
 } from 'lucide-react';
 
 const createManualReminderLog = (invoice) => {
@@ -19,10 +19,13 @@ const createManualReminderLog = (invoice) => {
 const Payments = () => {
   const {
     invoices,
-    recordPayment
+    recordPayment,
+    trainers,
+    processStaffPayroll
   } = useDashboard();
 
   // Component states
+  const [billingTab, setBillingTab] = useState('members'); // members or staff
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [viewingInvoice, setViewingInvoice] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('card');
@@ -33,6 +36,28 @@ const Payments = () => {
     overdue: true
   });
   
+  // Staff payroll states
+  const [selectedTrainer, setSelectedTrainer] = useState(null);
+  const [payrollHours, setPayrollHours] = useState(20);
+  const [payrollPaymentMethod, setPayrollPaymentMethod] = useState('bank_transfer');
+
+  const handleProcessPayrollSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedTrainer) return;
+    try {
+      const amount = selectedTrainer.hourly_rate * payrollHours;
+      const res = await processStaffPayroll(selectedTrainer.id, amount, payrollPaymentMethod);
+      if (res.success) {
+        alert(`Payroll of LKR ${amount.toLocaleString()} processed successfully for ${selectedTrainer.name}!`);
+        setSelectedTrainer(null);
+      } else {
+        alert(res.message || 'Failed to process payroll. Please try again.');
+      }
+    } catch (err) {
+      alert('An error occurred. Please try again.');
+    }
+  };
+
   // List of sent reminders logs (mock state)
   const [reminderLogs, setReminderLogs] = useState([
     { id: 'l1', member: 'Emma Watson', invoice: 'INV-2026-004', type: 'overdue', channel: 'email', sent_at: '2026-05-20T09:00:00Z', status: 'sent' },
@@ -117,362 +142,515 @@ const Payments = () => {
         </div>
       </div>
 
-      {/* Stats row */}
-      <div className="metrics-grid">
-        <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-success)' }}>
-          <div className="metric-header">
-            <span>REVENUE COLLECTED</span>
-            <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
-          </div>
-          <div className="metric-value">LKR {revenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-          <div className="metric-subtext">Paid memberships MTD</div>
-        </div>
-
-        <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
-          <div className="metric-header">
-            <span>OUTSTANDING ACCOUNT</span>
-            <Landmark size={18} style={{ color: 'var(--color-primary)' }} />
-          </div>
-          <div className="metric-value">LKR {outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
-          <div className="metric-subtext">Awaiting payment (Open status)</div>
-        </div>
-
-      </div>
-  
-      {/* Revenue Breakdowns (FR-PAY-03) */}
-      <div className="glass-card grid-2" style={{ gap: '2.5rem', marginBottom: '2rem', padding: '1.5rem 2rem' }}>
-        <div>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={16} style={{ color: 'var(--color-primary)' }} />
-            Revenue by Payment Method
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {/* Card */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600 }}>Credit/Debit Card</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  LKR {methodRevenue.stats.card.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.card / methodRevenue.total) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.card / methodRevenue.total) * 100 : 0}%`, 
-                  height: '100%', 
-                  background: 'var(--color-primary)', 
-                  borderRadius: '4px',
-                  boxShadow: '0 0 8px var(--color-primary)' 
-                }} />
-              </div>
-            </div>
-            {/* Cash */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600 }}>Cash Punch</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  LKR {methodRevenue.stats.cash.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.cash / methodRevenue.total) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.cash / methodRevenue.total) * 100 : 0}%`, 
-                  height: '100%', 
-                  background: 'var(--color-success)', 
-                  borderRadius: '4px',
-                  boxShadow: '0 0 8px var(--color-success)' 
-                }} />
-              </div>
-            </div>
-            {/* UPI */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600 }}>Mobile UPI</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  LKR {methodRevenue.stats.upi.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.upi / methodRevenue.total) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.upi / methodRevenue.total) * 100 : 0}%`, 
-                  height: '100%', 
-                  background: 'var(--color-warning)', 
-                  borderRadius: '4px',
-                  boxShadow: '0 0 8px var(--color-warning)' 
-                }} />
-              </div>
-            </div>
-            {/* Bank Wire */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600 }}>Bank Wire</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  LKR {methodRevenue.stats.bank_transfer.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.bank_transfer / methodRevenue.total) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${methodRevenue.total > 0 ? (methodRevenue.stats.bank_transfer / methodRevenue.total) * 100 : 0}%`, 
-                  height: '100%', 
-                  background: 'var(--color-ai)', 
-                  borderRadius: '4px',
-                  boxShadow: '0 0 8px var(--color-ai)' 
-                }} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={16} style={{ color: 'var(--color-success)' }} />
-            Revenue by Membership Plan
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-            {/* Starter (p1) */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600 }}>Basic Starter (LKR 4,500)</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  LKR {planRevenue.stats.p1.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p1 / planRevenue.total) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p1 / planRevenue.total) * 100 : 0}%`, 
-                  height: '100%', 
-                  background: '#38bdf8', 
-                  borderRadius: '4px',
-                  boxShadow: '0 0 8px #38bdf8' 
-                }} />
-              </div>
-            </div>
-            {/* Elite (p2) */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600 }}>Ascend Elite (LKR 8,500)</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  LKR {planRevenue.stats.p2.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p2 / planRevenue.total) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p2 / planRevenue.total) * 100 : 0}%`, 
-                  height: '100%', 
-                  background: 'var(--color-primary)', 
-                  borderRadius: '4px',
-                  boxShadow: '0 0 8px var(--color-primary)' 
-                }} />
-              </div>
-            </div>
-            {/* VIP (p3) */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                <span style={{ fontWeight: 600 }}>VIP Platinum (LKR 15,000)</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  LKR {planRevenue.stats.p3.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p3 / planRevenue.total) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ 
-                  width: `${planRevenue.total > 0 ? (planRevenue.stats.p3 / planRevenue.total) * 100 : 0}%`, 
-                  height: '100%', 
-                  background: '#a855f7', 
-                  borderRadius: '4px',
-                  boxShadow: '0 0 8px #a855f7' 
-                }} />
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Tab Selector */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+        <button 
+          onClick={() => setBillingTab('members')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: billingTab === 'members' ? 'var(--color-primary)' : 'var(--text-muted)',
+            fontWeight: 600,
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+            paddingBottom: '0.5rem',
+            borderBottom: billingTab === 'members' ? '2px solid var(--color-primary)' : 'none',
+            outline: 'none'
+          }}
+        >
+          Member Invoices
+        </button>
+        <button 
+          onClick={() => setBillingTab('staff')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: billingTab === 'staff' ? 'var(--color-primary)' : 'var(--text-muted)',
+            fontWeight: 600,
+            fontSize: '0.95rem',
+            cursor: 'pointer',
+            paddingBottom: '0.5rem',
+            borderBottom: billingTab === 'staff' ? '2px solid var(--color-primary)' : 'none',
+            outline: 'none'
+          }}
+        >
+          Staff Payroll
+        </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '2rem' }}>
-        
-        {/* Invoices List */}
-        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700 }}>
-              Recent Invoices & Billing logs
-            </h3>
+      {billingTab === 'members' ? (
+        <>
+          {/* Stats row */}
+          <div className="metrics-grid">
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-success)' }}>
+              <div className="metric-header">
+                <span>REVENUE COLLECTED</span>
+                <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
+              </div>
+              <div className="metric-value">LKR {revenueCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="metric-subtext">Paid memberships MTD</div>
+            </div>
+
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
+              <div className="metric-header">
+                <span>OUTSTANDING ACCOUNT</span>
+                <Landmark size={18} style={{ color: 'var(--color-primary)' }} />
+              </div>
+              <div className="metric-value">LKR {outstandingAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="metric-subtext">Awaiting payment (Open status)</div>
+            </div>
           </div>
-          
-          <div className="table-container">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Inv Number</th>
-                  <th>Member Name</th>
-                  <th>Total Amount</th>
-                  <th>Due Date</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInvoices.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                      No invoices found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredInvoices.map(inv => {
-                    return (
-                      <tr key={inv.id}>
-                        <td>
-                          <button 
-                            className="btn-link"
-                            style={{ 
-                              background: 'none', 
-                              border: 'none', 
-                              color: 'var(--color-primary)', 
-                              fontWeight: 700, 
-                              cursor: 'pointer', 
-                              padding: 0,
-                              textDecoration: 'underline'
-                            }}
-                            onClick={() => setViewingInvoice(inv)}
-                          >
-                            {inv.invoice_number}
-                          </button>
+      
+          {/* Revenue Breakdowns (FR-PAY-03) */}
+          <div className="glass-card grid-2" style={{ gap: '2.5rem', marginBottom: '2rem', padding: '1.5rem 2rem' }}>
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={16} style={{ color: 'var(--color-primary)' }} />
+                Revenue by Payment Method
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Card */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>Credit/Debit Card</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      LKR {methodRevenue.stats.card.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.card / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${methodRevenue.total > 0 ? (methodRevenue.stats.card / methodRevenue.total) * 100 : 0}%`, 
+                      height: '100%', 
+                      background: 'var(--color-primary)', 
+                      borderRadius: '4px',
+                      boxShadow: '0 0 8px var(--color-primary)' 
+                    }} />
+                  </div>
+                </div>
+                {/* Cash */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>Cash Punch</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      LKR {methodRevenue.stats.cash.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.cash / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${methodRevenue.total > 0 ? (methodRevenue.stats.cash / methodRevenue.total) * 100 : 0}%`, 
+                      height: '100%', 
+                      background: 'var(--color-success)', 
+                      borderRadius: '4px',
+                      boxShadow: '0 0 8px var(--color-success)' 
+                    }} />
+                  </div>
+                </div>
+                {/* UPI */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>Mobile UPI</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      LKR {methodRevenue.stats.upi.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.upi / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${methodRevenue.total > 0 ? (methodRevenue.stats.upi / methodRevenue.total) * 100 : 0}%`, 
+                      height: '100%', 
+                      background: 'var(--color-warning)', 
+                      borderRadius: '4px',
+                      boxShadow: '0 0 8px var(--color-warning)' 
+                    }} />
+                  </div>
+                </div>
+                {/* Bank Wire */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>Bank Wire</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      LKR {methodRevenue.stats.bank_transfer.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({methodRevenue.total > 0 ? ((methodRevenue.stats.bank_transfer / methodRevenue.total) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${methodRevenue.total > 0 ? (methodRevenue.stats.bank_transfer / methodRevenue.total) * 100 : 0}%`, 
+                      height: '100%', 
+                      background: 'var(--color-ai)', 
+                      borderRadius: '4px',
+                      boxShadow: '0 0 8px var(--color-ai)' 
+                    }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={16} style={{ color: 'var(--color-success)' }} />
+                Revenue by Membership Plan
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                {/* Starter (p1) */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>Basic Starter (LKR 4,500)</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      LKR {planRevenue.stats.p1.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p1 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${planRevenue.total > 0 ? (planRevenue.stats.p1 / planRevenue.total) * 100 : 0}%`, 
+                      height: '100%', 
+                      background: '#38bdf8', 
+                      borderRadius: '4px',
+                      boxShadow: '0 0 8px #38bdf8' 
+                    }} />
+                  </div>
+                </div>
+                {/* Elite (p2) */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>Ascend Elite (LKR 8,500)</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      LKR {planRevenue.stats.p2.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p2 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${planRevenue.total > 0 ? (planRevenue.stats.p2 / planRevenue.total) * 100 : 0}%`, 
+                      height: '100%', 
+                      background: 'var(--color-primary)', 
+                      borderRadius: '4px',
+                      boxShadow: '0 0 8px var(--color-primary)' 
+                    }} />
+                  </div>
+                </div>
+                {/* VIP (p3) */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>VIP Platinum (LKR 15,000)</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      LKR {planRevenue.stats.p3.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p3 / planRevenue.total) * 100).toFixed(1) : 0}%)
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${planRevenue.total > 0 ? (planRevenue.stats.p3 / planRevenue.total) * 100 : 0}%`, 
+                      height: '100%', 
+                      background: '#a855f7', 
+                      borderRadius: '4px',
+                      boxShadow: '0 0 8px #a855f7' 
+                    }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '2rem' }}>
+            
+            {/* Invoices List */}
+            <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700 }}>
+                  Recent Invoices & Billing logs
+                </h3>
+              </div>
+              
+              <div className="table-container">
+                <table className="dashboard-table">
+                  <thead>
+                    <tr>
+                      <th>Inv Number</th>
+                      <th>Member Name</th>
+                      <th>Total Amount</th>
+                      <th>Due Date</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                          No invoices found.
                         </td>
-                        <td style={{ fontWeight: 600 }}>{inv.member_name}</td>
-                        <td style={{ fontWeight: 600 }}>LKR {inv.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td>{inv.due_date}</td>
-                        <td>
-                          <span className={`badge badge-${inv.status === 'paid' ? 'active' : inv.status === 'overdue' ? 'expired' : 'frozen'}`}>
-                            {inv.status}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ padding: '0.35rem' }}
-                              title="View Invoice Details"
-                              onClick={() => setViewingInvoice(inv)}
-                            >
-                              <Eye size={12} />
-                            </button>
-                            {inv.status !== 'paid' && inv.status !== 'void' ? (
-                              <>
-                                <button 
-                                  className="btn btn-primary" 
-                                  style={{ fontSize: '0.7rem', padding: '0.35rem 0.65rem' }}
-                                  onClick={() => setSelectedInvoice(inv)}
-                                >
-                                  Collect Pay
-                                </button>
+                      </tr>
+                    ) : (
+                      filteredInvoices.map(inv => {
+                        return (
+                          <tr key={inv.id}>
+                            <td>
+                              <button 
+                                className="btn-link"
+                                style={{ 
+                                  background: 'none', 
+                                  border: 'none', 
+                                  color: 'var(--color-primary)', 
+                                  fontWeight: 700, 
+                                  cursor: 'pointer', 
+                                  padding: 0,
+                                  textDecoration: 'underline'
+                                }}
+                                onClick={() => setViewingInvoice(inv)}
+                              >
+                                {inv.invoice_number}
+                              </button>
+                            </td>
+                            <td style={{ fontWeight: 600 }}>{inv.member_name}</td>
+                            <td style={{ fontWeight: 600 }}>LKR {inv.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td>{inv.due_date}</td>
+                            <td>
+                              <span className={`badge badge-${inv.status === 'paid' ? 'active' : inv.status === 'overdue' ? 'expired' : 'frozen'}`}>
+                                {inv.status}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
                                 <button 
                                   className="btn btn-secondary" 
                                   style={{ padding: '0.35rem' }}
-                                  title="Send Email Reminder"
-                                  onClick={() => triggerManualReminder(inv)}
+                                  title="View Invoice Details"
+                                  onClick={() => setViewingInvoice(inv)}
                                 >
-                                  <Mail size={12} />
+                                  <Eye size={12} />
                                 </button>
-                              </>
-                            ) : (
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontStyle: 'italic', display: 'flex', alignItems: 'center' }}>
-                                Processed
-                              </span>
-                            )}
+                                {inv.status !== 'paid' && inv.status !== 'void' ? (
+                                  <>
+                                    <button 
+                                      className="btn btn-primary" 
+                                      style={{ fontSize: '0.7rem', padding: '0.35rem 0.65rem' }}
+                                      onClick={() => setSelectedInvoice(inv)}
+                                    >
+                                      Collect Pay
+                                    </button>
+                                    <button 
+                                      className="btn btn-secondary" 
+                                      style={{ padding: '0.35rem' }}
+                                      title="Send Email Reminder"
+                                      onClick={() => triggerManualReminder(inv)}
+                                    >
+                                      <Mail size={12} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontStyle: 'italic', display: 'flex', alignItems: 'center' }}>
+                                    Processed
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Reminders & Automation configurations (FR-PAY-04) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              
+              {/* Automated Reminders Schedule */}
+              <div className="glass-card">
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                  Billing Reminders Engine (FR-PAY-04)
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-7 Days Early Warning</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send email reminder 7 days before due date</div>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={reminderConfig.tMinus7} 
+                      onChange={(e) => setReminderConfig({...reminderConfig, tMinus7: e.target.checked})}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-3 Days Urgent Alert</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send urgent notification 3 days before due date</div>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={reminderConfig.tMinus3} 
+                      onChange={(e) => setReminderConfig({...reminderConfig, tMinus3: e.target.checked})}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-0 Renewal Day Alert</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send billing reminder on invoice due date</div>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={reminderConfig.tZero} 
+                      onChange={(e) => setReminderConfig({...reminderConfig, tZero: e.target.checked})}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Overdue Suspension Warning</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Auto-alert when payments are overdue</div>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={reminderConfig.overdue} 
+                      onChange={(e) => setReminderConfig({...reminderConfig, overdue: e.target.checked})}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Reminders queued/sent logs */}
+              <div className="glass-card" style={{ flexGrow: 1, maxHeight: '280px', overflowY: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                  Notifications Log Feed (FR-NOT-02)
+                </h3>
+                
+                <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
+                  {reminderLogs.map(log => (
+                    <div key={log.id} style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.625rem', fontSize: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                        <span>{log.member}</span>
+                        <span style={{ color: 'var(--color-primary)' }}>{log.type.toUpperCase()}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                        <span>Invoice: {log.invoice} via {log.channel}</span>
+                        <span>{new Date(log.sent_at).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', animation: 'fadeIn 0.3s ease-out' }}>
+          {/* Staff Metrics */}
+          <div className="metrics-grid">
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
+              <div className="metric-header">
+                <span>EST. MONTHLY PAYROLL</span>
+                <DollarSign size={18} style={{ color: 'var(--color-primary)' }} />
+              </div>
+              <div className="metric-value">
+                LKR {trainers.reduce((sum, t) => sum + (t.hourly_rate * 20), 0).toLocaleString()}
+              </div>
+              <div className="metric-subtext">Based on 20 average hours/trainer</div>
+            </div>
+
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-warning)' }}>
+              <div className="metric-header">
+                <span>PENDING PAYOUTS</span>
+                <Landmark size={18} style={{ color: 'var(--color-warning)' }} />
+              </div>
+              <div className="metric-value">
+                {trainers.filter(t => t.payment_status === 'pending').length} Staff
+              </div>
+              <div className="metric-subtext">Awaiting payroll processing</div>
+            </div>
+
+            <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-success)' }}>
+              <div className="metric-header">
+                <span>NEXT PAYROLL DATE</span>
+                <Calendar size={18} style={{ color: 'var(--color-success)' }} />
+              </div>
+              <div className="metric-value">
+                {new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+              <div className="metric-subtext">End of current month cycle</div>
+            </div>
+          </div>
+
+          {/* Payroll Registry Table */}
+          <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700 }}>
+                Staff Payroll Registry & Payout Log
+              </h3>
+            </div>
+            <div className="table-container">
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Staff Member</th>
+                    <th>Specialization</th>
+                    <th>Compensation Model</th>
+                    <th>Last Payment Date</th>
+                    <th>Next Payment Date</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trainers.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                        No staff members found.
+                      </td>
+                    </tr>
+                  ) : (
+                    trainers.map(t => (
+                      <tr key={t.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <img 
+                              src={t.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                              alt={t.name} 
+                              style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{t.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Trainer/Employee</div>
+                            </div>
                           </div>
                         </td>
+                        <td>{t.specialization}</td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>LKR {t.hourly_rate.toLocaleString()} / hr</div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Hourly wages</span>
+                        </td>
+                        <td>
+                          {t.last_payment_date ? new Date(t.last_payment_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                        </td>
+                        <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
+                          {t.next_payment_date ? new Date(t.next_payment_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                        </td>
+                        <td>
+                          <span className={`badge badge-${t.payment_status === 'paid' ? 'active' : 'expired'}`}>
+                            {t.payment_status}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button 
+                            className="btn btn-primary" 
+                            style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
+                            onClick={() => { setSelectedTrainer(t); setPayrollHours(20); }}
+                          >
+                            Process Pay
+                          </button>
+                        </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Reminders & Automation configurations (FR-PAY-04) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {/* Automated Reminders Schedule */}
-          <div className="glass-card">
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-              Billing Reminders Engine (FR-PAY-04)
-            </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-7 Days Early Warning</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send email reminder 7 days before due date</div>
-                </div>
-                <input 
-                  type="checkbox" 
-                  checked={reminderConfig.tMinus7} 
-                  onChange={(e) => setReminderConfig({...reminderConfig, tMinus7: e.target.checked})}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-3 Days Urgent Alert</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send urgent notification 3 days before due date</div>
-                </div>
-                <input 
-                  type="checkbox" 
-                  checked={reminderConfig.tMinus3} 
-                  onChange={(e) => setReminderConfig({...reminderConfig, tMinus3: e.target.checked})}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>T-0 Renewal Day Alert</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Send billing reminder on invoice due date</div>
-                </div>
-                <input 
-                  type="checkbox" 
-                  checked={reminderConfig.tZero} 
-                  onChange={(e) => setReminderConfig({...reminderConfig, tZero: e.target.checked})}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Overdue Suspension Warning</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Auto-alert when payments are overdue</div>
-                </div>
-                <input 
-                  type="checkbox" 
-                  checked={reminderConfig.overdue} 
-                  onChange={(e) => setReminderConfig({...reminderConfig, overdue: e.target.checked})}
-                />
-              </div>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-
-          {/* Payment Reminders queued/sent logs */}
-          <div className="glass-card" style={{ flexGrow: 1, maxHeight: '280px', overflowY: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-              Notifications Log Feed (FR-NOT-02)
-            </h3>
-            
-            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
-              {reminderLogs.map(log => (
-                <div key={log.id} style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.625rem', fontSize: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
-                    <span>{log.member}</span>
-                    <span style={{ color: 'var(--color-primary)' }}>{log.type.toUpperCase()}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                    <span>Invoice: {log.invoice} via {log.channel}</span>
-                    <span>{new Date(log.sent_at).toLocaleTimeString()}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
-
-      </div>
+      )}
 
       {/* Collect Payment Modal (FR-PAY-01 to 02) */}
       {selectedInvoice && (
@@ -721,6 +899,91 @@ const Payments = () => {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Process Payroll Modal */}
+      {selectedTrainer && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '440px', padding: '1.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700 }}>
+                Process Staff Payroll
+              </h2>
+              <button onClick={() => setSelectedTrainer(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+              <img src={selectedTrainer.photo_url} alt={selectedTrainer.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+              <div>
+                <div style={{ fontWeight: 700 }}>{selectedTrainer.name}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Specialization: {selectedTrainer.specialization}</div>
+              </div>
+            </div>
+
+            <form onSubmit={handleProcessPayrollSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+              <div className="grid-2" style={{ gap: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Hourly Rate (LKR)</label>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, padding: '0.5rem 0', color: '#fff' }}>
+                    LKR {selectedTrainer.hourly_rate.toLocaleString()} / hr
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Hours Worked</label>
+                  <input 
+                    type="number"
+                    required
+                    min="1"
+                    className="glass-input"
+                    value={payrollHours}
+                    onChange={(e) => setPayrollHours(parseInt(e.target.value) || 0)}
+                    style={{ marginTop: '0.25rem', padding: '0.45rem 0.65rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Total payout card */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Total Payout:</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-success)' }}>
+                  LKR {(selectedTrainer.hourly_rate * payrollHours).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              {/* Payout Dates */}
+              <div style={{ background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Payment Date: <strong>Today</strong></span>
+                <span>Next Payment Date: <strong>{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</strong></span>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Payout Payment Method</label>
+                <select
+                  className="glass-select"
+                  style={{ marginTop: '0.35rem', width: '100%', padding: '0.5rem' }}
+                  value={payrollPaymentMethod}
+                  onChange={(e) => setPayrollPaymentMethod(e.target.value)}
+                >
+                  <option value="bank_transfer">🏦 Bank Wire Transfer (Recommended)</option>
+                  <option value="cash">💵 Cash Payout</option>
+                  <option value="card">💳 Credit/Debit Card</option>
+                  <option value="upi">📱 Mobile UPI</option>
+                </select>
+              </div>
+
+              <div className="grid-2 margin-t-1" style={{ gap: '0.75rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setSelectedTrainer(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-success" style={{ fontWeight: 600 }}>
+                  Approve Payout
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
