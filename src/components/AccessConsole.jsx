@@ -61,6 +61,7 @@ const AccessConsole = () => {
           });
         }
       } catch (err) {
+        console.error('Scan error:', err);
         setScannerState({
           status: 'denied',
           message: 'ACCESS DENIED: System error',

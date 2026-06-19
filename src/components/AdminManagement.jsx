@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   UserPlus, Shield, ShieldCheck, Mail, Lock, User, Info, CheckCircle2, XCircle, 
-  Eye, EyeOff, Edit2, Trash2, Key, Award, UserCheck, DollarSign, Activity, FileText, Plus, X 
+  Eye, EyeOff, Edit2, Trash2, Key, Award, UserCheck, Plus, X 
 } from 'lucide-react';
 
 const AdminManagement = () => {
@@ -79,6 +79,7 @@ const AdminManagement = () => {
         setErrorMsg(res.message);
       }
     } catch (err) {
+      console.error('Register admin error:', err);
       setErrorMsg('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -111,6 +112,7 @@ const AdminManagement = () => {
         alert(res.message || 'Failed to update password.');
       }
     } catch (err) {
+      console.error('Change password error:', err);
       alert('An unexpected error occurred. Please try again.');
     } finally {
       setIsUpdatingPassword(false);
@@ -132,6 +134,7 @@ const AdminManagement = () => {
           alert(res.message || 'Failed to delete administrator.');
         }
       } catch (err) {
+        console.error('Delete admin error:', err);
         alert('An error occurred. Please try again.');
       }
     }
@@ -220,6 +223,7 @@ const AdminManagement = () => {
         }
       }
     } catch (err) {
+      console.error('Plan save error:', err);
       alert('An error occurred. Please try again.');
     }
   };
@@ -234,6 +238,7 @@ const AdminManagement = () => {
           alert(res.message || 'Failed to delete package.');
         }
       } catch (err) {
+        console.error('Plan delete error:', err);
         alert('An error occurred. Please try again.');
       }
     }
@@ -311,6 +316,7 @@ const AdminManagement = () => {
         }
       }
     } catch (err) {
+      console.error('Trainer save error:', err);
       alert('An error occurred. Please try again.');
     }
   };
@@ -325,6 +331,7 @@ const AdminManagement = () => {
           alert(res.message || 'Failed to delete trainer.');
         }
       } catch (err) {
+        console.error('Trainer delete error:', err);
         alert('An error occurred. Please try again.');
       }
     }

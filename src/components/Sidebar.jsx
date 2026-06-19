@@ -4,14 +4,16 @@ import {
   Users, 
   UserPlus, 
   QrCode, 
-  CreditCard, 
+
   Sparkles, 
   ClipboardList,
   Shield,
   LogOut,
   Briefcase,
   Dumbbell,
-  DollarSign
+  DollarSign,
+  Settings,
+  LifeBuoy
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -27,19 +29,21 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'finance', name: 'Finance', icon: DollarSign },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
     { id: 'audit', name: 'System Audit Logs', icon: ClipboardList },
-    { id: 'admin_management', name: 'Admin Console', icon: Shield }
+    { id: 'admin_management', name: 'Admin Console', icon: Shield },
+    { id: 'client_settings', name: 'Client Settings', icon: Settings },
+    { id: 'support_tickets', name: 'Support Center', icon: LifeBuoy }
   ];
 
   // Filter based on currentUser role
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
     
-    // Regular admin can only access members, registrations, access
+    // Regular gym staff can only access members, registrations, access
     if (currentUser.role === 'admin') {
       return ['members', 'registrations', 'access'].includes(item.id);
     }
     
-    // Super admin can access everything
+    // Gym owners can access everything except superadmin specific features
     return true;
   });
 
@@ -84,7 +88,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               {currentUser?.name || 'Administrator'}
             </span>
             <span className="user-role" style={{ fontSize: '0.7rem' }}>
-              {currentUser?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+              {currentUser?.role === 'super_admin' ? 'Super Admin' : currentUser?.role === 'gym_owner' ? 'Gym Owner' : 'Gym Staff'}
             </span>
           </div>
           

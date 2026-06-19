@@ -24,6 +24,8 @@ const Payments = () => {
     processStaffPayroll
   } = useDashboard();
 
+  const [now] = useState(() => Date.now());
+
   // Component states
   const [billingTab, setBillingTab] = useState('members'); // members or staff
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -54,6 +56,7 @@ const Payments = () => {
         alert(res.message || 'Failed to process payroll. Please try again.');
       }
     } catch (err) {
+      console.error('Payroll error:', err);
       alert('An error occurred. Please try again.');
     }
   };
@@ -122,6 +125,7 @@ const Payments = () => {
       setSelectedInvoice(null);
       alert(`Payment recorded successfully via ${paymentMethod.toUpperCase()}!`);
     } catch (err) {
+      console.error('Record payment error:', err);
       alert('Failed to record payment. Please try again.');
     }
   };
@@ -953,7 +957,7 @@ const Payments = () => {
               {/* Payout Dates */}
               <div style={{ background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
                 <span>Payment Date: <strong>Today</strong></span>
-                <span>Next Payment Date: <strong>{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</strong></span>
+                <span>Next Payment Date: <strong>{new Date(now + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</strong></span>
               </div>
 
               <div>

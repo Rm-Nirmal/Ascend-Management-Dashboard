@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  LineChart, Line, AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  Line, AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell
 } from 'recharts';
 import { 
@@ -19,6 +19,8 @@ const Overview = () => {
     expenses,
     showToast
   } = useDashboard();
+
+  const [now] = useState(() => Date.now());
 
   // Tab State for Revenue & Chart period: 'daily', 'monthly', 'yearly'
   const [timeframe, setTimeframe] = useState('monthly');
@@ -84,7 +86,7 @@ const Overview = () => {
     const paidInvoices = uniqueInvoices.filter(i => i.status === 'paid' && i.paid_at);
     const validIncome = uniqueIncome;
     
-    let total, count, label, comparison, isTrendUp = true;
+    let total, count, label, comparison, isTrendUp;
 
     if (timeframe === 'daily') {
       // Paid on selectedDate (combining invoices and manual income)
@@ -112,7 +114,7 @@ const Overview = () => {
 
     } else if (timeframe === 'yearly') {
       // Paid in selectedYear
-      const yearPaid = yearPaid => yearPaid; // placeholder to prevent unused
+
       const yearPaidList = paidInvoices.filter(i => i.paid_at.startsWith(selectedYear));
       const yearManual = validIncome.filter(inc => inc.date && inc.date.startsWith(selectedYear));
       total = yearPaidList.reduce((sum, i) => sum + i.total_amount, 0) + yearManual.reduce((sum, inc) => sum + inc.amount, 0);
@@ -167,10 +169,10 @@ const Overview = () => {
   const totalMembersCount = uniqueMembers.length;
   const activeMembersCount = useMemo(() => {
     return uniqueMembers.filter(m => {
-      const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now());
+      const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < now);
       return m.status === 'active' && !isExpired;
     }).length;
-  }, [uniqueMembers]);
+  }, [uniqueMembers, now]);
   
   const activeAttendanceCount = useMemo(() => {
     if (timeframe === 'daily') {
@@ -422,9 +424,9 @@ const Overview = () => {
 
   const expiredMembersList = useMemo(() => {
     return uniqueMembers
-      .filter(m => m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now())
+      .filter(m => m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < now)
       .slice(0, 5);
-  }, [uniqueMembers]);
+  }, [uniqueMembers, now]);
 
   const frozenMembersList = useMemo(() => {
     return uniqueMembers

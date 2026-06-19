@@ -32,23 +32,29 @@ export const db = getFirestore(app);
 // ─── Collection Name Constants ───────────────────────────────────────
 // Centralized collection names to prevent typo bugs across the codebase.
 export const COLLECTIONS = {
-  ORGANIZATIONS: 'organizations',
+  GYMS: 'gyms',
+  ADMINS: 'users',
   MEMBERS: 'members',
-  INVOICES: 'invoices',
+  INVOICES: 'payments',
   REGISTRATIONS: 'registrations',
-  ACCESS_EVENTS: 'access_events',
-  AUDIT_LOGS: 'audit_logs',
-  PLANS: 'plans',
-  TRAINERS: 'trainers',
-  ADMINS: 'admins',
+  ACCESS_EVENTS: 'attendance',
+  AUDIT_LOGS: 'auditLogs',
+  PLANS: 'membershipPlans',
+  TRAINERS: 'employees',
   EMPLOYEES: 'employees',
-  EMPLOYEE_REGISTRATIONS: 'employee_registrations',
+  EMPLOYEE_REGISTRATIONS: 'employeeRegistrations',
   EXPENSES: 'expenses',
-  INCOME: 'income',
-  SMS_LOGS: 'sms_logs',
+  INCOME: 'payments',
+  SMS_LOGS: 'smsLogs',
+  GYM_SETTINGS: 'gymSettings',
+  SUBSCRIPTIONS: 'subscriptions',
+  SUPPORT_TICKETS: 'supportTickets',
+  ANNOUNCEMENTS: 'announcements',
+  NOTIFICATIONS: 'notifications',
+  ACCESS_LOGS: 'accessLogs',
 };
 
 // Default organization ID (single-tenant for now)
-export const DEFAULT_ORG_ID = 'org_ascend_hq';
+export const DEFAULT_ORG_ID = 'gym_ascend_hq';
 
 export default app;

@@ -7,7 +7,7 @@ import {
 import { 
   PieChart as LucidePieChart, DollarSign, TrendingUp, Plus, Edit2, Trash2, Eye, X, 
   Calendar, Filter, Search, FileDown, CheckCircle, ArrowUpRight, ArrowDownRight, 
-  AlertCircle, UploadCloud, Info, Check, Trash, Users, Printer, FileText
+  AlertCircle, UploadCloud, Users, Printer, FileText
 } from 'lucide-react';
 import { uploadToCloudinary } from '../lib/cloudinary';
 
@@ -46,6 +46,11 @@ const isWithinRange = (dateStr, start, end) => {
   const d = new Date(dateStr);
   return d >= start && d <= end;
 };
+
+// Expense Categories List
+const expenseCategories = ['Rent', 'Electricity', 'Water', 'Internet', 'Salary', 'Equipment', 'Maintenance', 'Marketing', 'Other'];
+const userExpenseCategories = expenseCategories.filter(cat => cat !== 'Salary');
+const incomeSources = ['Registration Fees', 'Personal Training Sessions', 'Product Sales', 'Other'];
 
 // ─── Component ──────────────────────────────────────────────────────
 
@@ -329,7 +334,6 @@ const Finance = () => {
   };
 
   // Overview Tab Timeline: 'monthly' (fixed for charts comparison)
-  const [selectedOverviewPeriod, setSelectedOverviewPeriod] = useState('month');
 
   // Income Tab Filters & State
   const [incomeTimeframe, setIncomeTimeframe] = useState('month');
@@ -379,10 +383,7 @@ const Finance = () => {
   // Recent Transactions date filter state
   const [txDateFilter, setTxDateFilter] = useState('');
 
-  // Expense Categories List
-  const expenseCategories = ['Rent', 'Electricity', 'Water', 'Internet', 'Salary', 'Equipment', 'Maintenance', 'Marketing', 'Other'];
-  const userExpenseCategories = expenseCategories.filter(cat => cat !== 'Salary');
-  const incomeSources = ['Registration Fees', 'Personal Training Sessions', 'Product Sales', 'Other'];
+
 
   // ─── 1. OVERVIEW METRICS CALCULATIONS ────────────────────────────────
 
@@ -803,6 +804,7 @@ const Finance = () => {
         showToast(res.message || 'Failed to log income.', 'error');
       }
     } catch (err) {
+      console.error('Add income error:', err);
       showToast('System error logging income.', 'error');
     }
   };
@@ -905,6 +907,7 @@ const Finance = () => {
         }
       }
     } catch (err) {
+      console.error('Manage expense error:', err);
       showToast('System error managing expense.', 'error');
     }
   };
@@ -920,6 +923,7 @@ const Finance = () => {
         showToast(res.message || 'Failed to delete expense.', 'error');
       }
     } catch (err) {
+      console.error('Delete expense error:', err);
       showToast('System error deleting expense.', 'error');
     }
   };

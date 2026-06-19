@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign
@@ -134,6 +134,7 @@ const Members = () => {
         alert(res.message || 'Renewal failed. Please try again.');
       }
     } catch (err) {
+      console.error('Renewal error:', err);
       alert('An error occurred during renewal. Please try again.');
     }
   };
@@ -195,6 +196,7 @@ const Members = () => {
         alert('Member details updated successfully!');
       }
     } catch (err) {
+      console.error('Update error:', err);
       alert('Failed to update member. Please try again.');
     }
   };
@@ -285,14 +287,14 @@ const Members = () => {
     });
   }, [members]);
 
-  const getResolvedStatus = (m) => {
+  const getResolvedStatus = useCallback((m) => {
     if (!m) return 'active';
     if (m.status === 'frozen') return 'frozen';
-    const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now());
+    const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < time);
     if (isExpired) return 'expired';
     if (m.status === 'active') return 'active';
     return m.status || 'inactive';
-  };
+  }, [time]);
 
   // Filter members list based on filters
   const filteredMembersList = useMemo(() => {
@@ -311,7 +313,7 @@ const Members = () => {
         
       return matchesStatus && matchesSearch;
     });
-  }, [uniqueMembers, statusFilter, searchTerm]);
+  }, [uniqueMembers, statusFilter, searchTerm, getResolvedStatus]);
 
 
 
@@ -370,7 +372,7 @@ const Members = () => {
           .reduce((s, inv) => s + inv.total_amount, 0);
         return sum + thisMonthPaid;
       }, 0);
-  }, [uniqueMembers, invoices]);
+  }, [uniqueMembers, invoices, getResolvedStatus]);
 
   const totalOutstandingAmount = useMemo(() => {
     return uniqueMembers
@@ -380,7 +382,7 @@ const Members = () => {
         const memberTotal = memberInvoices.reduce((s, inv) => s + inv.total_amount, 0);
         return sum + memberTotal;
       }, 0);
-  }, [uniqueMembers, invoices]);
+  }, [uniqueMembers, invoices, getResolvedStatus]);
 
   const filteredFinancialsList = useMemo(() => {
     return memberFinancials.filter(m => {
@@ -441,6 +443,7 @@ const Members = () => {
         setSelectedMember(created);
       }
     } catch (err) {
+      console.error('Add member error:', err);
       alert('Failed to add member. Please try again.');
     }
   };
@@ -1473,9 +1476,9 @@ const Members = () => {
         const total = subtotal + tax;
 
         // Calculate dynamic new expiry date
-        const baseDate = selectedRenewMember.countdown_end && new Date(selectedRenewMember.countdown_end).getTime() > Date.now()
+        const baseDate = selectedRenewMember.countdown_end && new Date(selectedRenewMember.countdown_end).getTime() > time
           ? new Date(selectedRenewMember.countdown_end)
-          : new Date();
+          : new Date(time);
         baseDate.setMonth(baseDate.getMonth() + parseInt(renewPeriod));
         const newExpiryStr = baseDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 

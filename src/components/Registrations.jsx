@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Check, X, ShieldCheck, QrCode, Link, Copy, ExternalLink
+  Check, X, QrCode, Copy, ExternalLink
 } from 'lucide-react';
 import PublicRegistrationForm from './PublicRegistrationForm';
 

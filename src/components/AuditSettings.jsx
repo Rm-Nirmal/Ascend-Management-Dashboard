@@ -25,7 +25,7 @@ const AuditSettings = () => {
         try {
           const logDateStr = new Date(log.occurred_at).toISOString().split('T')[0];
           matchesDate = (logDateStr === selectedDate);
-        } catch (e) {
+        } catch {
           matchesDate = false;
         }
       }
