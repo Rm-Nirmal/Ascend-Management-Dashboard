@@ -4,7 +4,7 @@ import {
   Users, 
   UserPlus, 
   QrCode, 
-
+  CreditCard,
   Sparkles, 
   ClipboardList,
   Shield,
