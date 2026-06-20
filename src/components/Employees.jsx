@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Search, Plus, Edit2, Trash2, Mail, Phone, Briefcase, 
-  DollarSign, Calendar, Check, X, ShieldAlert, FileText, Send, CheckCircle2,
+  DollarSign, Calendar, Check, X, Send,
   UserPlus
 } from 'lucide-react';
 

@@ -74,7 +74,9 @@ export const uploadToCloudinary = async (file, options = {}) => {
             if (errData.error?.message) {
               errMsg = `${errData.error.message} (Status ${xhr.status})`;
             }
-          } catch (e) {}
+          } catch {
+            // ignore invalid JSON parsing error
+          }
           reject(new Error(errMsg));
         }
       });

@@ -35,18 +35,30 @@ const app = initializeApp({ credential: cert(require(keyPath)) });
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-const ORG_ID = 'org_ascend_hq';
+const ORG_ID = 'gym_ascend_hq';
 
 // ─── Collection Names (must match src/lib/firebase.js) ───────────────
 const COLLECTIONS = {
-  PLANS: 'plans',
-  TRAINERS: 'trainers',
+  GYMS: 'gyms',
+  ADMINS: 'users',
   MEMBERS: 'members',
-  INVOICES: 'invoices',
+  INVOICES: 'payments',
   REGISTRATIONS: 'registrations',
-  ACCESS_EVENTS: 'access_events',
-  AUDIT_LOGS: 'audit_logs',
-  ADMINS: 'admins',
+  ACCESS_EVENTS: 'attendance',
+  AUDIT_LOGS: 'auditLogs',
+  PLANS: 'membershipPlans',
+  TRAINERS: 'employees',
+  EMPLOYEES: 'employees',
+  EMPLOYEE_REGISTRATIONS: 'employeeRegistrations',
+  EXPENSES: 'expenses',
+  INCOME: 'payments',
+  SMS_LOGS: 'smsLogs',
+  GYM_SETTINGS: 'gymSettings',
+  SUBSCRIPTIONS: 'subscriptions',
+  SUPPORT_TICKETS: 'supportTickets',
+  ANNOUNCEMENTS: 'announcements',
+  NOTIFICATIONS: 'notifications',
+  ACCESS_LOGS: 'accessLogs',
 };
 
 // ─── Unsplash Avatar URLs ────────────────────────────────────────────
@@ -83,7 +95,7 @@ const PLANS_DATA = [
     price: 3500,
     tax_rate: 5,
     duration_days: 30,
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     features: ['Gym floor access', 'Locker usage', 'Basic equipment', 'Shower facilities'],
     created_at: new Date().toISOString(),
   },
@@ -92,7 +104,7 @@ const PLANS_DATA = [
     price: 5500,
     tax_rate: 5,
     duration_days: 30,
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     features: ['Full gym access', 'Group classes', 'Sauna & steam', 'Nutrition guide', 'Locker usage'],
     created_at: new Date().toISOString(),
   },
@@ -101,7 +113,7 @@ const PLANS_DATA = [
     price: 8500,
     tax_rate: 5,
     duration_days: 30,
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     features: ['Full gym + classes', '1 PT session/week', 'Spa access', 'Diet consultation', 'Priority booking', 'Towel service'],
     created_at: new Date().toISOString(),
   },
@@ -110,7 +122,7 @@ const PLANS_DATA = [
     price: 15000,
     tax_rate: 5,
     duration_days: 30,
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     features: ['Unlimited everything', '3 PT sessions/week', 'Private locker', 'VIP lounge', 'Guest passes (2/mo)', 'Body composition analysis', 'Priority parking'],
     created_at: new Date().toISOString(),
   },
@@ -122,8 +134,12 @@ const TRAINERS_DATA = [
     specialization: 'Strength & Conditioning',
     bio: 'NSCA-certified strength coach with 8 years of experience in powerlifting and athletic performance.',
     hourly_rate: 3500,
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     photo_url: AVATARS.male[0],
+    date_of_birth: '1988-06-21',
+    last_payment_date: '2026-05-30',
+    next_payment_date: '2026-06-30',
+    payment_status: 'pending',
     created_at: new Date().toISOString(),
   },
   {
@@ -131,8 +147,12 @@ const TRAINERS_DATA = [
     specialization: 'Yoga & Mobility',
     bio: 'RYT-500 certified yoga instructor specializing in vinyasa flow and corrective mobility for athletes.',
     hourly_rate: 3000,
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     photo_url: AVATARS.female[0],
+    date_of_birth: '1992-06-25',
+    last_payment_date: '2026-05-30',
+    next_payment_date: '2026-06-30',
+    payment_status: 'pending',
     created_at: new Date().toISOString(),
   },
   {
@@ -140,8 +160,12 @@ const TRAINERS_DATA = [
     specialization: 'HIIT & Cardio',
     bio: 'ACE-certified personal trainer focused on high-intensity interval training and cardiovascular endurance.',
     hourly_rate: 2800,
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     photo_url: AVATARS.male[1],
+    date_of_birth: '1990-06-19', // June 19th - Today!
+    last_payment_date: '2026-05-30',
+    next_payment_date: '2026-06-30',
+    payment_status: 'pending',
     created_at: new Date().toISOString(),
   },
   {
@@ -149,8 +173,12 @@ const TRAINERS_DATA = [
     specialization: 'Nutrition & Weight Loss',
     bio: 'Certified nutritionist and fitness coach specializing in body recomposition and sustainable weight management.',
     hourly_rate: 3200,
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     photo_url: AVATARS.female[1],
+    date_of_birth: '1994-07-02',
+    last_payment_date: '2026-05-30',
+    next_payment_date: '2026-06-30',
+    payment_status: 'pending',
     created_at: new Date().toISOString(),
   },
 ];
@@ -160,7 +188,7 @@ const ADMINS_DATA = [
     name: 'Sarah Jenkins',
     email: 'superadmin@ascend.com',
     role: 'super_admin',
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     photo_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
     created_at: new Date().toISOString(),
   },
@@ -168,7 +196,7 @@ const ADMINS_DATA = [
     name: 'James Mercer',
     email: 'admin@ascend.com',
     role: 'admin',
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     photo_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
     created_at: new Date().toISOString(),
   },
@@ -393,7 +421,7 @@ const REGISTRATIONS_DATA = [
     status: 'pending_approval',
     captcha_verified: true,
     ip_address: '192.168.1.42',
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     created_at: daysAgo(2).toISOString(),
   },
   {
@@ -409,7 +437,7 @@ const REGISTRATIONS_DATA = [
     status: 'pending_approval',
     captcha_verified: true,
     ip_address: '192.168.1.55',
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     created_at: daysAgo(1).toISOString(),
   },
   {
@@ -425,7 +453,7 @@ const REGISTRATIONS_DATA = [
     status: 'pending_approval',
     captcha_verified: true,
     ip_address: '192.168.1.78',
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     created_at: daysAgo(0).toISOString(),
   },
 ];
@@ -548,7 +576,7 @@ async function main() {
     const countdownEnd = daysFromNow(tmpl._daysRemaining).toISOString();
 
     const member = {
-      organization_id: ORG_ID,
+      gymId: ORG_ID,
       full_name: tmpl.full_name,
       email: tmpl.email,
       phone: tmpl.phone,
@@ -596,7 +624,7 @@ async function main() {
 
     // Initial enrollment invoice
     invoicesData.push({
-      organization_id: ORG_ID,
+      gymId: ORG_ID,
       member_id: memberIds[idx],
       member_name: member.full_name,
       invoice_number: `INV-2026-${(1001 + idx * 2).toString()}`,
@@ -618,7 +646,7 @@ async function main() {
     // Some members have a second (renewal) invoice
     if (MEMBERS_TEMPLATE[idx]._joinedDaysAgo > 60) {
       invoicesData.push({
-        organization_id: ORG_ID,
+        gymId: ORG_ID,
         member_id: memberIds[idx],
         member_name: member.full_name,
         invoice_number: `INV-2026-${(1002 + idx * 2).toString()}`,
@@ -639,7 +667,7 @@ async function main() {
 
   // Add a couple of open invoices
   invoicesData.push({
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     member_id: memberIds[5], // Ishara - expired member
     member_name: membersData[5].full_name,
     invoice_number: 'INV-2026-2001',
@@ -689,7 +717,7 @@ async function main() {
       eventDate.setHours(hour, minute, 0, 0);
 
       const evt = {
-        organization_id: ORG_ID,
+        gymId: ORG_ID,
         member_id: memberIds[memberIdx],
         member_name: membersData[memberIdx].full_name,
         member_code: membersData[memberIdx].member_code,
@@ -711,7 +739,7 @@ async function main() {
 
   // Add 2 denied events
   accessEventsData.push({
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     member_id: memberIds[5], // Ishara - expired
     member_name: membersData[5].full_name,
     member_code: membersData[5].member_code,
@@ -722,7 +750,7 @@ async function main() {
   });
 
   accessEventsData.push({
-    organization_id: ORG_ID,
+    gymId: ORG_ID,
     member_id: memberIds[4], // Nuwan - frozen
     member_name: membersData[4].full_name,
     member_code: membersData[4].member_code,
@@ -739,7 +767,7 @@ async function main() {
   console.log('📜 Seeding audit logs...');
   const auditData = [
     {
-      organization_id: ORG_ID,
+      gymId: ORG_ID,
       user_name: 'Sarah Jenkins',
       action: 'system.login',
       entity_type: 'auth',
@@ -748,7 +776,7 @@ async function main() {
       occurred_at: daysAgo(0).toISOString(),
     },
     {
-      organization_id: ORG_ID,
+      gymId: ORG_ID,
       user_name: 'Sarah Jenkins',
       action: 'member.create',
       entity_type: 'member',
@@ -757,7 +785,7 @@ async function main() {
       occurred_at: daysAgo(45).toISOString(),
     },
     {
-      organization_id: ORG_ID,
+      gymId: ORG_ID,
       user_name: 'James Mercer',
       action: 'member.freeze',
       entity_type: 'member',
@@ -766,7 +794,7 @@ async function main() {
       occurred_at: daysAgo(10).toISOString(),
     },
     {
-      organization_id: ORG_ID,
+      gymId: ORG_ID,
       user_name: 'Sarah Jenkins',
       action: 'payment.receive',
       entity_type: 'invoice',
@@ -775,7 +803,7 @@ async function main() {
       occurred_at: daysAgo(44).toISOString(),
     },
     {
-      organization_id: ORG_ID,
+      gymId: ORG_ID,
       user_name: 'System',
       action: 'member.expire',
       entity_type: 'member',
@@ -784,7 +812,7 @@ async function main() {
       occurred_at: daysAgo(5).toISOString(),
     },
     {
-      organization_id: ORG_ID,
+      gymId: ORG_ID,
       user_name: 'James Mercer',
       action: 'access.denied',
       entity_type: 'access_event',

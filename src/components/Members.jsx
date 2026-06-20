@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign
@@ -64,6 +64,7 @@ const Members = () => {
   const [selectedRenewMember, setSelectedRenewMember] = useState(null);
   const [renewPrice, setRenewPrice] = useState('');
   const [renewPaymentMethod, setRenewPaymentMethod] = useState('card');
+  const [renewPeriod, setRenewPeriod] = useState(1);
   const [viewingReceipt, setViewingReceipt] = useState(null);
 
   const numberToWords = (num) => {
@@ -106,18 +107,16 @@ const Members = () => {
     return str.trim() + ' LKR Only';
   };
 
-
-
   const handleRenewSubmit = async (e) => {
     e.preventDefault();
     if (!renewPrice || !selectedRenewMember) return;
     try {
-      const res = await renewMemberMembership(selectedRenewMember.id, renewPaymentMethod, renewPrice);
+      const res = await renewMemberMembership(selectedRenewMember.id, renewPaymentMethod, renewPrice, renewPeriod);
       if (res.success) {
         if (showToast) {
-          showToast(`Membership for ${selectedRenewMember.full_name} renewed successfully!`, 'success');
+          showToast(`Membership for ${selectedRenewMember.full_name} renewed successfully for ${renewPeriod} month(s)!`, 'success');
         } else {
-          alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for 30 days! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
+          alert(`Membership for ${selectedRenewMember.full_name} renewed successfully for ${renewPeriod} month(s)! New Expiry: ${new Date(res.newCountdownEnd).toLocaleDateString()}`);
         }
         setSelectedRenewMember(null);
         if (res.invoice) {
@@ -128,13 +127,15 @@ const Members = () => {
           setSelectedMember(prev => ({
             ...prev,
             status: 'active',
-            countdown_end: res.newCountdownEnd
+            countdown_end: res.newCountdownEnd,
+            next_payment_date: res.newCountdownEnd
           }));
         }
       } else {
         alert(res.message || 'Renewal failed. Please try again.');
       }
     } catch (err) {
+      console.error('Renewal error:', err);
       alert('An error occurred during renewal. Please try again.');
     }
   };
@@ -197,6 +198,7 @@ const Members = () => {
         alert('Member details updated successfully!');
       }
     } catch (err) {
+      console.error('Update error:', err);
       alert('Failed to update member. Please try again.');
     }
   };
@@ -288,14 +290,14 @@ const Members = () => {
     });
   }, [members]);
 
-  const getResolvedStatus = (m) => {
+  const getResolvedStatus = useCallback((m) => {
     if (!m) return 'active';
     if (m.status === 'frozen') return 'frozen';
-    const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now());
+    const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < time);
     if (isExpired) return 'expired';
     if (m.status === 'active') return 'active';
     return m.status || 'inactive';
-  };
+  }, [time]);
 
   // Filter members list based on filters
   const filteredMembersList = useMemo(() => {
@@ -314,7 +316,7 @@ const Members = () => {
         
       return matchesStatus && matchesSearch;
     });
-  }, [uniqueMembers, statusFilter, searchTerm]);
+  }, [uniqueMembers, statusFilter, searchTerm, getResolvedStatus]);
 
 
 
@@ -373,7 +375,7 @@ const Members = () => {
           .reduce((s, inv) => s + inv.total_amount, 0);
         return sum + thisMonthPaid;
       }, 0);
-  }, [uniqueMembers, invoices]);
+  }, [uniqueMembers, invoices, getResolvedStatus]);
 
   const totalOutstandingAmount = useMemo(() => {
     return uniqueMembers
@@ -383,7 +385,7 @@ const Members = () => {
         const memberTotal = memberInvoices.reduce((s, inv) => s + inv.total_amount, 0);
         return sum + memberTotal;
       }, 0);
-  }, [uniqueMembers, invoices]);
+  }, [uniqueMembers, invoices, getResolvedStatus]);
 
   const filteredFinancialsList = useMemo(() => {
     return memberFinancials.filter(m => {
@@ -445,6 +447,7 @@ const Members = () => {
         setSelectedMember(created);
       }
     } catch (err) {
+      console.error('Add member error:', err);
       alert('Failed to add member. Please try again.');
     }
   };
@@ -612,6 +615,7 @@ const Members = () => {
                 <th>Installment Plan</th>
                 <th>Status</th>
                 <th>Validity</th>
+                <th>Next Payment</th>
                 <th>Joined</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -656,9 +660,27 @@ const Members = () => {
                       <td>
                         {getCountdownDisplay(member)}
                       </td>
+                      <td style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-primary)' }}>
+                        {member.next_payment_date 
+                          ? new Date(member.next_payment_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                          : new Date(member.countdown_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
                       <td>{member.joined_at}</td>
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.4rem', color: 'var(--color-success)' }}
+                            title="Collect Payment & Renew"
+                            onClick={() => {
+                              setSelectedRenewMember(member);
+                              setRenewPeriod(1);
+                              const plan = plans.find(p => p.id === member.plan_id);
+                              setRenewPrice(plan ? plan.price : '');
+                            }}
+                          >
+                            <CreditCard size={14} />
+                          </button>
                           <button 
                             className="btn btn-secondary" 
                             style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
@@ -881,6 +903,7 @@ const Members = () => {
                                 title="Collect Payment & Renew"
                                 onClick={() => {
                                   setSelectedRenewMember(member);
+                                  setRenewPeriod(1);
                                   setRenewPrice(plan ? plan.price : '');
                                 }}
                               >
@@ -1052,9 +1075,16 @@ const Members = () => {
             {/* Validity Countdown and Renew inside drawer */}
             <div style={{ background: 'rgba(6,182,212,0.03)', border: '1px solid rgba(6,182,212,0.15)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', textTransform: 'uppercase', fontWeight: 700 }}>Membership Validity</span>
-                <div style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', marginTop: '0.25rem' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', textTransform: 'uppercase', fontWeight: 700 }}>Membership Validity & Due Date</span>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', marginTop: '0.25rem' }}>
                   {getCountdownDisplay(selectedMember)}
+                </div>
+                <div style={{ fontSize: '0.8rem', marginTop: '0.25rem', color: 'var(--text-muted)' }}>
+                  Next Payment: <strong style={{ color: 'var(--color-primary)' }}>
+                    {selectedMember.next_payment_date 
+                      ? new Date(selectedMember.next_payment_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                      : new Date(selectedMember.countdown_end).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </strong>
                 </div>
                 {latestInvoice && (
                   <div style={{ marginTop: '0.35rem' }}>
@@ -1083,6 +1113,7 @@ const Members = () => {
                   setSelectedRenewMember(selectedMember);
                   const plan = plans.find(p => p.id === selectedMember.plan_id);
                   setRenewPrice(plan ? plan.price : '');
+                  setRenewPeriod(1);
                 }}
                 className="btn btn-primary" 
                 style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', gap: '0.35rem' }}
@@ -1497,85 +1528,150 @@ const Members = () => {
       )}
 
       {/* Collect Payment & Renew Modal */}
-      {selectedRenewMember && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '420px', animation: 'slideUp 0.25s ease-out' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CreditCard size={20} style={{ color: 'var(--color-primary)' }} />
-                Collect Payment & Renew
-              </h2>
-              <button 
-                onClick={() => setSelectedRenewMember(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {selectedRenewMember && (() => {
+        const plan = plans.find(p => p.id === selectedRenewMember.plan_id) || plans[0];
+        const subtotal = parseFloat(renewPrice || 0);
+        const taxRate = plan ? plan.tax_rate / 100 : 0.085;
+        const tax = subtotal * taxRate;
+        const total = subtotal + tax;
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <img 
-                src={selectedRenewMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
-                alt={selectedRenewMember.full_name} 
-                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
-              />
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{selectedRenewMember.full_name}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Code: {selectedRenewMember.member_code}</div>
+        // Calculate dynamic new expiry date
+        const baseDate = selectedRenewMember.countdown_end && new Date(selectedRenewMember.countdown_end).getTime() > time
+          ? new Date(selectedRenewMember.countdown_end)
+          : new Date(time);
+        baseDate.setMonth(baseDate.getMonth() + parseInt(renewPeriod));
+        const newExpiryStr = baseDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+        return (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '480px', padding: '1.75rem', animation: 'slideUp 0.25s ease-out' }}>
+              {/* Modal Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <CreditCard size={20} style={{ color: 'var(--color-primary)' }} />
+                  Collect Payment & Renew
+                </h2>
+                <button 
+                  onClick={() => setSelectedRenewMember(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                >
+                  <X size={20} />
+                </button>
               </div>
-            </div>
 
-            <form onSubmit={handleRenewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Plan info */}
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Attached Membership Plan</label>
-                <div style={{ fontSize: '0.875rem', fontWeight: 600, background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '6px', marginTop: '0.25rem', border: '1px solid var(--border-color)' }}>
-                  {plans.find(p => p.id === selectedRenewMember.plan_id)?.name || 'N/A'}
+              {/* Member Card */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
+                <img 
+                  src={selectedRenewMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                  alt={selectedRenewMember.full_name} 
+                  style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--color-primary)' }}
+                />
+                <div style={{ flexGrow: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{selectedRenewMember.full_name}</div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.15rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Code: {selectedRenewMember.member_code}</span>
+                    <span className={`badge badge-${selectedRenewMember.status}`} style={{ fontSize: '0.6rem', padding: '0.1rem 0.35rem' }}>
+                      {selectedRenewMember.status}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Plan Type</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)' }}>{plan?.name || 'N/A'}</span>
                 </div>
               </div>
 
-              {/* Price */}
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Renew Amount (LKR)</label>
-                <input 
-                  type="number"
-                  required
-                  className="glass-input"
-                  style={{ marginTop: '0.25rem', fontWeight: 700, color: 'var(--color-success)' }}
-                  value={renewPrice}
-                  onChange={(e) => setRenewPrice(e.target.value)}
-                />
-              </div>
+              <form onSubmit={handleRenewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+                
+                {/* Period Selector & Price Override Row */}
+                <div className="grid-2" style={{ gap: '1rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Renewal Period</label>
+                    <select
+                      className="glass-select"
+                      style={{ marginTop: '0.35rem', width: '100%', padding: '0.5rem 0.75rem' }}
+                      value={renewPeriod}
+                      onChange={(e) => {
+                        const newPeriod = parseInt(e.target.value);
+                        setRenewPeriod(newPeriod);
+                        const plan = plans.find(p => p.id === selectedRenewMember.plan_id) || plans[0];
+                        if (plan) {
+                          setRenewPrice(plan.price * newPeriod);
+                        }
+                      }}
+                    >
+                      <option value={1}>1 Month (Standard)</option>
+                      <option value={3}>3 Months (Quarterly)</option>
+                      <option value={6}>6 Months (Semi-Annual)</option>
+                      <option value={12}>12 Months (Annual)</option>
+                    </select>
+                  </div>
 
-              {/* Payment Method */}
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Payment Collection Method</label>
-                <select
-                  className="glass-select"
-                  style={{ marginTop: '0.25rem', width: '100%', padding: '0.5rem' }}
-                  value={renewPaymentMethod}
-                  onChange={(e) => setRenewPaymentMethod(e.target.value)}
-                >
-                  <option value="card">Credit / Debit Card</option>
-                  <option value="cash">Cash Payment</option>
-                  <option value="upi">UPI / Instant Pay</option>
-                  <option value="bank_transfer">Bank Wire Transfer</option>
-                </select>
-              </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Amount (LKR)</label>
+                    <input 
+                      type="number"
+                      required
+                      className="glass-input"
+                      style={{ marginTop: '0.35rem', fontWeight: 700, color: 'var(--color-success)', width: '100%', padding: '0.5rem 0.75rem' }}
+                      value={renewPrice}
+                      onChange={(e) => setRenewPrice(e.target.value)}
+                    />
+                  </div>
+                </div>
 
-              {/* Action buttons */}
-              <div className="grid-2 margin-t-1">
-                <button type="button" className="btn btn-secondary" onClick={() => setSelectedRenewMember(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-success">
-                  Renew & Activate
-                </button>
-              </div>
-            </form>
+                {/* Professional Billing breakdown card */}
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Base Subtotal:</span>
+                    <span>LKR {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Tax ({plan?.tax_rate || 8.5}%):</span>
+                    <span>+LKR {tax.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.6rem 0', paddingTop: '0.6rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-success)' }}>
+                      <span>Total Collection:</span>
+                      <span>LKR {total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                  <div style={{ borderTop: '1px dashed var(--border-color)', marginTop: '0.5rem', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>New Expiry / Next Payment:</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-primary)' }}>{newExpiryStr}</span>
+                  </div>
+                </div>
+
+                {/* Payment Method Selector */}
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Payment Method</label>
+                  <select
+                    className="glass-select"
+                    style={{ marginTop: '0.35rem', width: '100%', padding: '0.5rem 0.75rem' }}
+                    value={renewPaymentMethod}
+                    onChange={(e) => setRenewPaymentMethod(e.target.value)}
+                  >
+                    <option value="card">💳 Credit / Debit Card</option>
+                    <option value="cash">💵 Cash Payment</option>
+                    <option value="upi">📱 UPI / Instant Pay</option>
+                    <option value="bank_transfer">🏦 Bank Wire Transfer</option>
+                  </select>
+                </div>
+
+                {/* Action buttons */}
+                <div className="grid-2 margin-t-1" style={{ gap: '0.75rem' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setSelectedRenewMember(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-success" style={{ fontWeight: 600 }}>
+                    Renew & Settle
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Edit Member Modal */}
       {showEditModal && (

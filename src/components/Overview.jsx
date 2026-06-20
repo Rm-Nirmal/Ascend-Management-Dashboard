@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  LineChart, Line, AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  Line, AreaChart, Area, BarChart, Bar, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell
 } from 'recharts';
 import { 
@@ -14,10 +14,13 @@ const Overview = () => {
     accessEvents, 
     invoices, 
     registrations,
+    trainers,
     income,
     expenses,
     showToast
   } = useDashboard();
+
+  const [now] = useState(() => Date.now());
 
   // Tab State for Revenue & Chart period: 'daily', 'monthly', 'yearly'
   const [timeframe, setTimeframe] = useState('monthly');
@@ -83,7 +86,7 @@ const Overview = () => {
     const paidInvoices = uniqueInvoices.filter(i => i.status === 'paid' && i.paid_at);
     const validIncome = uniqueIncome;
     
-    let total, count, label, comparison, isTrendUp = true;
+    let total, count, label, comparison, isTrendUp;
 
     if (timeframe === 'daily') {
       // Paid on selectedDate (combining invoices and manual income)
@@ -111,7 +114,7 @@ const Overview = () => {
 
     } else if (timeframe === 'yearly') {
       // Paid in selectedYear
-      const yearPaid = yearPaid => yearPaid; // placeholder to prevent unused
+
       const yearPaidList = paidInvoices.filter(i => i.paid_at.startsWith(selectedYear));
       const yearManual = validIncome.filter(inc => inc.date && inc.date.startsWith(selectedYear));
       total = yearPaidList.reduce((sum, i) => sum + i.total_amount, 0) + yearManual.reduce((sum, inc) => sum + inc.amount, 0);
@@ -166,10 +169,10 @@ const Overview = () => {
   const totalMembersCount = uniqueMembers.length;
   const activeMembersCount = useMemo(() => {
     return uniqueMembers.filter(m => {
-      const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now());
+      const isExpired = m.status === 'expired' || (m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < now);
       return m.status === 'active' && !isExpired;
     }).length;
-  }, [uniqueMembers]);
+  }, [uniqueMembers, now]);
   
   const activeAttendanceCount = useMemo(() => {
     if (timeframe === 'daily') {
@@ -421,9 +424,9 @@ const Overview = () => {
 
   const expiredMembersList = useMemo(() => {
     return uniqueMembers
-      .filter(m => m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < Date.now())
+      .filter(m => m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < now)
       .slice(0, 5);
-  }, [uniqueMembers]);
+  }, [uniqueMembers, now]);
 
   const frozenMembersList = useMemo(() => {
     return uniqueMembers
@@ -462,6 +465,54 @@ const Overview = () => {
   const hasGenderData = useMemo(() => {
     return genderStats.some(d => d.value > 0);
   }, [genderStats]);
+
+  const birthdayReminders = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const getDaysUntilBirthday = (dobStr) => {
+      if (!dobStr) return -1;
+      const dob = new Date(dobStr);
+      
+      // Calculate birthday for this year
+      const bdayThisYear = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+      bdayThisYear.setHours(0, 0, 0, 0);
+
+      // If it passed, check next year
+      if (bdayThisYear.getTime() < today.getTime()) {
+        bdayThisYear.setFullYear(today.getFullYear() + 1);
+      }
+
+      const diffTime = bdayThisYear.getTime() - today.getTime();
+      return Math.round(diffTime / (1000 * 60 * 60 * 24));
+    };
+
+    const upcomingMembers = members
+      .filter(m => m.date_of_birth)
+      .map(m => ({
+        id: m.id,
+        name: m.full_name,
+        type: 'Member',
+        dob: m.date_of_birth,
+        daysLeft: getDaysUntilBirthday(m.date_of_birth),
+        photo: m.photo_url
+      }));
+
+    const upcomingEmployees = trainers
+      .filter(t => t.date_of_birth)
+      .map(t => ({
+        id: t.id,
+        name: t.name,
+        type: 'Staff/Trainer',
+        dob: t.date_of_birth,
+        daysLeft: getDaysUntilBirthday(t.date_of_birth),
+        photo: t.photo_url
+      }));
+
+    return [...upcomingMembers, ...upcomingEmployees]
+      .filter(b => b.daysLeft >= 0 && b.daysLeft <= 14) // Next 14 days
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [members, trainers]);
 
   const handleExport = (format) => {
     if (format === 'csv') {
@@ -781,7 +832,7 @@ const Overview = () => {
       </div>
 
       {/* Action lists row */}
-      <div className="grid-3">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
         {/* Inactive days list */}
         <div className="glass-card">
           <h4 style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>
@@ -848,6 +899,54 @@ const Overview = () => {
                   <span className="badge badge-frozen" style={{ fontSize: '0.65rem' }}>
                     Frozen
                   </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Birthday Reminders */}
+        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column' }}>
+          <h4 style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>
+            🎂 Birthday Reminders
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flexGrow: 1, overflowY: 'auto', maxHeight: '250px' }}>
+            {birthdayReminders.length === 0 ? (
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-dark)', fontStyle: 'italic' }}>
+                No birthdays in next 14 days.
+              </span>
+            ) : (
+              birthdayReminders.map(b => (
+                <div key={`${b.type}-${b.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <img 
+                    src={b.photo || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                    alt={b.name} 
+                    style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: b.daysLeft === 0 ? '2.5px solid var(--color-success)' : '1px solid var(--border-color)' }}
+                  />
+                  <div style={{ flexGrow: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '0.35rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {b.name}
+                      {b.daysLeft === 0 && <span>🎉</span>}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {b.type} • {new Date(b.dob).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                  <div style={{ flexShrink: 0 }}>
+                    {b.daysLeft === 0 ? (
+                      <span style={{ color: 'var(--color-success)', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700 }}>
+                        Today!
+                      </span>
+                    ) : b.daysLeft === 1 ? (
+                      <span style={{ color: 'var(--color-warning)', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700 }}>
+                        Tomorrow
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600 }}>
+                        In {b.daysLeft}d
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))
             )}

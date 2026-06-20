@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, Dumbbell, Loader2 } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ShieldCheck, Dumbbell } from 'lucide-react';
 
 const Login = () => {
-  const { login } = useDashboard();
+  const { login, seedDatabaseClientSide } = useDashboard();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,8 +24,8 @@ const Login = () => {
       if (!res.success) {
         setError(res.message);
       }
-      // If successful, onAuthStateChanged in context will handle the redirect
     } catch (err) {
+      console.error('Login error:', err);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -39,11 +39,19 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await login(demoEmail, demoPassword);
+      let res = await login(demoEmail, demoPassword);
+      if (!res.success) {
+        setError('Auto-seeding demo database... Please wait.');
+        const seedRes = await seedDatabaseClientSide(demoEmail, demoPassword);
+        if (seedRes.success) {
+          res = await login(demoEmail, demoPassword);
+        }
+      }
       if (!res.success) {
         setError(res.message);
       }
     } catch (err) {
+      console.error('Demo login error:', err);
       setError('Demo login failed. Ensure demo accounts exist in Firebase Auth.');
     } finally {
       setIsLoading(false);
@@ -296,7 +304,7 @@ const Login = () => {
                 borderColor: 'rgba(255, 255, 255, 0.05)'
               }}
             >
-              <span style={{ fontWeight: 600 }}>Sarah (Super Admin)</span>
+              <span style={{ fontWeight: 600 }}>Sarah (SaaS Super Admin)</span>
               <span style={{ color: 'var(--text-dark)', fontSize: '0.7rem' }}>1-Click Login</span>
             </button>
 
@@ -312,7 +320,23 @@ const Login = () => {
                 borderColor: 'rgba(255, 255, 255, 0.05)'
               }}
             >
-              <span style={{ fontWeight: 600 }}>James (Standard Admin)</span>
+              <span style={{ fontWeight: 600 }}>James (Ascend Gym Owner)</span>
+              <span style={{ color: 'var(--text-dark)', fontSize: '0.7rem' }}>1-Click Login</span>
+            </button>
+
+            <button
+              onClick={() => handleDemoLogin('owner@powergym.com', 'Owner@123')}
+              disabled={isLoading}
+              className="btn btn-secondary"
+              style={{
+                fontSize: '0.75rem',
+                padding: '0.5rem 1rem',
+                justifyContent: 'space-between',
+                background: 'rgba(255, 255, 255, 0.02)',
+                borderColor: 'rgba(255, 255, 255, 0.05)'
+              }}
+            >
+              <span style={{ fontWeight: 600 }}>John (Power Gym Owner)</span>
               <span style={{ color: 'var(--text-dark)', fontSize: '0.7rem' }}>1-Click Login</span>
             </button>
           </div>

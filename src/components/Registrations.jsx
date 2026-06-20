@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useDashboard } from '../context/DashboardContext';
+import { useDashboard, getBaseUrl } from '../context/DashboardContext';
 import { 
   Check, X, QrCode, Copy, ExternalLink
 } from 'lucide-react';
@@ -11,7 +11,8 @@ const Registrations = () => {
     plans,
     approveRegistration,
     rejectRegistration,
-    showToast
+    showToast,
+    currentUser
   } = useDashboard();
 
   // Navigation: Toggle between "Admin Queue" and "Simulate Public Registration Form"
@@ -201,10 +202,8 @@ const Registrations = () => {
 
       {/* View 2: Simulated Public Form */}
       {currentSubTab === 'form' && (() => {
-        const base = window.location.pathname.endsWith('/') 
-          ? window.location.pathname 
-          : window.location.pathname + '/';
-        const registrationUrl = `${window.location.origin}${base}?view=register`;
+        const gymIdQuery = currentUser?.gymId ? `&gymId=${currentUser.gymId}` : '';
+        const registrationUrl = `${getBaseUrl()}?view=register${gymIdQuery}`;
         const handleCopyLink = () => {
           navigator.clipboard.writeText(registrationUrl);
           showToast('Public registration URL copied to clipboard!', 'success');

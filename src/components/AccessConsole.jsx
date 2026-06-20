@@ -9,7 +9,8 @@ const AccessConsole = () => {
     members,
     accessEvents,
     checkInMember,
-    checkOutMember
+    checkOutMember,
+    currentUser
   } = useDashboard();
 
   // Console states
@@ -60,6 +61,7 @@ const AccessConsole = () => {
           });
         }
       } catch (err) {
+        console.error('Scan error:', err);
         setScannerState({
           status: 'denied',
           message: 'ACCESS DENIED: System error',
@@ -277,47 +279,49 @@ const AccessConsole = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
           {/* Quick-Scan Helper Panel */}
-          <div className="glass-card" style={{ maxHeight: '320px', overflowY: 'auto' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-              Quick Scan Simulation Desk
-            </h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              Click a member below to simulate a physical gate swipe.
-            </p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {members.map(m => (
-                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+          {currentUser?.role !== 'admin' && (
+            <div className="glass-card" style={{ maxHeight: '320px', overflowY: 'auto' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                Quick Scan Simulation Desk
+              </h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                Click a member below to simulate a physical gate swipe.
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {members.map(m => (
+                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{m.full_name}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {m.member_code} ({m.status})</div>
+                    </div>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderColor: 'var(--border-color)' }}
+                      onClick={() => handleTriggerScan(m.member_code)}
+                    >
+                      Swipe QR
+                    </button>
+                  </div>
+                ))}
+                
+                {/* Bad card code simulation */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239, 68, 68, 0.05)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.85rem' }}>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{m.full_name}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {m.member_code} ({m.status})</div>
+                    <div style={{ fontWeight: 600, color: 'var(--color-danger)' }}>Corrupted QR Code</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Simulates bad credentials</div>
                   </div>
                   <button 
-                    className="btn btn-secondary" 
-                    style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderColor: 'var(--border-color)' }}
-                    onClick={() => handleTriggerScan(m.member_code)}
+                    className="btn btn-danger" 
+                    style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
+                    onClick={() => handleTriggerScan('BAD-TOKEN-999')}
                   >
-                    Swipe QR
+                    Swipe Bad
                   </button>
                 </div>
-              ))}
-              
-              {/* Bad card code simulation */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(239, 68, 68, 0.05)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)', fontSize: '0.85rem' }}>
-                <div>
-                  <div style={{ fontWeight: 600, color: 'var(--color-danger)' }}>Corrupted QR Code</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Simulates bad credentials</div>
-                </div>
-                <button 
-                  className="btn btn-danger" 
-                  style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}
-                  onClick={() => handleTriggerScan('BAD-TOKEN-999')}
-                >
-                  Swipe Bad
-                </button>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Live entry audit log feed */}
           <div className="glass-card" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', maxHeight: '420px', overflowY: 'hidden' }}>
