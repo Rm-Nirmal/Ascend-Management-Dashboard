@@ -210,7 +210,14 @@ const ClientsList = ({ setActiveTab }) => {
     if (!selectedGym) return;
 
     setRenewIsSubmitting(true);
-    const res = await updateAndRenewSubscription(selectedGym.gymId, renewForm);
+    const billingPeriod = renewForm.installmentPlan === '1 Time Payment' 
+      ? 'one_time' 
+      : (renewForm.installmentPlan === '3 Month Installment Plan' ? 'installment_3mo' : 'monthly');
+
+    const res = await updateAndRenewSubscription(selectedGym.gymId, {
+      ...renewForm,
+      billingPeriod
+    });
     setRenewIsSubmitting(false);
 
     if (res.success) {
@@ -374,6 +381,7 @@ const ClientsList = ({ setActiveTab }) => {
                   <th style={{ padding: '1rem 0.5rem' }}>Gym Details</th>
                   <th style={{ padding: '1rem 0.5rem' }}>Owner Info</th>
                   <th style={{ padding: '1rem 0.5rem' }}>SaaS Plan</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>Next Payment</th>
                   <th style={{ padding: '1rem 0.5rem' }}>Workspace Status</th>
                   <th style={{ padding: '1rem 0.5rem' }}>Health Score</th>
                   <th style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>Actions</th>
@@ -382,7 +390,7 @@ const ClientsList = ({ setActiveTab }) => {
               <tbody>
                 {filteredGyms.length === 0 ? (
                   <tr>
-                    <td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <td colSpan="7" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                       No client gyms found.
                     </td>
                   </tr>
@@ -443,6 +451,21 @@ const ClientsList = ({ setActiveTab }) => {
                             <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{gym.subscriptionPlan}</span>
                             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{gym.installmentPlan || 'Monthly Plan'}</span>
                           </div>
+                        </td>
+
+                        {/* Next Payment */}
+                        <td style={{ padding: '1rem 0.5rem' }}>
+                          {(() => {
+                            const sub = getSubscriptionForGym(gym.gymId);
+                            if (sub && sub.nextRenewalDate) {
+                              try {
+                                return new Date(sub.nextRenewalDate).toLocaleDateString();
+                              } catch (e) {
+                                return sub.nextRenewalDate;
+                              }
+                            }
+                            return 'N/A';
+                          })()}
                         </td>
 
                         {/* Status */}
@@ -1467,7 +1490,8 @@ const ClientsList = ({ setActiveTab }) => {
             boxShadow: '0 10px 40px rgba(168, 85, 247, 0.1)',
             borderRadius: '16px',
             padding: '2rem',
-            width: '480px',
+            width: '680px',
+            maxWidth: '95%',
             animation: 'fadeIn 0.25s ease-out'
           }}>
             <style>{`
@@ -1485,89 +1509,163 @@ const ClientsList = ({ setActiveTab }) => {
             </p>
 
             <form onSubmit={handleRenewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Subscription Plan</label>
-                  <select 
-                    className="form-control" 
-                    value={renewForm.planId} 
-                    onChange={e => handleRenewFormChange({ planId: e.target.value })}
-                  >
-                    {plansToUse.map(p => (
-                      <option key={p.id} value={p.name.toLowerCase()}>
-                        {p.name} Plan
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                {/* Left Column: Interactive Form Parameters */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h5 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem', margin: 0 }}>
+                    Subscription Parameters
+                  </h5>
+                  
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Subscription Plan</label>
+                    <select 
+                      className="form-control" 
+                      value={renewForm.planId} 
+                      onChange={e => handleRenewFormChange({ planId: e.target.value })}
+                    >
+                      {plansToUse.map(p => (
+                        <option key={p.id} value={p.name.toLowerCase()}>
+                          {p.name} Plan
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Installment / Billing Cycle</label>
-                  <select 
-                    className="form-control" 
-                    value={renewForm.installmentPlan} 
-                    onChange={e => handleRenewFormChange({ installmentPlan: e.target.value })}
-                  >
-                    <option value="Monthly Subscription">Monthly Recurring</option>
-                    <option value="3 Month Installment Plan">3 Month Installment</option>
-                    <option value="1 Time Payment">1 Time (Annual)</option>
-                  </select>
-                </div>
-              </div>
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Installment / Billing Cycle</label>
+                    <select 
+                      className="form-control" 
+                      value={renewForm.installmentPlan} 
+                      onChange={e => handleRenewFormChange({ installmentPlan: e.target.value })}
+                    >
+                      <option value="Monthly Subscription">Monthly Recurring</option>
+                      <option value="3 Month Installment Plan">3 Month Installment</option>
+                      <option value="1 Time Payment">1 Time (Annual)</option>
+                    </select>
+                  </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Price rate ({renewForm.currency})</label>
-                  <div style={{ position: 'relative' }}>
-                    <DollarSign size={13} style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Price rate ({renewForm.currency})</label>
+                    <div style={{ position: 'relative' }}>
+                      <DollarSign size={13} style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                      <input 
+                        type="number" 
+                        className="form-control" 
+                        style={{ paddingLeft: '1.75rem' }}
+                        value={renewForm.price}
+                        onChange={e => setRenewForm({ ...renewForm, price: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Extension Duration (Days)</label>
                     <input 
                       type="number" 
                       className="form-control" 
-                      style={{ paddingLeft: '1.75rem' }}
-                      value={renewForm.price}
-                      onChange={e => setRenewForm({ ...renewForm, price: parseFloat(e.target.value) })}
+                      value={renewForm.durationDays}
+                      onChange={e => setRenewForm({ ...renewForm, durationDays: parseInt(e.target.value) || 0 })}
                       required
                     />
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Extension Duration (Days)</label>
-                  <input 
-                    type="number" 
-                    className="form-control" 
-                    value={renewForm.durationDays}
-                    onChange={e => setRenewForm({ ...renewForm, durationDays: parseInt(e.target.value) })}
-                    required
-                  />
-                </div>
-              </div>
+                {/* Right Column: Comparison Panel */}
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '1rem',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '10px',
+                  padding: '1rem'
+                }}>
+                  <h5 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem', margin: 0 }}>
+                    Live Status Preview
+                  </h5>
+                  
+                  {/* Current State */}
+                  <div>
+                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--text-dark)', fontWeight: 700, display: 'block' }}>
+                      Current State
+                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      <span>Active Plan:</span>
+                      <strong style={{ textTransform: 'capitalize' }}>{selectedGym.subscriptionPlan || 'N/A'}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.15rem' }}>
+                      <span>Renewal Date:</span>
+                      <strong>
+                        {(() => {
+                          const sub = getSubscriptionForGym(selectedGym.gymId);
+                          if (sub && sub.nextRenewalDate) {
+                            try {
+                              return new Date(sub.nextRenewalDate).toLocaleDateString();
+                            } catch (e) {
+                              return sub.nextRenewalDate;
+                            }
+                          }
+                          return 'N/A';
+                        })()}
+                      </strong>
+                    </div>
+                  </div>
 
-              {/* Limits Information Card */}
-              <div style={{
-                background: 'rgba(255,255,255,0.01)',
-                border: '1px solid rgba(255,255,255,0.05)',
-                borderRadius: '8px',
-                padding: '0.85rem',
-                fontSize: '0.75rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.35rem'
-              }}>
-                <span style={{ color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <AlertCircle size={12} style={{ color: '#a855f7' }} /> New Quota Quota Parameters:
-                </span>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '0.85rem' }}>
-                  <span>Max Members:</span>
-                  <strong>
-                    {renewForm.planId === 'enterprise' ? 'Unlimited' : (renewForm.planId === 'professional' ? '500' : (renewForm.planId === 'trial' ? '20' : '100'))}
-                  </strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '0.85rem' }}>
-                  <span>Max Staff:</span>
-                  <strong>
-                    {renewForm.planId === 'enterprise' ? 'Unlimited' : (renewForm.planId === 'professional' ? '10' : (renewForm.planId === 'trial' ? '2' : '3'))}
-                  </strong>
+                  {/* Proposed State */}
+                  <div style={{ borderTop: '1px dashed rgba(255, 255, 255, 0.05)', paddingTop: '0.75rem' }}>
+                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#3b82f6', fontWeight: 700, display: 'block' }}>
+                      Proposed State
+                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      <span>Selected Plan:</span>
+                      <strong style={{ textTransform: 'capitalize' }}>{renewForm.planId}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.15rem' }}>
+                      <span>Max Members / Staff:</span>
+                      <strong>
+                        {renewForm.planId === 'enterprise' 
+                          ? 'Unlimited' 
+                          : (renewForm.planId === 'professional' 
+                            ? '500 / 10' 
+                            : (renewForm.planId === 'trial' ? '20 / 2' : '100 / 3'))}
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.15rem' }}>
+                      <span>New Next Renewal:</span>
+                      <strong style={{ color: '#10b981' }}>
+                        {(() => {
+                          const sub = getSubscriptionForGym(selectedGym.gymId);
+                          const currentRenewalDate = sub && sub.nextRenewalDate ? new Date(sub.nextRenewalDate) : new Date();
+                          try {
+                            const days = parseInt(renewForm.durationDays) || 0;
+                            const nextDate = new Date(currentRenewalDate.getTime());
+                            nextDate.setDate(nextDate.getDate() + days);
+                            return nextDate.toLocaleDateString();
+                          } catch (e) {
+                            return 'N/A';
+                          }
+                        })()}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Billing Summary Cost Badge */}
+                  <div style={{ 
+                    marginTop: 'auto', 
+                    background: 'rgba(168, 85, 247, 0.1)', 
+                    border: '1px solid rgba(168, 85, 247, 0.2)', 
+                    borderRadius: '8px', 
+                    padding: '0.75rem', 
+                    textAlign: 'center' 
+                  }}>
+                    <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#c084fc', fontWeight: 700, display: 'block' }}>
+                      Billing Summary
+                    </span>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', display: 'block', marginTop: '0.15rem' }}>
+                      {formatCurrency(renewForm.price, renewForm.currency)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1623,12 +1721,16 @@ const ClientsList = ({ setActiveTab }) => {
                 width: 100% !important;
                 height: 100% !important;
                 margin: 0 !important;
-                padding: 3rem !important;
+                padding: 3.5rem !important;
                 background: #ffffff !important;
-                color: #000000 !important;
+                color: #1e293b !important;
                 box-shadow: none !important;
                 border: none !important;
                 z-index: 99999 !important;
+              }
+              .no-print-header, .no-print-header * {
+                display: none !important;
+                visibility: hidden !important;
               }
             }
           `}</style>
