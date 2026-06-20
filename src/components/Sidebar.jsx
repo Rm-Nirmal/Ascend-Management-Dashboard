@@ -24,6 +24,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
     { id: 'access', name: 'Access Console', icon: QrCode },
+    { id: 'console', name: 'Console', icon: CreditCard },
     { id: 'finance', name: 'Finance', icon: DollarSign },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
     { id: 'audit', name: 'System Audit Logs', icon: ClipboardList },
@@ -34,9 +35,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
     
-    // Regular admin can only access members, registrations, access
+    // Regular admin can only access members, registrations, access, console
     if (currentUser.role === 'admin') {
-      return ['members', 'registrations', 'access'].includes(item.id);
+      return ['members', 'registrations', 'access', 'console'].includes(item.id);
     }
     
     // Super admin can access everything

@@ -974,6 +974,7 @@ export const DashboardProvider = ({ children }) => {
           gender: req.gender,
           date_of_birth: req.date_of_birth,
           plan_id: req.plan_id,
+          installment_plan: req.installment_plan || '1 time',
           medical_notes: req.medical_conditions || 'None.',
           fitness_goals: req.fitness_goals || 'General conditioning.',
           emergency_contact_name: req.emergency_contact_name || '',

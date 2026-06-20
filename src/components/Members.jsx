@@ -40,6 +40,7 @@ const Members = () => {
     gender: 'male',
     date_of_birth: '',
     plan_id: '',
+    installment_plan: '1 time',
     emergency_contact_name: '',
     emergency_contact_phone: '',
     medical_notes: '',
@@ -147,6 +148,7 @@ const Members = () => {
       gender: member.gender || 'male',
       date_of_birth: member.date_of_birth || '',
       plan_id: member.plan_id || '',
+      installment_plan: member.installment_plan || '1 time',
       emergency_contact_name: member.emergency_contact_name || '',
       emergency_contact_phone: member.emergency_contact_phone || '',
       medical_notes: member.medical_notes || '',
@@ -265,6 +267,7 @@ const Members = () => {
     gender: 'male',
     date_of_birth: '',
     plan_id: '',
+    installment_plan: '1 time',
     emergency_contact_name: '',
     emergency_contact_phone: '',
     medical_notes: '',
@@ -426,6 +429,7 @@ const Members = () => {
         gender: 'male',
         date_of_birth: '',
         plan_id: '',
+        installment_plan: '1 time',
         emergency_contact_name: '',
         emergency_contact_phone: '',
         medical_notes: '',
@@ -605,6 +609,7 @@ const Members = () => {
                 <th>Code</th>
                 <th>Name</th>
                 <th>Attached Plan</th>
+                <th>Installment Plan</th>
                 <th>Status</th>
                 <th>Validity</th>
                 <th>Joined</th>
@@ -614,7 +619,7 @@ const Members = () => {
             <tbody>
               {displayedMembers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                     No members matching filters.
                   </td>
                 </tr>
@@ -639,6 +644,11 @@ const Members = () => {
                       </td>
                       <td>{plan ? plan.name : 'N/A'}</td>
                       <td>
+                        <span style={{ fontSize: '0.75rem', textTransform: 'capitalize', fontWeight: 600 }}>
+                          {member.installment_plan || '1 time'}
+                        </span>
+                      </td>
+                      <td>
                         <span className={`badge badge-${getResolvedStatus(member)}`}>
                           {getResolvedStatus(member)}
                         </span>
@@ -648,52 +658,56 @@ const Members = () => {
                       </td>
                       <td>{member.joined_at}</td>
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           <button 
                             className="btn btn-secondary" 
-                            style={{ padding: '0.4rem', color: 'var(--color-success)' }}
-                            title="Collect Payment & Renew"
-                            onClick={() => {
-                              setSelectedRenewMember(member);
-                              const plan = plans.find(p => p.id === member.plan_id);
-                              setRenewPrice(plan ? plan.price : '');
-                            }}
-                          >
-                            <CreditCard size={14} />
-                          </button>
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '0.4rem' }}
-                            title="View Profile Details"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                            title="See Profile Details"
                             onClick={() => { setSelectedMember(member); setShowMedical(false); setShowFreezeForm(false); }}
                           >
-                            <Eye size={14} />
+                            <Eye size={12} /> Profile
                           </button>
-                          {currentUser?.role === 'super_admin' && (
+
+                          {getResolvedStatus(member) === 'frozen' ? (
                             <button 
                               className="btn btn-secondary" 
-                              style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
-                              title="Edit Member Details"
-                              onClick={() => handleEditClick(member)}
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', color: 'var(--color-success)', borderColor: 'rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                              onClick={() => handleUnfreeze(member.id)}
                             >
-                              <Edit2 size={14} />
+                              <Unlock size={12} /> Unfreeze
                             </button>
-                          )}
-                          <button 
-                            className="btn btn-secondary" 
-                            style={{ padding: '0.4rem', color: 'var(--color-danger)' }}
-                            title="Cancel Membership"
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to cancel membership for ${member.full_name}?`)) {
-                                deleteMember(member.id);
-                                if (selectedMember && selectedMember.id === member.id) {
-                                  setSelectedMember(null);
+                          ) : getResolvedStatus(member) === 'active' ? (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', color: 'var(--color-warning)', borderColor: 'rgba(245, 158, 11, 0.3)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setShowMedical(false);
+                                setShowFreezeForm(true);
+                              }}
+                            >
+                              <Lock size={12} /> Freeze
+                            </button>
+                          ) : null}
+
+                          {getResolvedStatus(member) !== 'cancelled' ? (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.7rem', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to deactivate membership for ${member.full_name}?`)) {
+                                  deleteMember(member.id);
+                                  if (selectedMember && selectedMember.id === member.id) {
+                                    setSelectedMember(null);
+                                  }
                                 }
-                              }
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                              }}
+                            >
+                              <Trash2 size={12} /> Deactivate
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-dark)', padding: '0.3rem' }}>Deactivated</span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1016,6 +1030,9 @@ const Members = () => {
                   Plan: {plans.find(p => p.id === selectedMember.plan_id)?.name}
                 </div>
                 <div style={{ fontSize: '0.85rem' }}>
+                  Installment Option: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{selectedMember.installment_plan || '1 time'}</span>
+                </div>
+                <div style={{ fontSize: '0.85rem' }}>
                   Trainer: {trainers.find(t => t.id === selectedMember.trainer_id)?.name || 'Unassigned'}
                 </div>
               </div>
@@ -1214,6 +1231,24 @@ const Members = () => {
                 </div>
               )}
             </div>
+
+            {/* Deactivate control UI */}
+            {selectedMember.status !== 'cancelled' && (
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
+                <button 
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to deactivate membership for ${selectedMember.full_name}?`)) {
+                      deleteMember(selectedMember.id);
+                      setSelectedMember(null);
+                    }
+                  }}
+                  className="btn btn-secondary" 
+                  style={{ width: '100%', gap: '0.35rem', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}
+                >
+                  <Trash2 size={14} /> Deactivate Membership
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -1311,7 +1346,7 @@ const Members = () => {
                 <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
                   2. Membership & Trainer Assignment
                 </h4>
-                <div className="grid-2">
+                <div className="grid-3">
                   <div>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Membership Plan *</label>
                     <select 
@@ -1325,6 +1360,19 @@ const Members = () => {
                       {plans.map(p => (
                         <option key={p.id} value={p.id}>{p.name} (LKR {p.price.toLocaleString()}/mo)</option>
                       ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Installment Option *</label>
+                    <select 
+                      required
+                      value={newMemberForm.installment_plan}
+                      onChange={(e) => setNewMemberForm({...newMemberForm, installment_plan: e.target.value})}
+                      className="glass-select"
+                      style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                    >
+                      <option value="1 time">1 Time (Pay in full)</option>
+                      <option value="3 month installment plan">3 Month Installment Plan</option>
                     </select>
                   </div>
                   <div>
@@ -1622,7 +1670,7 @@ const Members = () => {
                 <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
                   2. Membership & Trainer Assignment
                 </h4>
-                <div className="grid-2">
+                <div className="grid-3">
                   <div>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Membership Plan *</label>
                     <select 
@@ -1636,6 +1684,19 @@ const Members = () => {
                       {plans.map(p => (
                         <option key={p.id} value={p.id}>{p.name} (LKR {p.price.toLocaleString()}/mo)</option>
                       ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Installment Option *</label>
+                    <select 
+                      required
+                      value={editMemberForm.installment_plan}
+                      onChange={(e) => setEditMemberForm({...editMemberForm, installment_plan: e.target.value})}
+                      className="glass-select"
+                      style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                    >
+                      <option value="1 time">1 Time (Pay in full)</option>
+                      <option value="3 month installment plan">3 Month Installment Plan</option>
                     </select>
                   </div>
                   <div>
@@ -1870,10 +1931,6 @@ const Members = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                   <span>Subtotal:</span>
                   <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Tax & Fees:</span>
-                  <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.tax_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
                 </div>
               </div>
               <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>

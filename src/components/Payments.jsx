@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye, Dumbbell, Share2 
+  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye
 } from 'lucide-react';
 
 const createManualReminderLog = (invoice) => {
@@ -19,8 +19,7 @@ const createManualReminderLog = (invoice) => {
 const Payments = () => {
   const {
     invoices,
-    recordPayment,
-    members
+    recordPayment
   } = useDashboard();
 
   // Component states
@@ -690,10 +689,6 @@ const Payments = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Subtotal:</span>
                   <span style={{ color: '#fff' }}>LKR {viewingInvoice.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Tax (8.5%):</span>
-                  <span style={{ color: '#fff' }}>+LKR {viewingInvoice.tax_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                 </div>
                 {viewingInvoice.discount_amount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-success)' }}>

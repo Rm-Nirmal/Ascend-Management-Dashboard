@@ -99,7 +99,6 @@ const PublicReceipt = () => {
     ? (plans.find(p => p.id === receiptData.plan_id)?.name || 'Membership Plan')
     : receiptData.source;
   const subtotal = isInvoice ? receiptData.subtotal : amount;
-  const tax = isInvoice ? receiptData.tax_amount : 0;
   const discount = isInvoice ? (receiptData.discount_amount || 0) : 0;
 
   return (
@@ -263,12 +262,6 @@ const PublicReceipt = () => {
             <span style={{ color: 'var(--text-muted)' }} className="muted-text">Subtotal:</span>
             <span style={{ color: '#fff' }} className="value-text">LKR {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
           </div>
-          {tax > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }} className="muted-text">Tax:</span>
-              <span style={{ color: '#fff' }} className="value-text">+LKR {tax.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-            </div>
-          )}
           {discount > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff' }} className="value-text">
               <span>Discounts:</span>
