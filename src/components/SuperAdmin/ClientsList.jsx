@@ -46,12 +46,21 @@ const ClientsList = ({ setActiveTab }) => {
     updateAndRenewSubscription,
     updateGymDetails,
     getGymHealthScore, 
-    showToast 
+    showToast,
+    saasPlans
   } = useDashboard();
   
   // States
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState('');
+  const [currentDirTab, setCurrentDirTab] = useState('all');
+
+  const plansToUse = saasPlans && saasPlans.length > 0 ? saasPlans : [
+    { id: 'trial', name: 'Trial', price: 0 },
+    { id: 'starter', name: 'Starter', price: 6000 },
+    { id: 'professional', name: 'Professional', price: 12000 },
+    { id: 'enterprise', name: 'Enterprise', price: 30000 }
+  ];
   
   // Password reset inline state
   const [resettingOwnerEmail, setResettingOwnerEmail] = useState('');
@@ -177,8 +186,9 @@ const ClientsList = ({ setActiveTab }) => {
     
     // Auto calculate price rate & duration if planId or installmentPlan changed
     if (updatedFields.planId || updatedFields.installmentPlan) {
-      const subPrices = { trial: 0, starter: 6000, professional: 12000, enterprise: 30000 };
-      const basePrice = subPrices[nextForm.planId.toLowerCase()] || 0;
+      const selectedPlanObj = plansToUse.find(p => p.name.toLowerCase() === nextForm.planId.toLowerCase() || p.id === nextForm.planId) || 
+                              { price: 6000 };
+      const basePrice = selectedPlanObj.price || 0;
       
       if (nextForm.installmentPlan === '1 Time Payment') {
         nextForm.price = basePrice * 10; // Annual discount (10 months fee)
@@ -306,218 +316,450 @@ const ClientsList = ({ setActiveTab }) => {
           </div>
         </div>
 
-        {/* Table View */}
-        <div className="table-responsive" style={{ overflowX: 'auto' }}>
-          <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>
-                <th style={{ padding: '1rem 0.5rem' }}>Gym Details</th>
-                <th style={{ padding: '1rem 0.5rem' }}>Owner Info</th>
-                <th style={{ padding: '1rem 0.5rem' }}>SaaS Plan</th>
-                <th style={{ padding: '1rem 0.5rem' }}>Workspace Status</th>
-                <th style={{ padding: '1rem 0.5rem' }}>Health Score</th>
-                <th style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredGyms.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No client gyms found.
-                  </td>
+        {/* Directory Sub-tabs */}
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          marginBottom: '1.5rem',
+          paddingBottom: '0.25rem'
+        }}>
+          <button
+            onClick={() => setCurrentDirTab('all')}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: currentDirTab === 'all' ? '2px solid #a855f7' : '2px solid transparent',
+              color: currentDirTab === 'all' ? '#fff' : 'var(--text-muted)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              padding: '0.5rem 1rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+          >
+            All Workspaces ({filteredGyms.length})
+          </button>
+          <button
+            onClick={() => setCurrentDirTab('installments')}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: currentDirTab === 'installments' ? '2px solid #a855f7' : '2px solid transparent',
+              color: currentDirTab === 'installments' ? '#fff' : 'var(--text-muted)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              padding: '0.5rem 1rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+          >
+            Installment Progress Tracker ({
+              gyms.filter(g => {
+                const sub = getSubscriptionForGym(g.gymId);
+                return sub && (sub.billingPeriod === 'installment_3mo' || sub.billingPeriod === 'monthly');
+              }).length
+            })
+          </button>
+        </div>
+
+        {currentDirTab === 'all' ? (
+          /* Table View */
+          <div className="table-responsive" style={{ overflowX: 'auto' }}>
+            <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>
+                  <th style={{ padding: '1rem 0.5rem' }}>Gym Details</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>Owner Info</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>SaaS Plan</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>Workspace Status</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>Health Score</th>
+                  <th style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
-              ) : (
-                filteredGyms.map(gym => {
-                  const healthScore = getGymHealthScore(gym.gymId);
-                  let healthColor = '#10b981'; // Green
-                  if (healthScore < 50) healthColor = '#ef4444'; // Red
-                  else if (healthScore < 75) healthColor = '#f59e0b'; // Orange
+              </thead>
+              <tbody>
+                {filteredGyms.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No client gyms found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredGyms.map(gym => {
+                    const healthScore = getGymHealthScore(gym.gymId);
+                    let healthColor = '#10b981'; // Green
+                    if (healthScore < 50) healthColor = '#ef4444'; // Red
+                    else if (healthScore < 75) healthColor = '#f59e0b'; // Orange
 
-                  return (
-                    <tr key={gym.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.85rem' }}>
-                      {/* Gym Details */}
-                      <td style={{ padding: '1rem 0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '8px',
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--text-muted)'
-                          }}>
-                            <Building2 size={16} />
-                          </div>
-                          <div>
-                            <span 
-                              style={{ display: 'block', fontWeight: 600, cursor: 'pointer', transition: 'color 0.2s' }}
-                              onClick={() => openGymProfile(gym)}
-                              onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
-                            >
-                              {gym.gymName}
-                            </span>
-                            <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-dark)' }}>ID: {gym.gymId}</span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Owner details */}
-                      <td style={{ padding: '1rem 0.5rem' }}>
-                        <div>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
-                            <User size={13} style={{ color: 'var(--text-dark)' }} /> {gym.ownerName}
-                          </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                            <Mail size={12} style={{ color: 'var(--text-dark)' }} /> {gym.ownerEmail}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Plan */}
-                      <td style={{ padding: '1rem 0.5rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{gym.subscriptionPlan}</span>
-                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{gym.installmentPlan || 'Monthly Plan'}</span>
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td style={{ padding: '1rem 0.5rem' }}>
-                        <span style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '4px',
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          background: gym.status === 'suspended' ? 'rgba(239, 68, 68, 0.1)' : 
-                                      gym.status === 'frozen' ? 'rgba(245, 158, 11, 0.1)' : 
-                                      gym.status === 'trial' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                          color: gym.status === 'suspended' ? '#ef4444' : 
-                                 gym.status === 'frozen' ? '#f59e0b' : 
-                                 gym.status === 'trial' ? '#3b82f6' : '#10b981',
-                          border: `1px solid ${gym.status === 'suspended' ? 'rgba(239, 68, 68, 0.2)' : 
-                                                gym.status === 'frozen' ? 'rgba(245, 158, 11, 0.2)' : 
-                                                gym.status === 'trial' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`
-                        }}>
-                          {gym.status === 'suspended' ? 'deactivated' : gym.status}
-                        </span>
-                      </td>
-
-                      {/* Health Score */}
-                      <td style={{ padding: '1rem 0.5rem' }}>
-                        <span style={{ 
-                          fontSize: '0.8rem', 
-                          fontWeight: 700, 
-                          color: healthColor,
-                          background: `${healthColor}08`,
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: '4px',
-                          border: `1px solid ${healthColor}15`
-                        }}>
-                          {healthScore}%
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
-                          
-                          {/* View Profile */}
-                          <button
-                            onClick={() => openGymProfile(gym)}
-                            className="btn btn-primary"
-                            style={{ 
-                              padding: '0.35rem 0.75rem', 
-                              borderRadius: '6px', 
-                              fontSize: '0.75rem', 
-                              fontWeight: 600,
-                              background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
-                              border: 'none',
+                    return (
+                      <tr key={gym.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.85rem' }}>
+                        {/* Gym Details */}
+                        <td style={{ padding: '1rem 0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '8px',
+                              background: 'rgba(255,255,255,0.02)',
+                              border: '1px solid rgba(255,255,255,0.05)',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.25rem'
-                            }}
-                            title="View Profile and Workspace Details"
-                          >
-                            <Eye size={12} /> View Profile
-                          </button>
-
-                          {/* Quick Status Select */}
-                          <select
-                            value={gym.status}
-                            onChange={(e) => handleStatusChange(gym.gymId, e.target.value)}
-                            style={{
-                              background: 'rgba(255, 255, 255, 0.03)',
-                              border: '1px solid rgba(255, 255, 255, 0.08)',
-                              borderRadius: '6px',
-                              padding: '0.35rem 0.5rem',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              color: gym.status === 'active' ? '#10b981' : 
-                                     gym.status === 'frozen' ? '#f59e0b' : 
-                                     gym.status === 'trial' ? '#3b82f6' : '#ef4444',
-                              cursor: 'pointer',
-                              outline: 'none',
-                              width: '110px'
-                            }}
-                          >
-                            <option value="active" style={{ color: '#10b981', background: '#0c0c0c' }}>Active</option>
-                            <option value="frozen" style={{ color: '#f59e0b', background: '#0c0c0c' }}>Frozen</option>
-                            <option value="suspended" style={{ color: '#ef4444', background: '#0c0c0c' }}>Deactivated</option>
-                            <option value="trial" style={{ color: '#3b82f6', background: '#0c0c0c' }}>Trialing</option>
-                          </select>
-
-                          {/* Reset Password */}
-                          <button
-                            onClick={() => setResettingOwnerEmail(gym.ownerEmail)}
-                            className="btn btn-secondary"
-                            style={{ padding: '0.4rem', borderRadius: '6px' }}
-                            title="Reset Owner Password"
-                          >
-                            <Key size={14} />
-                          </button>
-
-                          {/* Delete Gym */}
-                          {confirmDeleteId === gym.gymId ? (
-                            <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                              <button
-                                onClick={() => handleDelete(gym.gymId)}
-                                className="btn btn-danger"
-                                style={{ padding: '0.4rem', fontSize: '0.7rem' }}
+                              justifyContent: 'center',
+                              color: 'var(--text-muted)'
+                            }}>
+                              <Building2 size={16} />
+                            </div>
+                            <div>
+                              <span 
+                                style={{ display: 'block', fontWeight: 600, cursor: 'pointer', transition: 'color 0.2s' }}
+                                onClick={() => openGymProfile(gym)}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
                               >
-                                Confirm
+                                {gym.gymName}
+                              </span>
+                              <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-dark)' }}>ID: {gym.gymId}</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Owner details */}
+                        <td style={{ padding: '1rem 0.5rem' }}>
+                          <div>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 500 }}>
+                              <User size={13} style={{ color: 'var(--text-dark)' }} /> {gym.ownerName}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                              <Mail size={12} style={{ color: 'var(--text-dark)' }} /> {gym.ownerEmail}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Plan */}
+                        <td style={{ padding: '1rem 0.5rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{gym.subscriptionPlan}</span>
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{gym.installmentPlan || 'Monthly Plan'}</span>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td style={{ padding: '1rem 0.5rem' }}>
+                          <span style={{
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            background: gym.status === 'suspended' ? 'rgba(239, 68, 68, 0.1)' : 
+                                        gym.status === 'frozen' ? 'rgba(245, 158, 11, 0.1)' : 
+                                        gym.status === 'trial' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                            color: gym.status === 'suspended' ? '#ef4444' : 
+                                   gym.status === 'frozen' ? '#f59e0b' : 
+                                   gym.status === 'trial' ? '#3b82f6' : '#10b981',
+                            border: `1px solid ${gym.status === 'suspended' ? 'rgba(239, 68, 68, 0.2)' : 
+                                                  gym.status === 'frozen' ? 'rgba(245, 158, 11, 0.2)' : 
+                                                  gym.status === 'trial' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`
+                          }}>
+                            {gym.status === 'suspended' ? 'deactivated' : gym.status}
+                          </span>
+                        </td>
+
+                        {/* Health Score */}
+                        <td style={{ padding: '1rem 0.5rem' }}>
+                          <span style={{ 
+                            fontSize: '0.8rem', 
+                            fontWeight: 700, 
+                            color: healthColor,
+                            background: `${healthColor}08`,
+                            padding: '0.15rem 0.4rem',
+                            borderRadius: '4px',
+                            border: `1px solid ${healthColor}15`
+                          }}>
+                            {healthScore}%
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
+                            
+                            {/* View Profile */}
+                            <button
+                              onClick={() => openGymProfile(gym)}
+                              className="btn btn-primary"
+                              style={{ 
+                                padding: '0.35rem 0.75rem', 
+                                borderRadius: '6px', 
+                                fontSize: '0.75rem', 
+                                fontWeight: 600,
+                                background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem'
+                              }}
+                              title="View Profile and Workspace Details"
+                            >
+                              <Eye size={12} /> View Profile
+                            </button>
+
+                            {/* Quick Status Select */}
+                            <select
+                              value={gym.status}
+                              onChange={(e) => handleStatusChange(gym.gymId, e.target.value)}
+                              style={{
+                                padding: '0.35rem 1.5rem 0.35rem 0.5rem',
+                                borderRadius: '6px',
+                                border: '1px solid var(--border-color)',
+                                background: 'rgba(255,255,255,0.02)',
+                                color: '#fff',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                outline: 'none'
+                              }}
+                            >
+                              <option value="active">Active</option>
+                              <option value="frozen">Freeze</option>
+                              <option value="suspended">Deactivate</option>
+                            </select>
+
+                            {/* Delete Button */}
+                            {confirmDeleteId === gym.gymId ? (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <button 
+                                  onClick={() => handleDelete(gym.gymId)}
+                                  className="btn btn-primary" 
+                                  style={{ padding: '0.4rem', fontSize: '0.75rem' }}
+                                >
+                                  Confirm
+                                </button>
+                                <button 
+                                  onClick={() => setConfirmDeleteId('')}
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '0.4rem' }}
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => setConfirmDeleteId(gym.gymId)}
+                                className="btn btn-secondary" 
+                                style={{ padding: '0.4rem', borderRadius: '6px' }}
+                                title="Delete Gym Workspace"
+                              >
+                                <Trash2 size={14} style={{ color: '#ef4444' }} />
                               </button>
+                            )}
+
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Installment Tracker View */
+          <div className="table-responsive" style={{ overflowX: 'auto' }}>
+            <table className="table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>
+                  <th style={{ padding: '1rem 0.5rem' }}>Gym Workspace</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>Installment Plan</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>Total Paid to Date</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>Next Installment Due</th>
+                  <th style={{ padding: '1rem 0.5rem' }}>Status</th>
+                  <th style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredGyms.filter(g => {
+                  const sub = getSubscriptionForGym(g.gymId);
+                  return sub && (sub.billingPeriod === 'installment_3mo' || sub.billingPeriod === 'monthly');
+                }).length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      No gyms on installment or monthly plans found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredGyms
+                    .filter(g => {
+                      const sub = getSubscriptionForGym(g.gymId);
+                      return sub && (sub.billingPeriod === 'installment_3mo' || sub.billingPeriod === 'monthly');
+                    })
+                    .map(gym => {
+                      const sub = getSubscriptionForGym(gym.gymId);
+                      const receipts = getSaaSReceiptsForGym(gym.gymId);
+                      const totalPaid = receipts.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+                      
+                      // Calculate due status
+                      const nextRenewalDate = sub?.nextRenewalDate ? new Date(sub.nextRenewalDate) : null;
+                      const today = new Date();
+                      const diffTime = nextRenewalDate ? nextRenewalDate.getTime() - today.getTime() : 0;
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      
+                      let statusText = 'Paid / Up to Date';
+                      let badgeColor = '#10b981'; // Green
+                      
+                      if (!nextRenewalDate) {
+                        statusText = 'No Renewal Date';
+                        badgeColor = 'var(--text-dark)';
+                      } else if (diffDays < 0) {
+                        statusText = 'Overdue / Unpaid';
+                        badgeColor = '#ef4444'; // Red
+                      } else if (diffDays <= 7) {
+                        statusText = `Due in ${diffDays} Days`;
+                        badgeColor = '#f59e0b'; // Orange
+                      }
+
+                      return (
+                        <tr key={gym.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.85rem' }}>
+                          <td style={{ padding: '1rem 0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <div style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '8px',
+                                background: 'rgba(255,255,255,0.02)',
+                                border: '1px solid rgba(255,255,255,0.05)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--text-muted)'
+                              }}>
+                                <Building2 size={16} />
+                              </div>
+                              <div>
+                                <span 
+                                  style={{ display: 'block', fontWeight: 600, cursor: 'pointer', transition: 'color 0.2s' }}
+                                  onClick={() => openGymProfile(gym)}
+                                  onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
+                                  onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+                                >
+                                  {gym.gymName}
+                                </span>
+                                <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-dark)' }}>ID: {gym.gymId}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '1rem 0.5rem' }}>
+                            <div>
+                              <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>
+                                {gym.subscriptionPlan} Plan
+                              </span>
+                              <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                {sub?.billingPeriod === 'installment_3mo' ? '3 Month Installment' : 'Monthly Recurring'}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '1rem 0.5rem', fontWeight: 600 }}>
+                            {formatCurrency(totalPaid, sub?.currency || 'LKR')}
+                          </td>
+
+                          <td style={{ padding: '1rem 0.5rem' }}>
+                            {nextRenewalDate ? nextRenewalDate.toLocaleDateString() : 'N/A'}
+                          </td>
+
+                          <td style={{ padding: '1rem 0.5rem' }}>
+                            <span style={{
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              background: `${badgeColor}15`,
+                              color: badgeColor,
+                              border: `1px solid ${badgeColor}30`
+                            }}>
+                              {statusText}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
+                              {/* Record Next Installment */}
                               <button
-                                onClick={() => setConfirmDeleteId('')}
-                                className="btn btn-secondary"
-                                style={{ padding: '0.4rem' }}
+                                onClick={() => {
+                                  setSelectedGym(gym);
+                                  openRenewModal(gym, sub);
+                                }}
+                                className="btn btn-primary"
+                                style={{
+                                  padding: '0.35rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                                  border: 'none',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}
                               >
-                                <X size={12} />
+                                <DollarSign size={12} /> Record payment
+                              </button>
+
+                              {/* Print Onboard Register Receipt */}
+                              <button
+                                onClick={() => {
+                                  // Oldest SaaS invoice is the onboard registration receipt
+                                  const onboardingInvoice = [...receipts].sort((a,b) => new Date(a.created_at) - new Date(b.created_at))[0];
+                                  if (onboardingInvoice) {
+                                    setSelectedGym(gym);
+                                    setViewingReceipt(onboardingInvoice);
+                                  } else {
+                                    showToast('No onboarding register receipt found.', 'warning');
+                                  }
+                                }}
+                                className="btn btn-secondary"
+                                style={{
+                                  padding: '0.35rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}
+                                title="Print original Onboard Registration receipt"
+                              >
+                                <Printer size={12} /> Onboard Register
+                              </button>
+
+                              {/* View Billing History Drawer */}
+                              <button
+                                onClick={() => {
+                                  openGymProfile(gym);
+                                  setActiveDrawerTab('billing');
+                                }}
+                                className="btn btn-secondary"
+                                style={{
+                                  padding: '0.35rem',
+                                  borderRadius: '6px'
+                                }}
+                                title="View Billing History"
+                              >
+                                <Eye size={12} />
                               </button>
                             </div>
-                          ) : (
-                            <button
-                              onClick={() => setConfirmDeleteId(gym.gymId)}
-                              className="btn btn-secondary"
-                              style={{ padding: '0.4rem', borderRadius: '6px' }}
-                              title="Delete Gym Workspace"
-                            >
-                              <Trash2 size={14} style={{ color: '#ef4444' }} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* DETAILED PROFILE DRAWER (Slide-out panel from the right) */}
@@ -1251,10 +1493,11 @@ const ClientsList = ({ setActiveTab }) => {
                     value={renewForm.planId} 
                     onChange={e => handleRenewFormChange({ planId: e.target.value })}
                   >
-                    <option value="trial">Trial Plan</option>
-                    <option value="starter">Starter Plan</option>
-                    <option value="professional">Professional Plan</option>
-                    <option value="enterprise">Enterprise Plan</option>
+                    {plansToUse.map(p => (
+                      <option key={p.id} value={p.name.toLowerCase()}>
+                        {p.name} Plan
+                      </option>
+                    ))}
                   </select>
                 </div>
 

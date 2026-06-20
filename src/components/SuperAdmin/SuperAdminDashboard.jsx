@@ -9,7 +9,8 @@ import {
   Megaphone, 
   LogOut, 
   ShieldCheck, 
-  Dumbbell 
+  Dumbbell,
+  Sliders
 } from 'lucide-react';
 
 import SuperAdminOverview from './SuperAdminOverview';
@@ -18,6 +19,7 @@ import CreateGym from './CreateGym';
 import Subscriptions from './Subscriptions';
 import SupportCenter from './SupportCenter';
 import Announcements from './Announcements';
+import SaaSSubscriptionConsole from './SaaSSubscriptionConsole';
 
 const SuperAdminDashboard = () => {
   const { currentUser, logout, showToast } = useDashboard();
@@ -28,6 +30,7 @@ const SuperAdminDashboard = () => {
     { id: 'clients', name: 'Clients Directory', icon: Building2 },
     { id: 'create_gym', name: 'Onboard Gym', icon: UserPlus },
     { id: 'subscriptions', name: 'Subscriptions', icon: CreditCard },
+    { id: 'console', name: 'Plan Console', icon: Sliders },
     { id: 'support', name: 'Support Center', icon: LifeBuoy },
     { id: 'announcements', name: 'Announcements', icon: Megaphone }
   ];
@@ -42,6 +45,8 @@ const SuperAdminDashboard = () => {
         return <CreateGym />;
       case 'subscriptions':
         return <Subscriptions />;
+      case 'console':
+        return <SaaSSubscriptionConsole />;
       case 'support':
         return <SupportCenter />;
       case 'announcements':

@@ -52,6 +52,7 @@ export const COLLECTIONS = {
   ANNOUNCEMENTS: 'announcements',
   NOTIFICATIONS: 'notifications',
   ACCESS_LOGS: 'accessLogs',
+  SAAS_PLANS: 'saasPlans',
 };
 
 // Default organization ID (single-tenant for now)

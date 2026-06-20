@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 const CreateGym = () => {
-  const { onboardNewGym } = useDashboard();
+  const { onboardNewGym, saasPlans } = useDashboard();
   
   // States
   const [gymName, setGymName] = useState('');
@@ -47,13 +47,17 @@ const CreateGym = () => {
     setTimeout(() => setCopiedField(''), 2000);
   };
 
-  // Live calculation values
-  const subPrices = { Trial: 0, Starter: 6000, Professional: 12000, Enterprise: 30000 };
-  const subMembers = { Trial: 20, Starter: 100, Professional: 500, Enterprise: 99999 };
-  const subStaff = { Trial: 2, Starter: 3, Professional: 10, Enterprise: 99999 };
+  // Fallback to defaults if saasPlans is empty, otherwise map from database
+  const plansToUse = saasPlans && saasPlans.length > 0 ? saasPlans : [
+    { id: 'trial', name: 'Trial', price: 0, maxMembers: 20, maxStaff: 2 },
+    { id: 'starter', name: 'Starter', price: 6000, maxMembers: 100, maxStaff: 3 },
+    { id: 'professional', name: 'Professional', price: 12000, maxMembers: 500, maxStaff: 10 },
+    { id: 'enterprise', name: 'Enterprise', price: 30000, maxMembers: 99999, maxStaff: 99999 }
+  ];
 
   const getPriceBreakdown = () => {
-    const base = subPrices[subscriptionPlan] || 0;
+    const selectedPlanObj = plansToUse.find(p => p.name.toLowerCase() === subscriptionPlan.toLowerCase()) || plansToUse[0];
+    const base = selectedPlanObj.price || 0;
     if (installmentPlan === '1 Time Payment') {
       return {
         baseRate: base,
@@ -460,10 +464,11 @@ const CreateGym = () => {
                     value={subscriptionPlan}
                     onChange={e => setSubscriptionPlan(e.target.value)}
                   >
-                    <option value="Trial">Free Trial Plan</option>
-                    <option value="Starter">Starter Plan</option>
-                    <option value="Professional">Professional Plan</option>
-                    <option value="Enterprise">Enterprise Plan</option>
+                    {plansToUse.map(p => (
+                      <option key={p.id || p.name.toLowerCase()} value={p.name}>
+                        {p.name} Plan
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -531,36 +536,43 @@ const CreateGym = () => {
           </div>
 
           {/* Plan Limits Info */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)', pb: '1rem', paddingBottom: '1rem' }}>
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Selected Plan:</span>
-              <strong style={{ textTransform: 'capitalize', color: '#a855f7' }}>{subscriptionPlan}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Workspace Limit:</span>
-              <strong>{subMembers[subscriptionPlan] === 99999 ? 'Unlimited' : `${subMembers[subscriptionPlan]} Members`}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Staff Quota:</span>
-              <strong>{subStaff[subscriptionPlan] === 99999 ? 'Unlimited' : `${subStaff[subscriptionPlan]} Staff`}</strong>
-            </div>
-          </div>
+          {(() => {
+            const selectedPlanObj = plansToUse.find(p => p.name.toLowerCase() === subscriptionPlan.toLowerCase()) || plansToUse[0];
+            return (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)', pb: '1rem', paddingBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Selected Plan:</span>
+                    <strong style={{ textTransform: 'capitalize', color: '#a855f7' }}>{subscriptionPlan}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Workspace Limit:</span>
+                    <strong>{selectedPlanObj.maxMembers === 99999 ? 'Unlimited' : `${selectedPlanObj.maxMembers} Members`}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Staff Quota:</span>
+                    <strong>{selectedPlanObj.maxStaff === 99999 ? 'Unlimited' : `${selectedPlanObj.maxStaff} Staff`}</strong>
+                  </div>
+                </div>
 
-          {/* Pricing Math Breakdown */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Base Monthly Rate:</span>
-              <span>{subPrices[subscriptionPlan]?.toLocaleString()} {currency}</span>
-            </div>
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Billing Period:</span>
-              <span style={{ fontWeight: 600 }}>{installmentPlan}</span>
-            </div>
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-dark)' }}>
-              <span>Term Duration:</span>
-              <span>{installmentPlan === '1 Time Payment' ? '365 Days' : (installmentPlan === '3 Month Installment Plan' ? '90 Days' : '30 Days')}</span>
-            </div>
-          </div>
+                {/* Pricing Math Breakdown */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Base Monthly Rate:</span>
+                    <span>{selectedPlanObj.price?.toLocaleString()} {currency}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Billing Period:</span>
+                    <span style={{ fontWeight: 600 }}>{installmentPlan}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-dark)' }}>
+                    <span>Term Duration:</span>
+                    <span>{installmentPlan === '1 Time Payment' ? '365 Days' : (installmentPlan === '3 Month Installment Plan' ? '90 Days' : '30 Days')}</span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
 
           <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: 0 }} />
 

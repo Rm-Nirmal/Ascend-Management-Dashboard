@@ -195,6 +195,7 @@ export const DashboardProvider = ({ children }) => {
   const [supportTickets, setSupportTickets] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [gymSettings, setGymSettings] = useState(null);
+  const [saasPlans, setSaasPlans] = useState([]);
 
   // ─── Core Utility callbacks (declared early to prevent temporal dead zone) ───
   const logAudit = useCallback(async (action, entityType, entityId, details, userOverride = null) => {
@@ -325,6 +326,35 @@ export const DashboardProvider = ({ children }) => {
     });
     return () => unsubscribe();
   }, [currentUser]);
+
+  // ─── Real-time SaaS Plans Listener & Seeder ────────────────────────
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, COLLECTIONS.SAAS_PLANS), async (snap) => {
+      if (snap.empty) {
+        // Seed default plans
+        const defaultPlans = [
+          { name: 'Trial', price: 0, duration_days: 30, maxMembers: 20, maxStaff: 2, features: ['20 Members Quota', '2 Staff Quota', 'Basic Analytics'], created_at: new Date().toISOString() },
+          { name: 'Starter', price: 6000, duration_days: 30, maxMembers: 100, maxStaff: 3, features: ['100 Members Quota', '3 Staff Quota', 'Standard Support'], created_at: new Date().toISOString() },
+          { name: 'Professional', price: 12000, duration_days: 30, maxMembers: 500, maxStaff: 10, features: ['500 Members Quota', '10 Staff Quota', 'Priority Support', 'AI Insights'], created_at: new Date().toISOString() },
+          { name: 'Enterprise', price: 30000, duration_days: 30, maxMembers: 99999, maxStaff: 99999, features: ['Unlimited Members Quota', 'Unlimited Staff Quota', '24/7 Dedicated Support', 'Audit Logs'], created_at: new Date().toISOString() }
+        ];
+        for (const p of defaultPlans) {
+          try {
+            await addDoc(collection(db, COLLECTIONS.SAAS_PLANS), p);
+          } catch (err) {
+            console.error('Seeding SaaS plan error:', err);
+          }
+        }
+      } else {
+        const sortedPlans = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        sortedPlans.sort((a, b) => a.price - b.price);
+        setSaasPlans(sortedPlans);
+      }
+    }, (err) => {
+      console.error('SaaS plans listener error:', err);
+    });
+    return () => unsubscribe();
+  }, []);
 
 
 
@@ -1148,23 +1178,24 @@ export const DashboardProvider = ({ children }) => {
       await addDoc(collection(db, COLLECTIONS.GYM_SETTINGS), newSettingsDoc);
 
       // 5. Create Subscription Document
-      const subPrices = { Trial: 0, Starter: 6000, Professional: 12000, Enterprise: 30000 };
-      const subMembers = { Trial: 20, Starter: 100, Professional: 500, Enterprise: 99999 };
-      const subStaff = { Trial: 2, Starter: 3, Professional: 10, Enterprise: 99999 };
-
       const planSelected = gymData.subscriptionPlan || 'Starter';
       const installmentSelected = gymData.installmentPlan || 'Monthly Subscription';
 
-      let priceSelected = subPrices[planSelected] || 6000;
+      // Resolve plan dynamically from saasPlans
+      const selectedPlanObj = saasPlans.find(p => p.name.toLowerCase() === planSelected.toLowerCase()) || 
+                              saasPlans.find(p => p.name.toLowerCase() === 'starter') || 
+                              { name: 'Starter', price: 6000, maxMembers: 100, maxStaff: 3 };
+
+      let priceSelected = selectedPlanObj.price;
       let billingPeriod = 'monthly';
       let nextRenewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       if (installmentSelected === '1 Time Payment') {
-        priceSelected = (subPrices[planSelected] || 6000) * 10; // Annual upfront (10 months fee)
+        priceSelected = selectedPlanObj.price * 10; // Annual upfront (10 months fee)
         billingPeriod = 'one_time';
         nextRenewalDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
       } else if (installmentSelected === '3 Month Installment Plan') {
-        priceSelected = (subPrices[planSelected] || 6000) * 3; // 3 months contract upfront
+        priceSelected = selectedPlanObj.price * 3; // 3 months contract upfront
         billingPeriod = 'installment_3mo';
         nextRenewalDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
       }
@@ -1172,8 +1203,8 @@ export const DashboardProvider = ({ children }) => {
       const newSubDoc = {
         gymId: generatedGymId,
         planId: planSelected.toLowerCase(),
-        maxMembers: subMembers[planSelected] || 100,
-        maxStaff: subStaff[planSelected] || 3,
+        maxMembers: selectedPlanObj.maxMembers || 100,
+        maxStaff: selectedPlanObj.maxStaff || 3,
         status: 'active',
         price: priceSelected,
         currency: gymData.currency || 'LKR',
@@ -1209,26 +1240,25 @@ export const DashboardProvider = ({ children }) => {
         await addDoc(plansRef, p);
       }
 
-      // Create initial SaaS payment invoice if price > 0 (NO TAX)
-      if (newSubDoc.price > 0) {
-        const initialPayment = {
-          gymId: generatedGymId,
-          isSaaS: true,
-          gymName: gymData.gymName,
-          invoice_number: `SAAS-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-          subtotal: newSubDoc.price,
-          tax_amount: 0,
-          total_amount: newSubDoc.price,
-          status: 'paid',
-          issued_at: new Date().toISOString(),
-          paid_at: new Date().toISOString(),
-          plan_id: newSubDoc.planId,
-          created_at: new Date().toISOString(),
-          billingPeriod: newSubDoc.billingPeriod || 'monthly',
-          currency: newSubDoc.currency || 'LKR'
-        };
-        await addDoc(collection(db, COLLECTIONS.INVOICES), initialPayment);
-      }
+      // Create initial SaaS payment invoice (onboard register) (NO TAX)
+      const initialPayment = {
+        gymId: generatedGymId,
+        isSaaS: true,
+        gymName: gymData.gymName,
+        invoice_number: `SAAS-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+        subtotal: newSubDoc.price,
+        tax_amount: 0,
+        total_amount: newSubDoc.price,
+        status: 'paid',
+        issued_at: new Date().toISOString(),
+        paid_at: new Date().toISOString(),
+        plan_id: newSubDoc.planId,
+        created_at: new Date().toISOString(),
+        billingPeriod: newSubDoc.billingPeriod || 'monthly',
+        currency: newSubDoc.currency || 'LKR',
+        description: 'Onboarding Registration Fee'
+      };
+      await addDoc(collection(db, COLLECTIONS.INVOICES), initialPayment);
 
       await logAudit(
         'gym.onboard', 'gym', generatedGymId,
@@ -1415,10 +1445,11 @@ export const DashboardProvider = ({ children }) => {
       baseDate.setDate(baseDate.getDate() + parseInt(durationDays || 30));
       const newRenewalDate = baseDate.toISOString();
 
-      const subMembers = { trial: 20, starter: 100, professional: 500, enterprise: 99999 };
-      const subStaff = { trial: 2, starter: 3, professional: 10, enterprise: 99999 };
-      const maxMembers = subMembers[planId.toLowerCase()] || 100;
-      const maxStaff = subStaff[planId.toLowerCase()] || 3;
+      // Resolve plan limits dynamically
+      const selectedPlanObj = saasPlans.find(p => p.name.toLowerCase() === planId.toLowerCase() || p.id === planId) || 
+                              { name: 'Starter', price: 6000, maxMembers: 100, maxStaff: 3 };
+      const maxMembers = selectedPlanObj.maxMembers || 100;
+      const maxStaff = selectedPlanObj.maxStaff || 3;
 
       // Update subscription in Firestore
       await updateDoc(subDocRef, {
@@ -2308,6 +2339,65 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [plans, logAudit]);
 
+  // ─── SaaS PLAN CRUD ACTIONS ─────────────────────────────────────────
+
+  const addSaasPlan = useCallback(async (planData) => {
+    try {
+      const newPlan = {
+        name: planData.name,
+        price: parseFloat(planData.price),
+        duration_days: parseInt(planData.duration_days || 30),
+        maxMembers: parseInt(planData.maxMembers || 100),
+        maxStaff: parseInt(planData.maxStaff || 3),
+        features: planData.features || [],
+        created_at: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.SAAS_PLANS), newPlan);
+      await logAudit('saas_plan.create', 'saas_plan', docRef.id, `Created SaaS subscription plan: ${newPlan.name}`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addSaasPlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const updateSaasPlan = useCallback(async (id, planFields) => {
+    try {
+      const planRef = doc(db, COLLECTIONS.SAAS_PLANS, id);
+      const updated = {
+        ...planFields,
+        price: planFields.price ? parseFloat(planFields.price) : undefined,
+        duration_days: planFields.duration_days ? parseInt(planFields.duration_days) : undefined,
+        maxMembers: planFields.maxMembers ? parseInt(planFields.maxMembers) : undefined,
+        maxStaff: planFields.maxStaff ? parseInt(planFields.maxStaff) : undefined,
+      };
+      // remove undefined values
+      Object.keys(updated).forEach(key => updated[key] === undefined && delete updated[key]);
+
+      await updateDoc(planRef, updated);
+      await logAudit('saas_plan.update', 'saas_plan', id, `Updated SaaS subscription plan fields: ${Object.keys(updated).join(', ')}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateSaasPlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
+  const deleteSaasPlan = useCallback(async (id) => {
+    try {
+      const planRef = doc(db, COLLECTIONS.SAAS_PLANS, id);
+      await deleteDoc(planRef);
+      await logAudit('saas_plan.delete', 'saas_plan', id, `Deleted SaaS subscription plan: ${id}`);
+      return { success: true };
+    } catch (err) {
+      console.error('deleteSaasPlan error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [logAudit]);
+
   // ═══════════════════════════════════════════════════════════════════
   // PERSONAL TRAINER CRUD ACTIONS
   // ═══════════════════════════════════════════════════════════════════
@@ -2673,6 +2763,12 @@ export const DashboardProvider = ({ children }) => {
       publishAnnouncement,
       updateGymSettings,
       getGymHealthScore,
+
+      // SaaS Plan Management
+      saasPlans,
+      addSaasPlan,
+      updateSaasPlan,
+      deleteSaasPlan,
     }}>
       {children}
     </DashboardContext.Provider>
