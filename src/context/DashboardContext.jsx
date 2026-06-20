@@ -392,7 +392,7 @@ export const DashboardProvider = ({ children }) => {
     if (currentUser.role === 'super_admin') {
       // ─── SUPER ADMIN REAL-TIME LISTENERS ───
       let loadedCount = 0;
-      const totalCollections = 7;
+      const totalCollections = 8;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -458,6 +458,16 @@ export const DashboardProvider = ({ children }) => {
           setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })));
           markLoaded();
         }, (err) => { console.error('Superadmin payments error:', err); markLoaded(); })
+      );
+
+      // 8. Audit Logs (all)
+      unsubscribers.push(
+        onSnapshot(collection(db, COLLECTIONS.AUDIT_LOGS), (snap) => {
+          const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          logs.sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at));
+          setAuditLogs(logs);
+          markLoaded();
+        }, (err) => { console.error('Superadmin audit logs error:', err); markLoaded(); })
       );
 
     } else {
@@ -1658,8 +1668,34 @@ export const DashboardProvider = ({ children }) => {
   // Update Gym Settings (Appearance & Localization)
   const updateGymSettings = useCallback(async (updatedFields) => {
     try {
+      const orgId = currentUser?.gymId || DEFAULT_ORG_ID;
+
+      // 1. Sync settings changes to COLLECTIONS.GYMS if gym owner
+      if (currentUser?.role === 'gym_owner') {
+        const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', '==', orgId)));
+        if (!gymSnap.empty) {
+          const gymDocRef = gymSnap.docs[0].ref;
+          await updateDoc(gymDocRef, {
+            gymName: updatedFields.gymName || gymSnap.docs[0].data().gymName,
+            ownerName: updatedFields.ownerName || gymSnap.docs[0].data().ownerName,
+            phone: updatedFields.phone || gymSnap.docs[0].data().phone,
+            address: updatedFields.address || gymSnap.docs[0].data().address,
+            currency: updatedFields.currency || gymSnap.docs[0].data().currency,
+            timezone: updatedFields.timezone || gymSnap.docs[0].data().timezone,
+          });
+        }
+
+        // 2. Sync owner name changes to COLLECTIONS.ADMINS
+        if (updatedFields.ownerName && currentUser?.id) {
+          const userRef = doc(db, COLLECTIONS.ADMINS, currentUser.id);
+          await updateDoc(userRef, {
+            name: updatedFields.ownerName
+          });
+        }
+      }
+
+      // 3. Update the GYM_SETTINGS collection doc
       if (!gymSettings?.id) {
-        const orgId = currentUser?.gymId || DEFAULT_ORG_ID;
         const newSettings = {
           gymId: orgId,
           gymName: (currentUser?.name || 'Client') + ' Gym',
@@ -1687,7 +1723,25 @@ export const DashboardProvider = ({ children }) => {
         await updateDoc(settingsRef, sanitized);
         setGymSettings(prev => ({ ...prev, ...sanitized }));
       }
-      await logAudit('gym.settings_update', 'settings', gymSettings?.id || 'new', 'Updated gym layout preferences and settings');
+
+      // 4. Construct detailed audit trail text
+      const changedFields = [];
+      if (gymSettings?.gymName !== updatedFields.gymName) changedFields.push(`Gym Name to "${updatedFields.gymName}"`);
+      if (currentUser?.name !== updatedFields.ownerName) changedFields.push(`Owner Name to "${updatedFields.ownerName}"`);
+      if (gymSettings?.phone !== updatedFields.phone) changedFields.push(`Phone Contact to "${updatedFields.phone}"`);
+      if (gymSettings?.email !== updatedFields.email) changedFields.push(`Contact Email to "${updatedFields.email}"`);
+      if (gymSettings?.address !== updatedFields.address) changedFields.push(`Address`);
+      if (gymSettings?.themeColor !== updatedFields.themeColor) changedFields.push(`Theme Color to "${updatedFields.themeColor}"`);
+      if (gymSettings?.timezone !== updatedFields.timezone) changedFields.push(`Timezone to "${updatedFields.timezone}"`);
+      if (gymSettings?.currency !== updatedFields.currency) changedFields.push(`Currency to "${updatedFields.currency}"`);
+      if (gymSettings?.openingHours !== updatedFields.openingHours) changedFields.push(`Opening Hours to "${updatedFields.openingHours}"`);
+      if (gymSettings?.language !== updatedFields.language) changedFields.push(`Language to "${updatedFields.language}"`);
+
+      const detailsText = changedFields.length > 0
+        ? `Changed ${changedFields.join(', ')}`
+        : 'Saved settings with no changes';
+
+      await logAudit('gym.settings_update', 'settings', gymSettings?.id || 'new', detailsText);
       showToast('Gym settings saved successfully.', 'success');
       return { success: true };
     } catch (err) {

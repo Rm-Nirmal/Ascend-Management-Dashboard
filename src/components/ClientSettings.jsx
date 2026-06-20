@@ -3,6 +3,7 @@ import { useDashboard } from '../context/DashboardContext';
 import { 
   Settings, 
   Building2, 
+  User,
   Phone, 
   Mail, 
   MapPin, 
@@ -22,6 +23,7 @@ const ClientSettings = () => {
   
   // States
   const [gymName, setGymName] = useState(gymSettings?.gymName || '');
+  const [ownerName, setOwnerName] = useState(currentUser?.name || gymSettings?.ownerName || '');
   const [themeColor, setThemeColor] = useState(gymSettings?.themeColor || '#3b82f6');
   const [phone, setPhone] = useState(gymSettings?.phone || '');
   const [email, setEmail] = useState(gymSettings?.email || '');
@@ -49,6 +51,7 @@ const ClientSettings = () => {
     
     await updateGymSettings({
       gymName,
+      ownerName,
       themeColor,
       phone,
       email,
@@ -172,6 +175,23 @@ const ClientSettings = () => {
             </div>
 
             <div className="form-group">
+              <label className="form-label">Owner Name *</label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  style={{ paddingLeft: '2.5rem' }} 
+                  value={ownerName} 
+                  onChange={e => setOwnerName(e.target.value)} 
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <div className="form-group">
               <label className="form-label">Phone Contact *</label>
               <div style={{ position: 'relative' }}>
                 <Phone size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
@@ -185,9 +205,7 @@ const ClientSettings = () => {
                 />
               </div>
             </div>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
             <div className="form-group">
               <label className="form-label">Gym Contact Email *</label>
               <div style={{ position: 'relative' }}>
@@ -202,7 +220,9 @@ const ClientSettings = () => {
                 />
               </div>
             </div>
+          </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
             <div className="form-group">
               <label className="form-label">Website Domain URL</label>
               <div style={{ position: 'relative' }}>
