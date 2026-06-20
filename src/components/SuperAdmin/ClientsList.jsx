@@ -9,11 +9,39 @@ import {
   Pause, 
   Key, 
   X,
-  Search
+  Search,
+  Eye,
+  Sliders,
+  DollarSign,
+  Activity,
+  Calendar,
+  Phone,
+  MapPin,
+  Globe,
+  Clock,
+  ShieldAlert,
+  Check,
+  Receipt,
+  Edit,
+  ArrowRight,
+  TrendingUp,
+  Award
 } from 'lucide-react';
 
 const ClientsList = () => {
-  const { gyms, suspendGym, deleteGym, resetGymOwnerPassword, getGymHealthScore, showToast } = useDashboard();
+  const { 
+    gyms, 
+    subscriptions, 
+    members, 
+    invoices, 
+    suspendGym, 
+    deleteGym, 
+    resetGymOwnerPassword, 
+    renewGymSubscription,
+    updateGymDetails,
+    getGymHealthScore, 
+    showToast 
+  } = useDashboard();
   
   // States
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,6 +51,26 @@ const ClientsList = () => {
   const [resettingOwnerEmail, setResettingOwnerEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+
+  // Selected gym for detailed profile drawer
+  const [selectedGym, setSelectedGym] = useState(null);
+  const [activeDrawerTab, setActiveDrawerTab] = useState('profile'); // 'profile', 'billing', 'usage', 'edit'
+
+  // Invoice / Receipt viewing state
+  const [viewingReceipt, setViewingReceipt] = useState(null);
+
+  // Edit gym form state
+  const [editForm, setEditForm] = useState({
+    gymName: '',
+    ownerName: '',
+    phone: '',
+    address: '',
+    country: 'Sri Lanka',
+    currency: 'LKR',
+    timezone: 'Asia/Colombo'
+  });
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [isRenewing, setIsRenewing] = useState(false);
 
   // Filter gyms
   const filteredGyms = gyms.filter(gym => 
@@ -36,6 +84,14 @@ const ClientsList = () => {
     const res = await suspendGym(gymId, isSuspended);
     if (!res.success) {
       showToast(res.message, 'error');
+    } else {
+      // If selected gym is open in drawer, update its status locally
+      if (selectedGym && selectedGym.gymId === gymId) {
+        setSelectedGym(prev => ({
+          ...prev,
+          status: isSuspended ? 'suspended' : 'active'
+        }));
+      }
     }
   };
 
@@ -43,6 +99,9 @@ const ClientsList = () => {
     const res = await deleteGym(gymId);
     if (res.success) {
       setConfirmDeleteId('');
+      if (selectedGym && selectedGym.gymId === gymId) {
+        setSelectedGym(null);
+      }
     } else {
       showToast(res.message, 'error');
     }
@@ -64,8 +123,73 @@ const ClientsList = () => {
     }
   };
 
+  const openGymProfile = (gym) => {
+    setSelectedGym(gym);
+    setActiveDrawerTab('profile');
+    setEditForm({
+      gymName: gym.gymName || '',
+      ownerName: gym.ownerName || '',
+      phone: gym.phone || '',
+      address: gym.address || '',
+      country: gym.country || 'Sri Lanka',
+      currency: gym.currency || 'LKR',
+      timezone: gym.timezone || 'Asia/Colombo'
+    });
+  };
+
+  const handleEditDetailsSubmit = async (e) => {
+    e.preventDefault();
+    if (!editForm.gymName || !editForm.ownerName || !editForm.phone) {
+      showToast('Please fill in all required fields.', 'error');
+      return;
+    }
+
+    setIsSavingDetails(true);
+    const res = await updateGymDetails(selectedGym.gymId, editForm);
+    setIsSavingDetails(false);
+
+    if (res.success) {
+      setSelectedGym(prev => ({
+        ...prev,
+        ...editForm
+      }));
+      setActiveDrawerTab('profile');
+    }
+  };
+
+  const handleRenewSubscription = async () => {
+    if (!selectedGym) return;
+    
+    setIsRenewing(true);
+    const res = await renewGymSubscription(selectedGym.gymId);
+    setIsRenewing(false);
+
+    if (res.success) {
+      // Refresh selected gym status in case it changed
+      const updatedGym = gyms.find(g => g.gymId === selectedGym.gymId);
+      if (updatedGym) {
+        setSelectedGym(updatedGym);
+      }
+    }
+  };
+
+  // Find subscription associated with the gym
+  const getSubscriptionForGym = (gymId) => {
+    return subscriptions.find(s => s.gymId === gymId);
+  };
+
+  // Find SaaS receipts associated with the gym
+  const getSaaSReceiptsForGym = (gymId) => {
+    return invoices.filter(i => i.gymId === gymId && i.isSaaS === true);
+  };
+
+  // Format currency
+  const formatCurrency = (val, code = 'LKR') => {
+    return `${val?.toLocaleString('en-US', { minimumFractionDigits: 2 })} ${code}`;
+  };
+
   return (
-    <div style={{ padding: '2rem' }}>
+    <div style={{ padding: '2rem', position: 'relative' }}>
       <div style={{
         background: 'rgba(255, 255, 255, 0.01)',
         border: '1px solid rgba(255, 255, 255, 0.04)',
@@ -73,9 +197,9 @@ const ClientsList = () => {
         padding: '2rem'
       }}>
         {/* Header and Search bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '2rem', flexWrap: 'wrap' }}>
           <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Registered Client Gyms</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, fontFamily: 'var(--font-display)' }}>Client Gym Directory</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
               Manage directories, access statuses, owner credentials, and data isolation.
             </p>
@@ -117,9 +241,9 @@ const ClientsList = () => {
               ) : (
                 filteredGyms.map(gym => {
                   const healthScore = getGymHealthScore(gym.gymId);
-                  let healthColor = 'var(--color-success)';
-                  if (healthScore < 50) healthColor = 'var(--color-danger)';
-                  else if (healthScore < 75) healthColor = 'var(--color-warning)';
+                  let healthColor = '#10b981'; // Green
+                  if (healthScore < 50) healthColor = '#ef4444'; // Red
+                  else if (healthScore < 75) healthColor = '#f59e0b'; // Orange
 
                   const isSuspended = gym.status === 'suspended';
                   const isTrial = gym.status === 'trial';
@@ -143,7 +267,14 @@ const ClientsList = () => {
                             <Building2 size={16} />
                           </div>
                           <div>
-                            <span style={{ display: 'block', fontWeight: 600 }}>{gym.gymName}</span>
+                            <span 
+                              style={{ display: 'block', fontWeight: 600, cursor: 'pointer', transition: 'color 0.2s' }}
+                              onClick={() => openGymProfile(gym)}
+                              onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'}
+                              onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+                            >
+                              {gym.gymName}
+                            </span>
                             <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-dark)' }}>ID: {gym.gymId}</span>
                           </div>
                         </div>
@@ -175,7 +306,7 @@ const ClientsList = () => {
                           fontWeight: 700,
                           textTransform: 'uppercase',
                           background: isSuspended ? 'rgba(239, 68, 68, 0.1)' : isTrial ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                          color: isSuspended ? 'var(--color-danger)' : isTrial ? '#3b82f6' : 'var(--color-success)',
+                          color: isSuspended ? '#ef4444' : isTrial ? '#3b82f6' : '#10b981',
                           border: `1px solid ${isSuspended ? 'rgba(239, 68, 68, 0.2)' : isTrial ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`
                         }}>
                           {gym.status}
@@ -201,6 +332,16 @@ const ClientsList = () => {
                       <td style={{ padding: '1rem 0.5rem', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
                           
+                          {/* View Profile */}
+                          <button
+                            onClick={() => openGymProfile(gym)}
+                            className="btn btn-secondary"
+                            style={{ padding: '0.4rem', borderRadius: '6px' }}
+                            title="View Detailed Profile"
+                          >
+                            <Eye size={14} />
+                          </button>
+
                           {/* Suspend/Activate toggle */}
                           <button
                             onClick={() => handleSuspendToggle(gym.gymId, gym.status)}
@@ -208,7 +349,7 @@ const ClientsList = () => {
                             style={{ padding: '0.4rem', borderRadius: '6px' }}
                             title={isSuspended ? 'Reactivate Gym Workspace' : 'Suspend Gym Workspace'}
                           >
-                            {isSuspended ? <Play size={14} style={{ color: 'var(--color-success)' }} /> : <Pause size={14} style={{ color: 'var(--color-warning)' }} />}
+                            {isSuspended ? <Play size={14} style={{ color: '#10b981' }} /> : <Pause size={14} style={{ color: '#f59e0b' }} />}
                           </button>
 
                           {/* Reset Password */}
@@ -246,7 +387,7 @@ const ClientsList = () => {
                               style={{ padding: '0.4rem', borderRadius: '6px' }}
                               title="Delete Gym Workspace"
                             >
-                              <Trash2 size={14} style={{ color: 'var(--color-danger)' }} />
+                              <Trash2 size={14} style={{ color: '#ef4444' }} />
                             </button>
                           )}
                         </div>
@@ -259,6 +400,590 @@ const ClientsList = () => {
           </table>
         </div>
       </div>
+
+      {/* DETAILED PROFILE DRAWER (Slide-out panel from the right) */}
+      {selectedGym && (
+        <>
+          {/* Backdrop overlay */}
+          <div 
+            onClick={() => setSelectedGym(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(3px)',
+              zIndex: 99
+            }}
+          />
+          
+          <div style={{
+            position: 'fixed',
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: '540px',
+            background: '#0c0c0c',
+            borderLeft: '1px solid var(--border-color)',
+            boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.8)',
+            zIndex: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            {/* Styles inside for slideIn animation */}
+            <style>{`
+              @keyframes slideIn {
+                from { transform: translateX(100%); }
+                to { transform: translateX(0); }
+              }
+            `}</style>
+
+            {/* Drawer Header */}
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'rgba(255, 255, 255, 0.01)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#a855f7'
+                }}>
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+                    {selectedGym.gymName}
+                  </h4>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    ID: {selectedGym.gymId}
+                  </span>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => setSelectedGym(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Drawer Tabs Navigation */}
+            <div style={{
+              display: 'flex',
+              borderBottom: '1px solid var(--border-color)',
+              background: 'rgba(0,0,0,0.2)',
+              padding: '0 0.75rem'
+            }}>
+              {[
+                { id: 'profile', label: 'Profile & Sub' },
+                { id: 'usage', label: 'Usage & Health' },
+                { id: 'billing', label: 'SaaS Receipts' },
+                { id: 'edit', label: 'Edit Directory' }
+              ].map(t => {
+                const isActive = activeDrawerTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setActiveDrawerTab(t.id)}
+                    style={{
+                      padding: '1rem 0.75rem',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: isActive ? '2px solid #a855f7' : '2px solid transparent',
+                      color: isActive ? '#a855f7' : 'var(--text-muted)',
+                      fontWeight: isActive ? 600 : 500,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      outline: 'none',
+                      flex: 1,
+                      textAlign: 'center'
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Drawer Content viewport */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+              
+              {/* TAB 1: Profile & Subscription info */}
+              {activeDrawerTab === 'profile' && (() => {
+                const sub = getSubscriptionForGym(selectedGym.gymId);
+                const isSuspended = selectedGym.status === 'suspended';
+                const isTrial = selectedGym.status === 'trial';
+                
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {/* Status card */}
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.01)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Workspace Status</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                          <span style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            background: isSuspended ? '#ef4444' : isTrial ? '#3b82f6' : '#10b981'
+                          }} />
+                          <strong style={{ fontSize: '0.95rem', textTransform: 'capitalize' }}>{selectedGym.status}</strong>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleSuspendToggle(selectedGym.gymId, selectedGym.status)}
+                        className={`btn ${isSuspended ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '0.4rem 0.8rem',
+                          background: isSuspended ? 'linear-gradient(135deg, #10b981, #059669)' : 'none',
+                          border: isSuspended ? 'none' : '1px solid rgba(255,255,255,0.1)'
+                        }}
+                      >
+                        {isSuspended ? 'Reactivate Client' : 'Suspend Client'}
+                      </button>
+                    </div>
+
+                    {/* Owner credentials card */}
+                    <div>
+                      <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>Owner Info</h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <User size={14} style={{ color: 'var(--text-muted)' }} />
+                          <span style={{ fontSize: '0.85rem' }}>{selectedGym.ownerName}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Mail size={14} style={{ color: 'var(--text-muted)' }} />
+                          <span style={{ fontSize: '0.85rem' }}>{selectedGym.ownerEmail}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Phone size={14} style={{ color: 'var(--text-muted)' }} />
+                          <span style={{ fontSize: '0.85rem' }}>{selectedGym.phone || 'N/A'}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <MapPin size={14} style={{ color: 'var(--text-muted)' }} />
+                          <span style={{ fontSize: '0.85rem' }}>{selectedGym.address || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subscription billing details */}
+                    {sub ? (
+                      <div>
+                        <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>SaaS Subscription Plan</h5>
+                        <div style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '1rem', 
+                          background: 'rgba(168, 85, 247, 0.02)', 
+                          border: '1px solid rgba(168, 85, 247, 0.1)', 
+                          borderRadius: '8px', 
+                          padding: '1.25rem' 
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active Tier</span>
+                              <h4 style={{ fontSize: '1.2rem', fontWeight: 800, textTransform: 'capitalize', color: 'var(--text-main)', margin: '0.1rem 0 0 0' }}>
+                                {sub.planId} Plan
+                              </h4>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Monthly Rate</span>
+                              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-success)', marginTop: '0.1rem' }}>
+                                {sub.price?.toLocaleString()} {sub.currency}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                              <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Member Limit</span>
+                              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{sub.maxMembers === 99999 ? 'Unlimited' : sub.maxMembers} members</span>
+                            </div>
+                            <div>
+                              <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Staff Limit</span>
+                              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{sub.maxStaff === 99999 ? 'Unlimited' : sub.maxStaff} employees</span>
+                            </div>
+                          </div>
+
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)' }}>Next Renewal Date</span>
+                              <span style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                                <Calendar size={13} /> {sub.nextRenewalDate ? new Date(sub.nextRenewalDate).toLocaleDateString() : 'N/A'}
+                              </span>
+                            </div>
+
+                            {/* Renew Subscription Action Button */}
+                            <button
+                              onClick={handleRenewSubscription}
+                              disabled={isRenewing}
+                              className="btn btn-primary"
+                              style={{
+                                padding: '0.5rem 1rem',
+                                background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                                border: 'none',
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem'
+                              }}
+                            >
+                              <TrendingUp size={13} /> {isRenewing ? 'Renewing...' : 'Renew 30 Days'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        No subscription record found.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* TAB 2: Usage & System Activity */}
+              {activeDrawerTab === 'usage' && (() => {
+                const gymMembers = members.filter(m => m.gymId === selectedGym.gymId);
+                const activeMembers = gymMembers.filter(m => m.status === 'active');
+                const frozenMembers = gymMembers.filter(m => m.status === 'frozen');
+                const cancelledMembers = gymMembers.filter(m => m.status === 'cancelled');
+
+                const sub = getSubscriptionForGym(selectedGym.gymId);
+                const maxMembersAllowed = sub ? sub.maxMembers : 100;
+                const percentQuotaUsed = Math.round((gymMembers.length / (maxMembersAllowed || 1)) * 100);
+
+                const healthScore = getGymHealthScore(selectedGym.gymId);
+                let healthColor = '#10b981';
+                if (healthScore < 50) healthColor = '#ef4444';
+                else if (healthScore < 75) healthColor = '#f59e0b';
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {/* Health Card */}
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.01)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1.5rem'
+                    }}>
+                      <div style={{
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        border: `3px solid ${healthColor}20`,
+                        borderTopColor: healthColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: healthColor,
+                        fontWeight: 800,
+                        fontSize: '1.2rem',
+                        background: `${healthColor}08`
+                      }}>
+                        {healthScore}
+                      </div>
+                      <div>
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>SaaS Health Index</h4>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0' }}>
+                          Calculated using active member ratio, attendance log rate, and collection ratios.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Member quota progress */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.35rem' }}>
+                        <span style={{ fontWeight: 600 }}>SaaS Member Quota Limit</span>
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          {gymMembers.length} / {maxMembersAllowed === 99999 ? 'Unlimited' : maxMembersAllowed} ({percentQuotaUsed}%)
+                        </span>
+                      </div>
+                      <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ 
+                          height: '100%', 
+                          width: `${Math.min(percentQuotaUsed, 100)}%`, 
+                          background: percentQuotaUsed > 90 ? '#ef4444' : '#a855f7',
+                          borderRadius: '4px'
+                        }} />
+                      </div>
+                    </div>
+
+                    {/* Breakdown */}
+                    <div>
+                      <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>Database Directory Metrics</h5>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '0.75rem'
+                      }}>
+                        <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Total Members Database</span>
+                          <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.15rem 0 0 0' }}>{gymMembers.length}</h4>
+                        </div>
+                        <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Active Members</span>
+                          <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.15rem 0 0 0', color: '#10b981' }}>{activeMembers.length}</h4>
+                        </div>
+                        <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Frozen Members</span>
+                          <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.15rem 0 0 0', color: '#f59e0b' }}>{frozenMembers.length}</h4>
+                        </div>
+                        <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Inactive / Cancelled</span>
+                          <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.15rem 0 0 0', color: '#525252' }}>{cancelledMembers.length}</h4>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* TAB 3: SaaS Receipts / Billing History */}
+              {activeDrawerTab === 'billing' && (() => {
+                const receipts = getSaaSReceiptsForGym(selectedGym.gymId);
+                const sub = getSubscriptionForGym(selectedGym.gymId);
+                
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, margin: 0 }}>SaaS Payments Billing History</h5>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{receipts.length} Payments recorded</span>
+                    </div>
+
+                    {receipts.length === 0 ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dark)', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                        No billing payments generated yet. Renew subscription to record a payment.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {receipts.map(rec => (
+                          <div 
+                            key={rec.id}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.01)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '8px',
+                              padding: '0.85rem 1rem',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              transition: 'border 0.2s',
+                              cursor: 'pointer'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)'}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                            onClick={() => setViewingReceipt(rec)}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <div style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '6px',
+                                background: 'rgba(16, 185, 129, 0.08)',
+                                border: '1px solid rgba(16, 185, 129, 0.15)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#10b981'
+                              }}>
+                                <Receipt size={15} />
+                              </div>
+                              <div>
+                                <span style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600 }}>{rec.invoice_number}</span>
+                                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                  Paid on {rec.paid_at ? new Date(rec.paid_at).toLocaleDateString() : new Date(rec.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                                {formatCurrency(rec.total_amount, rec.currency || sub?.currency)}
+                              </strong>
+                              <ArrowRight size={14} style={{ color: 'var(--text-dark)' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* TAB 4: Edit Gym Directory Profile details */}
+              {activeDrawerTab === 'edit' && (
+                <form onSubmit={handleEditDetailsSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.25rem' }}>Edit Directory Information</h5>
+                  
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Gym Name *</label>
+                    <div style={{ position: 'relative' }}>
+                      <Building2 size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        style={{ paddingLeft: '2.25rem' }} 
+                        value={editForm.gymName}
+                        onChange={e => setEditForm({ ...editForm, gymName: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Owner Full Name *</label>
+                    <div style={{ position: 'relative' }}>
+                      <User size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        style={{ paddingLeft: '2.25rem' }} 
+                        value={editForm.ownerName}
+                        onChange={e => setEditForm({ ...editForm, ownerName: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Contact Phone *</label>
+                    <div style={{ position: 'relative' }}>
+                      <Phone size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        style={{ paddingLeft: '2.25rem' }} 
+                        value={editForm.phone}
+                        onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Physical Address *</label>
+                    <div style={{ position: 'relative' }}>
+                      <MapPin size={14} style={{ position: 'absolute', left: '0.75rem', top: '12px', color: 'var(--text-dark)' }} />
+                      <textarea 
+                        className="form-control" 
+                        style={{ paddingLeft: '2.25rem', minHeight: '60px' }} 
+                        value={editForm.address}
+                        onChange={e => setEditForm({ ...editForm, address: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Country</label>
+                      <div style={{ position: 'relative' }}>
+                        <Globe size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          style={{ paddingLeft: '2.25rem' }} 
+                          value={editForm.country}
+                          onChange={e => setEditForm({ ...editForm, country: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Currency</label>
+                      <div style={{ position: 'relative' }}>
+                        <DollarSign size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          style={{ paddingLeft: '2.25rem' }} 
+                          value={editForm.currency}
+                          onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Timezone</label>
+                    <div style={{ position: 'relative' }}>
+                      <Clock size={14} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                      <select 
+                        className="form-control" 
+                        style={{ paddingLeft: '2.25rem' }} 
+                        value={editForm.timezone}
+                        onChange={e => setEditForm({ ...editForm, timezone: e.target.value })}
+                      >
+                        <option value="Asia/Colombo">Asia/Colombo</option>
+                        <option value="Asia/Kolkata">Asia/Kolkata</option>
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">America/New_York</option>
+                        <option value="Europe/London">Europe/London</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary"
+                    disabled={isSavingDetails}
+                    style={{
+                      marginTop: '0.5rem',
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                      borderColor: 'transparent',
+                      padding: '0.7rem'
+                    }}
+                  >
+                    {isSavingDetails ? 'Saving Changes...' : 'Save Directory Record'}
+                  </button>
+                </form>
+              )}
+
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Reset Password Modal */}
       {resettingOwnerEmail && (
@@ -324,6 +1049,203 @@ const ClientsList = () => {
           </div>
         </div>
       )}
+
+      {/* PREMIUM SAAS INVOICE/RECEIPT MODAL (PDF style viewer) */}
+      {viewingReceipt && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+          padding: '2rem'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            color: '#1a1a1a',
+            borderRadius: '12px',
+            width: '600px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            {/* Modal Header actions */}
+            <div style={{
+              background: '#f8fafc',
+              padding: '1rem 1.5rem',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Receipt size={16} /> Fitgencore SaaS Subscription Invoice
+              </span>
+              
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => window.print()}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#475569',
+                    borderRadius: '6px',
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Print / Save PDF
+                </button>
+                <button
+                  onClick={() => setViewingReceipt(null)}
+                  style={{
+                    background: '#cbd5e1',
+                    border: 'none',
+                    color: '#1e293b',
+                    borderRadius: '6px',
+                    padding: '0.35rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
+
+            {/* Print/Download area (SaaS Receipt Layout) */}
+            <div style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem', background: '#ffffff' }}>
+              
+              {/* Header Branding */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#7c3aed' }}>
+                    FITGENCORE SAAS
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Antigravity Labs (Pvt) Ltd.<br />
+                    100 Elite Tower, Colombo 03, Sri Lanka<br />
+                    billing@fitgencore.com
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    background: '#d1fae5',
+                    color: '#065f46',
+                    border: '1px solid #a7f3d0',
+                    marginBottom: '0.5rem'
+                  }}>
+                    PAID
+                  </span>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1e293b' }}>
+                    {viewingReceipt.invoice_number}
+                  </div>
+                </div>
+              </div>
+
+              <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: 0 }} />
+
+              {/* Bill To & Dates Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                <div>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>BILL TO</span>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', marginTop: '0.25rem' }}>
+                    {viewingReceipt.gymName}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    Attn: {selectedGym?.ownerName}<br />
+                    Email: {selectedGym?.ownerEmail}<br />
+                    Address: {selectedGym?.address || 'N/A'}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>DATE PAID</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
+                      {viewingReceipt.paid_at ? new Date(viewingReceipt.paid_at).toLocaleDateString() : new Date(viewingReceipt.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>BILLING CYCLE</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', textTransform: 'capitalize' }}>
+                      Monthly ({viewingReceipt.billingPeriod || 'monthly'})
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice Table */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0', fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'left' }}>Description</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', width: '100px' }}>Billing Qty</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right', width: '150px' }}>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.85rem', color: '#334155' }}>
+                    <td style={{ padding: '1rem 0.5rem' }}>
+                      <strong>Fitgencore SaaS Platform - {viewingReceipt.plan_id ? viewingReceipt.plan_id.charAt(0).toUpperCase() + viewingReceipt.plan_id.slice(1) : 'Starter'} Plan</strong>
+                      <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem' }}>
+                        Real-time analytics, automated access control integrations, multi-tenant directory service.
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem 0.5rem', textAlign: 'center' }}>
+                      1 Month
+                    </td>
+                    <td style={{ padding: '1rem 0.5rem', textAlign: 'right', fontWeight: 600 }}>
+                      {formatCurrency(viewingReceipt.subtotal, viewingReceipt.currency)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Invoice Totals */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <div style={{ width: '250px', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(viewingReceipt.subtotal, viewingReceipt.currency)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                    <span>Tax & Duties (0%):</span>
+                    <span>0.00 {viewingReceipt.currency || 'LKR'}</span>
+                  </div>
+                  <hr style={{ border: 'none', borderTop: '1px solid #cbd5e1', margin: '0.25rem 0' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1rem', color: '#1e293b' }}>
+                    <span>Total Amount Paid:</span>
+                    <span>{formatCurrency(viewingReceipt.total_amount, viewingReceipt.currency)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice Footer */}
+              <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
+                Thank you for partner gym onboarding with Fitgencore. If you have any billing concerns, please file a support ticket in the Support Center.
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

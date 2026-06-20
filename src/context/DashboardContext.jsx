@@ -1192,6 +1192,27 @@ export const DashboardProvider = ({ children }) => {
         await addDoc(plansRef, p);
       }
 
+      // Create initial SaaS payment invoice if price > 0
+      if (newSubDoc.price > 0) {
+        const initialPayment = {
+          gymId: generatedGymId,
+          isSaaS: true,
+          gymName: gymData.gymName,
+          invoice_number: `SAAS-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          subtotal: newSubDoc.price,
+          tax_amount: 0,
+          total_amount: newSubDoc.price,
+          status: 'paid',
+          issued_at: new Date().toISOString(),
+          paid_at: new Date().toISOString(),
+          plan_id: newSubDoc.planId,
+          created_at: new Date().toISOString(),
+          billingPeriod: newSubDoc.billingPeriod || 'monthly',
+          currency: newSubDoc.currency || 'LKR'
+        };
+        await addDoc(collection(db, COLLECTIONS.INVOICES), initialPayment);
+      }
+
       await logAudit(
         'gym.onboard', 'gym', generatedGymId,
         `Onboarded new gym: ${gymData.gymName} (Owner: ${gymData.ownerName})`,
@@ -1279,6 +1300,119 @@ export const DashboardProvider = ({ children }) => {
       return { success: false, message: 'Owner document not found.' };
     } catch (err) {
       console.error('resetGymOwnerPassword error:', err);
+      return { success: false, message: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
+  // Renew Gym SaaS Subscription
+  const renewGymSubscription = useCallback(async (gymId) => {
+    try {
+      // Find subscription document
+      const subSnap = await getDocs(query(collection(db, COLLECTIONS.SUBSCRIPTIONS), where('gymId', '==', gymId)));
+      if (subSnap.empty) {
+        return { success: false, message: 'Subscription not found for this gym.' };
+      }
+      const subDocRef = subSnap.docs[0].ref;
+      const subData = subSnap.docs[0].data();
+
+      // Extend next renewal date by 30 days
+      const currentRenewal = subData.nextRenewalDate;
+      const baseDate = currentRenewal && new Date(currentRenewal).getTime() > Date.now()
+        ? new Date(currentRenewal)
+        : new Date();
+      baseDate.setDate(baseDate.getDate() + 30);
+      const newRenewalDate = baseDate.toISOString();
+
+      // Update subscription in Firestore
+      await updateDoc(subDocRef, {
+        nextRenewalDate: newRenewalDate,
+        status: 'active'
+      });
+
+      // Update gym document to make sure it's active
+      const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', '==', gymId)));
+      let gymName = 'Client Gym';
+      if (!gymSnap.empty) {
+        gymName = gymSnap.docs[0].data().gymName;
+        await updateDoc(gymSnap.docs[0].ref, {
+          status: 'active'
+        });
+      }
+
+      // Generate SaaS payment receipt
+      const saasReceipt = {
+        gymId,
+        isSaaS: true,
+        gymName,
+        invoice_number: `SAAS-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+        subtotal: subData.price || 0,
+        tax_amount: 0,
+        total_amount: subData.price || 0,
+        status: 'paid',
+        issued_at: new Date().toISOString(),
+        paid_at: new Date().toISOString(),
+        plan_id: subData.planId,
+        created_at: new Date().toISOString(),
+        billingPeriod: subData.billingPeriod || 'monthly',
+        currency: subData.currency || 'LKR'
+      };
+      await addDoc(collection(db, COLLECTIONS.INVOICES), saasReceipt);
+
+      await logAudit(
+        'gym.subscription_renew', 'subscription', subSnap.docs[0].id,
+        `Renewed SaaS subscription for ${gymName} until ${newRenewalDate.split('T')[0]}`,
+        currentUser?.name
+      );
+
+      showToast(`Subscription for ${gymName} renewed successfully.`, 'success');
+      return { success: true };
+    } catch (err) {
+      console.error('renewGymSubscription error:', err);
+      return { success: false, message: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
+  // Update Gym Directory details
+  const updateGymDetails = useCallback(async (gymId, updatedFields) => {
+    try {
+      const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', '==', gymId)));
+      if (gymSnap.empty) {
+        return { success: false, message: 'Gym not found.' };
+      }
+      
+      const gymRef = gymSnap.docs[0].ref;
+      await updateDoc(gymRef, {
+        gymName: updatedFields.gymName,
+        ownerName: updatedFields.ownerName,
+        phone: updatedFields.phone,
+        address: updatedFields.address,
+        country: updatedFields.country,
+        currency: updatedFields.currency,
+        timezone: updatedFields.timezone,
+      });
+
+      // Also update gym settings
+      const settingsSnap = await getDocs(query(collection(db, COLLECTIONS.GYM_SETTINGS), where('gymId', '==', gymId)));
+      if (!settingsSnap.empty) {
+        await updateDoc(settingsSnap.docs[0].ref, {
+          gymName: updatedFields.gymName,
+          phone: updatedFields.phone,
+          address: updatedFields.address,
+          currency: updatedFields.currency,
+          timezone: updatedFields.timezone,
+        });
+      }
+
+      await logAudit(
+        'gym.details_update', 'gym', gymId,
+        `Updated directory details for ${updatedFields.gymName}`,
+        currentUser?.name
+      );
+
+      showToast('Gym details updated successfully.', 'success');
+      return { success: true };
+    } catch (err) {
+      console.error('updateGymDetails error:', err);
       return { success: false, message: err.message };
     }
   }, [currentUser, logAudit, showToast]);
@@ -2415,6 +2549,8 @@ export const DashboardProvider = ({ children }) => {
       suspendGym,
       deleteGym,
       resetGymOwnerPassword,
+      renewGymSubscription,
+      updateGymDetails,
       createSupportTicket,
       replySupportTicket,
       closeSupportTicket,
