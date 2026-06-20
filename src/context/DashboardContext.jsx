@@ -1124,7 +1124,8 @@ export const DashboardProvider = ({ children }) => {
         maxMembers: gymData.subscriptionPlan === 'Starter' ? 100 : (gymData.subscriptionPlan === 'Professional' ? 500 : 99999),
         status: 'trial',
         createdAt: new Date().toISOString(),
-        dashboardUrl: `${getBaseUrl()}?gymId=${generatedGymId}`
+        dashboardUrl: `${getBaseUrl()}?gymId=${generatedGymId}`,
+        installmentPlan: gymData.installmentPlan || 'Monthly Subscription'
       };
       await addDoc(collection(db, COLLECTIONS.GYMS), newGymDoc);
 
@@ -1152,17 +1153,33 @@ export const DashboardProvider = ({ children }) => {
       const subStaff = { Trial: 2, Starter: 3, Professional: 10, Enterprise: 99999 };
 
       const planSelected = gymData.subscriptionPlan || 'Starter';
+      const installmentSelected = gymData.installmentPlan || 'Monthly Subscription';
+
+      let priceSelected = subPrices[planSelected] || 6000;
+      let billingPeriod = 'monthly';
+      let nextRenewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      if (installmentSelected === '1 Time Payment') {
+        priceSelected = (subPrices[planSelected] || 6000) * 10; // Annual upfront (10 months fee)
+        billingPeriod = 'one_time';
+        nextRenewalDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      } else if (installmentSelected === '3 Month Installment Plan') {
+        priceSelected = (subPrices[planSelected] || 6000) * 3; // 3 months contract upfront
+        billingPeriod = 'installment_3mo';
+        nextRenewalDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+      }
+
       const newSubDoc = {
         gymId: generatedGymId,
         planId: planSelected.toLowerCase(),
         maxMembers: subMembers[planSelected] || 100,
         maxStaff: subStaff[planSelected] || 3,
         status: 'active',
-        price: subPrices[planSelected] || 6000,
+        price: priceSelected,
         currency: gymData.currency || 'LKR',
-        billingPeriod: 'monthly',
+        billingPeriod: billingPeriod,
         startDate: new Date().toISOString(),
-        nextRenewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        nextRenewalDate: nextRenewalDate
       };
       await addDoc(collection(db, COLLECTIONS.SUBSCRIPTIONS), newSubDoc);
 
@@ -1192,7 +1209,7 @@ export const DashboardProvider = ({ children }) => {
         await addDoc(plansRef, p);
       }
 
-      // Create initial SaaS payment invoice if price > 0
+      // Create initial SaaS payment invoice if price > 0 (NO TAX)
       if (newSubDoc.price > 0) {
         const initialPayment = {
           gymId: generatedGymId,
@@ -1215,7 +1232,7 @@ export const DashboardProvider = ({ children }) => {
 
       await logAudit(
         'gym.onboard', 'gym', generatedGymId,
-        `Onboarded new gym: ${gymData.gymName} (Owner: ${gymData.ownerName})`,
+        `Onboarded new gym: ${gymData.gymName} (Owner: ${gymData.ownerName}, Plan: ${planSelected}, Period: ${installmentSelected})`,
         currentUser?.name
       );
 
@@ -1234,31 +1251,36 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [currentUser, logAudit, showToast]);
 
-  // Suspend/Activate Gym
-  const suspendGym = useCallback(async (gymId, isSuspended) => {
+  // Update Gym Status (active, frozen, suspended)
+  const updateGymStatus = useCallback(async (gymId, newStatus) => {
     try {
       const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', '==', gymId)));
       if (!gymSnap.empty) {
-        await updateDoc(gymSnap.docs[0].ref, { status: isSuspended ? 'suspended' : 'active' });
+        await updateDoc(gymSnap.docs[0].ref, { status: newStatus });
       }
 
       const subSnap = await getDocs(query(collection(db, COLLECTIONS.SUBSCRIPTIONS), where('gymId', '==', gymId)));
       if (!subSnap.empty) {
-        await updateDoc(subSnap.docs[0].ref, { status: isSuspended ? 'suspended' : 'active' });
+        await updateDoc(subSnap.docs[0].ref, { status: newStatus === 'deactivated' || newStatus === 'suspended' ? 'suspended' : newStatus });
       }
 
       await logAudit(
-        isSuspended ? 'gym.suspend' : 'gym.unsuspend', 'gym', gymId,
-        `${isSuspended ? 'Suspended' : 'Unsuspended'} gym directory access for ${gymId}`,
+        'gym.status_update', 'gym', gymId,
+        `Updated gym status to ${newStatus} for ${gymId}`,
         currentUser?.name
       );
-      showToast(`Gym ${isSuspended ? 'suspended' : 'activated'} successfully.`, 'success');
+      showToast(`Gym status updated to ${newStatus} successfully.`, 'success');
       return { success: true };
     } catch (err) {
-      console.error('suspendGym error:', err);
+      console.error('updateGymStatus error:', err);
       return { success: false, message: err.message };
     }
   }, [currentUser, logAudit, showToast]);
+
+  // Suspend/Activate Gym (Legacy Wrapper)
+  const suspendGym = useCallback(async (gymId, isSuspended) => {
+    return updateGymStatus(gymId, isSuspended ? 'suspended' : 'active');
+  }, [updateGymStatus]);
 
   // Delete Gym
   const deleteGym = useCallback(async (gymId) => {
@@ -1368,6 +1390,98 @@ export const DashboardProvider = ({ children }) => {
       return { success: true };
     } catch (err) {
       console.error('renewGymSubscription error:', err);
+      return { success: false, message: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
+  // Update and Renew Subscription
+  const updateAndRenewSubscription = useCallback(async (gymId, planData) => {
+    try {
+      const { planId, price, billingPeriod, currency, durationDays } = planData;
+
+      // Find subscription document
+      const subSnap = await getDocs(query(collection(db, COLLECTIONS.SUBSCRIPTIONS), where('gymId', '==', gymId)));
+      if (subSnap.empty) {
+        return { success: false, message: 'Subscription not found for this gym.' };
+      }
+      const subDocRef = subSnap.docs[0].ref;
+      const subData = subSnap.docs[0].data();
+
+      // Extend next renewal date by durationDays (default 30)
+      const currentRenewal = subData.nextRenewalDate;
+      const baseDate = currentRenewal && new Date(currentRenewal).getTime() > Date.now()
+        ? new Date(currentRenewal)
+        : new Date();
+      baseDate.setDate(baseDate.getDate() + parseInt(durationDays || 30));
+      const newRenewalDate = baseDate.toISOString();
+
+      const subMembers = { trial: 20, starter: 100, professional: 500, enterprise: 99999 };
+      const subStaff = { trial: 2, starter: 3, professional: 10, enterprise: 99999 };
+      const maxMembers = subMembers[planId.toLowerCase()] || 100;
+      const maxStaff = subStaff[planId.toLowerCase()] || 3;
+
+      // Update subscription in Firestore
+      await updateDoc(subDocRef, {
+        planId: planId.toLowerCase(),
+        price: parseFloat(price),
+        billingPeriod,
+        currency,
+        maxMembers,
+        maxStaff,
+        nextRenewalDate: newRenewalDate,
+        status: 'active'
+      });
+
+      // Update gym document to make sure it's active
+      const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', '==', gymId)));
+      let gymName = 'Client Gym';
+      if (!gymSnap.empty) {
+        gymName = gymSnap.docs[0].data().gymName;
+        const planName = planId.charAt(0).toUpperCase() + planId.slice(1);
+        await updateDoc(gymSnap.docs[0].ref, {
+          subscriptionPlan: planName,
+          maxMembers: maxMembers,
+          status: 'active'
+        });
+      }
+
+      // Generate SaaS payment receipt (NO TAX)
+      const invoiceNumber = `SAAS-INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const saasReceipt = {
+        gymId,
+        isSaaS: true,
+        gymName,
+        invoice_number: invoiceNumber,
+        subtotal: parseFloat(price),
+        tax_amount: 0,
+        total_amount: parseFloat(price),
+        status: 'paid',
+        issued_at: new Date().toISOString(),
+        paid_at: new Date().toISOString(),
+        plan_id: planId.toLowerCase(),
+        created_at: new Date().toISOString(),
+        billingPeriod,
+        currency
+      };
+      
+      const newInvoiceDoc = await addDoc(collection(db, COLLECTIONS.INVOICES), saasReceipt);
+
+      await logAudit(
+        'gym.subscription_renew_and_update', 'subscription', subSnap.docs[0].id,
+        `Renewed and updated SaaS subscription for ${gymName} until ${newRenewalDate.split('T')[0]}`,
+        currentUser?.name
+      );
+
+      showToast(`Subscription for ${gymName} updated and renewed successfully.`, 'success');
+      return { 
+        success: true, 
+        invoice: { 
+          id: newInvoiceDoc.id, 
+          ...saasReceipt 
+        } 
+      };
+    } catch (err) {
+      console.error('updateAndRenewSubscription error:', err);
       return { success: false, message: err.message };
     }
   }, [currentUser, logAudit, showToast]);
@@ -2546,10 +2660,12 @@ export const DashboardProvider = ({ children }) => {
       // FitGenCore SaaS Callbacks
       seedDatabaseClientSide,
       onboardNewGym,
+      updateGymStatus,
       suspendGym,
       deleteGym,
       resetGymOwnerPassword,
       renewGymSubscription,
+      updateAndRenewSubscription,
       updateGymDetails,
       createSupportTicket,
       replySupportTicket,

@@ -25,19 +25,25 @@ import {
   Edit,
   ArrowRight,
   TrendingUp,
-  Award
+  Award,
+  Plus,
+  Printer,
+  Sparkles,
+  Lock,
+  Unlock,
+  AlertCircle
 } from 'lucide-react';
 
-const ClientsList = () => {
+const ClientsList = ({ setActiveTab }) => {
   const { 
     gyms, 
     subscriptions, 
     members, 
     invoices, 
-    suspendGym, 
+    updateGymStatus,
     deleteGym, 
     resetGymOwnerPassword, 
-    renewGymSubscription,
+    updateAndRenewSubscription,
     updateGymDetails,
     getGymHealthScore, 
     showToast 
@@ -59,6 +65,17 @@ const ClientsList = () => {
   // Invoice / Receipt viewing state
   const [viewingReceipt, setViewingReceipt] = useState(null);
 
+  // Renewal & Update modal states
+  const [showRenewModal, setShowRenewModal] = useState(false);
+  const [renewForm, setRenewForm] = useState({
+    planId: 'starter',
+    installmentPlan: 'Monthly Subscription',
+    price: 6000,
+    currency: 'LKR',
+    durationDays: 30
+  });
+  const [renewIsSubmitting, setRenewIsSubmitting] = useState(false);
+
   // Edit gym form state
   const [editForm, setEditForm] = useState({
     gymName: '',
@@ -70,7 +87,6 @@ const ClientsList = () => {
     timezone: 'Asia/Colombo'
   });
   const [isSavingDetails, setIsSavingDetails] = useState(false);
-  const [isRenewing, setIsRenewing] = useState(false);
 
   // Filter gyms
   const filteredGyms = gyms.filter(gym => 
@@ -79,9 +95,8 @@ const ClientsList = () => {
     gym.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSuspendToggle = async (gymId, currentStatus) => {
-    const isSuspended = currentStatus === 'active' || currentStatus === 'trial';
-    const res = await suspendGym(gymId, isSuspended);
+  const handleStatusChange = async (gymId, newStatus) => {
+    const res = await updateGymStatus(gymId, newStatus);
     if (!res.success) {
       showToast(res.message, 'error');
     } else {
@@ -89,7 +104,7 @@ const ClientsList = () => {
       if (selectedGym && selectedGym.gymId === gymId) {
         setSelectedGym(prev => ({
           ...prev,
-          status: isSuspended ? 'suspended' : 'active'
+          status: newStatus
         }));
       }
     }
@@ -137,6 +152,72 @@ const ClientsList = () => {
     });
   };
 
+  const openRenewModal = (gym, sub) => {
+    if (!sub) {
+      showToast('No subscription record found to renew.', 'error');
+      return;
+    }
+    
+    const billingPeriodMapped = sub.billingPeriod === 'one_time' 
+      ? '1 Time Payment' 
+      : (sub.billingPeriod === 'installment_3mo' ? '3 Month Installment Plan' : 'Monthly Subscription');
+
+    setRenewForm({
+      planId: sub.planId || 'starter',
+      installmentPlan: billingPeriodMapped,
+      price: sub.price || 6000,
+      currency: sub.currency || 'LKR',
+      durationDays: sub.billingPeriod === 'one_time' ? 365 : (sub.billingPeriod === 'installment_3mo' ? 90 : 30)
+    });
+    setShowRenewModal(true);
+  };
+
+  const handleRenewFormChange = (updatedFields) => {
+    const nextForm = { ...renewForm, ...updatedFields };
+    
+    // Auto calculate price rate & duration if planId or installmentPlan changed
+    if (updatedFields.planId || updatedFields.installmentPlan) {
+      const subPrices = { trial: 0, starter: 6000, professional: 12000, enterprise: 30000 };
+      const basePrice = subPrices[nextForm.planId.toLowerCase()] || 0;
+      
+      if (nextForm.installmentPlan === '1 Time Payment') {
+        nextForm.price = basePrice * 10; // Annual discount (10 months fee)
+        nextForm.durationDays = 365;
+      } else if (nextForm.installmentPlan === '3 Month Installment Plan') {
+        nextForm.price = basePrice * 3; // 3 months total
+        nextForm.durationDays = 90;
+      } else {
+        nextForm.price = basePrice;
+        nextForm.durationDays = 30;
+      }
+    }
+    
+    setRenewForm(nextForm);
+  };
+
+  const handleRenewSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedGym) return;
+
+    setRenewIsSubmitting(true);
+    const res = await updateAndRenewSubscription(selectedGym.gymId, renewForm);
+    setRenewIsSubmitting(false);
+
+    if (res.success) {
+      setShowRenewModal(false);
+      // Refresh local selected gym and open the generated invoice/receipt immediately
+      const updatedGym = gyms.find(g => g.gymId === selectedGym.gymId);
+      if (updatedGym) {
+        setSelectedGym(updatedGym);
+      }
+      if (res.invoice) {
+        setViewingReceipt(res.invoice);
+      }
+    } else {
+      showToast(res.message, 'error');
+    }
+  };
+
   const handleEditDetailsSubmit = async (e) => {
     e.preventDefault();
     if (!editForm.gymName || !editForm.ownerName || !editForm.phone) {
@@ -157,22 +238,6 @@ const ClientsList = () => {
     }
   };
 
-  const handleRenewSubscription = async () => {
-    if (!selectedGym) return;
-    
-    setIsRenewing(true);
-    const res = await renewGymSubscription(selectedGym.gymId);
-    setIsRenewing(false);
-
-    if (res.success) {
-      // Refresh selected gym status in case it changed
-      const updatedGym = gyms.find(g => g.gymId === selectedGym.gymId);
-      if (updatedGym) {
-        setSelectedGym(updatedGym);
-      }
-    }
-  };
-
   // Find subscription associated with the gym
   const getSubscriptionForGym = (gymId) => {
     return subscriptions.find(s => s.gymId === gymId);
@@ -183,7 +248,7 @@ const ClientsList = () => {
     return invoices.filter(i => i.gymId === gymId && i.isSaaS === true);
   };
 
-  // Format currency
+  // Format currency (no decimals needed for integer currencies if preferred, but keeping standard)
   const formatCurrency = (val, code = 'LKR') => {
     return `${val?.toLocaleString('en-US', { minimumFractionDigits: 2 })} ${code}`;
   };
@@ -199,22 +264,45 @@ const ClientsList = () => {
         {/* Header and Search bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '2rem', flexWrap: 'wrap' }}>
           <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, fontFamily: 'var(--font-display)' }}>Client Gym Directory</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Building2 size={20} style={{ color: '#a855f7' }} /> Client Workspace Directory
+            </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-              Manage directories, access statuses, owner credentials, and data isolation.
+              Detailed multi-tenant overview. Manage system isolation, status changes, credentials, and custom renewals.
             </p>
           </div>
           
-          <div style={{ position: 'relative', width: '300px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-            <input 
-              type="text" 
-              className="form-control" 
-              style={{ paddingLeft: '2.5rem' }} 
-              placeholder="Search by gym name, email..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ position: 'relative', width: '260px' }}>
+              <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+              <input 
+                type="text" 
+                className="form-control" 
+                style={{ paddingLeft: '2.3rem', fontSize: '0.8rem' }} 
+                placeholder="Search by gym name, email..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            {setActiveTab && (
+              <button
+                className="btn btn-primary"
+                onClick={() => setActiveTab('create_gym')}
+                style={{
+                  background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  padding: '0.6rem 1rem'
+                }}
+              >
+                <Plus size={16} /> Onboard Workspace
+              </button>
+            )}
           </div>
         </div>
 
@@ -244,9 +332,6 @@ const ClientsList = () => {
                   let healthColor = '#10b981'; // Green
                   if (healthScore < 50) healthColor = '#ef4444'; // Red
                   else if (healthScore < 75) healthColor = '#f59e0b'; // Orange
-
-                  const isSuspended = gym.status === 'suspended';
-                  const isTrial = gym.status === 'trial';
 
                   return (
                     <tr key={gym.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.85rem' }}>
@@ -293,8 +378,11 @@ const ClientsList = () => {
                       </td>
 
                       {/* Plan */}
-                      <td style={{ padding: '1rem 0.5rem', fontWeight: 600 }}>
-                        {gym.subscriptionPlan}
+                      <td style={{ padding: '1rem 0.5rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{gym.subscriptionPlan}</span>
+                          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{gym.installmentPlan || 'Monthly Plan'}</span>
+                        </div>
                       </td>
 
                       {/* Status */}
@@ -305,11 +393,17 @@ const ClientsList = () => {
                           fontSize: '0.7rem',
                           fontWeight: 700,
                           textTransform: 'uppercase',
-                          background: isSuspended ? 'rgba(239, 68, 68, 0.1)' : isTrial ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                          color: isSuspended ? '#ef4444' : isTrial ? '#3b82f6' : '#10b981',
-                          border: `1px solid ${isSuspended ? 'rgba(239, 68, 68, 0.2)' : isTrial ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`
+                          background: gym.status === 'suspended' ? 'rgba(239, 68, 68, 0.1)' : 
+                                      gym.status === 'frozen' ? 'rgba(245, 158, 11, 0.1)' : 
+                                      gym.status === 'trial' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                          color: gym.status === 'suspended' ? '#ef4444' : 
+                                 gym.status === 'frozen' ? '#f59e0b' : 
+                                 gym.status === 'trial' ? '#3b82f6' : '#10b981',
+                          border: `1px solid ${gym.status === 'suspended' ? 'rgba(239, 68, 68, 0.2)' : 
+                                                gym.status === 'frozen' ? 'rgba(245, 158, 11, 0.2)' : 
+                                                gym.status === 'trial' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`
                         }}>
-                          {gym.status}
+                          {gym.status === 'suspended' ? 'deactivated' : gym.status}
                         </span>
                       </td>
 
@@ -335,22 +429,47 @@ const ClientsList = () => {
                           {/* View Profile */}
                           <button
                             onClick={() => openGymProfile(gym)}
-                            className="btn btn-secondary"
-                            style={{ padding: '0.4rem', borderRadius: '6px' }}
-                            title="View Detailed Profile"
+                            className="btn btn-primary"
+                            style={{ 
+                              padding: '0.35rem 0.75rem', 
+                              borderRadius: '6px', 
+                              fontSize: '0.75rem', 
+                              fontWeight: 600,
+                              background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                              border: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                            title="View Profile and Workspace Details"
                           >
-                            <Eye size={14} />
+                            <Eye size={12} /> View Profile
                           </button>
 
-                          {/* Suspend/Activate toggle */}
-                          <button
-                            onClick={() => handleSuspendToggle(gym.gymId, gym.status)}
-                            className="btn btn-secondary"
-                            style={{ padding: '0.4rem', borderRadius: '6px' }}
-                            title={isSuspended ? 'Reactivate Gym Workspace' : 'Suspend Gym Workspace'}
+                          {/* Quick Status Select */}
+                          <select
+                            value={gym.status}
+                            onChange={(e) => handleStatusChange(gym.gymId, e.target.value)}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.03)',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              borderRadius: '6px',
+                              padding: '0.35rem 0.5rem',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              color: gym.status === 'active' ? '#10b981' : 
+                                     gym.status === 'frozen' ? '#f59e0b' : 
+                                     gym.status === 'trial' ? '#3b82f6' : '#ef4444',
+                              cursor: 'pointer',
+                              outline: 'none',
+                              width: '110px'
+                            }}
                           >
-                            {isSuspended ? <Play size={14} style={{ color: '#10b981' }} /> : <Pause size={14} style={{ color: '#f59e0b' }} />}
-                          </button>
+                            <option value="active" style={{ color: '#10b981', background: '#0c0c0c' }}>Active</option>
+                            <option value="frozen" style={{ color: '#f59e0b', background: '#0c0c0c' }}>Frozen</option>
+                            <option value="suspended" style={{ color: '#ef4444', background: '#0c0c0c' }}>Deactivated</option>
+                            <option value="trial" style={{ color: '#3b82f6', background: '#0c0c0c' }}>Trialing</option>
+                          </select>
 
                           {/* Reset Password */}
                           <button
@@ -421,7 +540,7 @@ const ClientsList = () => {
             right: 0,
             top: 0,
             bottom: 0,
-            width: '540px',
+            width: '560px',
             background: '#0c0c0c',
             borderLeft: '1px solid var(--border-color)',
             boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.8)',
@@ -467,7 +586,7 @@ const ClientsList = () => {
                     {selectedGym.gymName}
                   </h4>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    ID: {selectedGym.gymId}
+                    Workspace Subdomain ID: {selectedGym.gymId}
                   </span>
                 </div>
               </div>
@@ -500,10 +619,10 @@ const ClientsList = () => {
               padding: '0 0.75rem'
             }}>
               {[
-                { id: 'profile', label: 'Profile & Sub' },
-                { id: 'usage', label: 'Usage & Health' },
+                { id: 'profile', label: 'Profile & Status' },
+                { id: 'usage', label: 'Usage & Quotas' },
                 { id: 'billing', label: 'SaaS Receipts' },
-                { id: 'edit', label: 'Edit Directory' }
+                { id: 'edit', label: 'Edit Workspace' }
               ].map(t => {
                 const isActive = activeDrawerTab === t.id;
                 return (
@@ -534,48 +653,91 @@ const ClientsList = () => {
             {/* Drawer Content viewport */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
               
-              {/* TAB 1: Profile & Subscription info */}
+              {/* TAB 1: Profile & Workspace status */}
               {activeDrawerTab === 'profile' && (() => {
                 const sub = getSubscriptionForGym(selectedGym.gymId);
-                const isSuspended = selectedGym.status === 'suspended';
-                const isTrial = selectedGym.status === 'trial';
                 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    {/* Status card */}
+                    {/* Workspace status controls */}
                     <div style={{
-                      background: 'rgba(255, 255, 255, 0.01)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      padding: '1rem',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      borderRadius: '10px',
+                      padding: '1.25rem',
                       display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
+                      flexDirection: 'column',
+                      gap: '0.75rem'
                     }}>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Workspace Status</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                          <span style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: isSuspended ? '#ef4444' : isTrial ? '#3b82f6' : '#10b981'
-                          }} />
-                          <strong style={{ fontSize: '0.95rem', textTransform: 'capitalize' }}>{selectedGym.status}</strong>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Workspace Status</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                            <span style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              background: selectedGym.status === 'active' ? '#10b981' : 
+                                          selectedGym.status === 'frozen' ? '#f59e0b' : 
+                                          selectedGym.status === 'trial' ? '#3b82f6' : '#ef4444'
+                            }} />
+                            <strong style={{ fontSize: '0.95rem', textTransform: 'capitalize', color: 'var(--text-primary)' }}>
+                              {selectedGym.status === 'suspended' ? 'deactivated' : selectedGym.status}
+                            </strong>
+                          </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleSuspendToggle(selectedGym.gymId, selectedGym.status)}
-                        className={`btn ${isSuspended ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{
-                          fontSize: '0.75rem',
-                          padding: '0.4rem 0.8rem',
-                          background: isSuspended ? 'linear-gradient(135deg, #10b981, #059669)' : 'none',
-                          border: isSuspended ? 'none' : '1px solid rgba(255,255,255,0.1)'
-                        }}
-                      >
-                        {isSuspended ? 'Reactivate Client' : 'Suspend Client'}
-                      </button>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '0.25rem' }}>
+                        <button
+                          onClick={() => handleStatusChange(selectedGym.gymId, 'active')}
+                          className="btn"
+                          style={{
+                            flex: 1,
+                            fontSize: '0.75rem',
+                            padding: '0.45rem',
+                            borderRadius: '6px',
+                            background: selectedGym.status === 'active' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.01)',
+                            color: selectedGym.status === 'active' ? '#10b981' : 'var(--text-muted)',
+                            border: `1px solid ${selectedGym.status === 'active' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.05)'}`,
+                            fontWeight: 600
+                          }}
+                        >
+                          Activate
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(selectedGym.gymId, 'frozen')}
+                          className="btn"
+                          style={{
+                            flex: 1,
+                            fontSize: '0.75rem',
+                            padding: '0.45rem',
+                            borderRadius: '6px',
+                            background: selectedGym.status === 'frozen' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255,255,255,0.01)',
+                            color: selectedGym.status === 'frozen' ? '#f59e0b' : 'var(--text-muted)',
+                            border: `1px solid ${selectedGym.status === 'frozen' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)'}`,
+                            fontWeight: 600
+                          }}
+                        >
+                          Freeze
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(selectedGym.gymId, 'suspended')}
+                          className="btn"
+                          style={{
+                            flex: 1,
+                            fontSize: '0.75rem',
+                            padding: '0.45rem',
+                            borderRadius: '6px',
+                            background: selectedGym.status === 'suspended' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255,255,255,0.01)',
+                            color: selectedGym.status === 'suspended' ? '#ef4444' : 'var(--text-muted)',
+                            border: `1px solid ${selectedGym.status === 'suspended' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.05)'}`,
+                            fontWeight: 600
+                          }}
+                        >
+                          Deactivate
+                        </button>
+                      </div>
                     </div>
 
                     {/* Owner credentials card */}
@@ -601,10 +763,29 @@ const ClientsList = () => {
                       </div>
                     </div>
 
-                    {/* Subscription billing details */}
+                    {/* Active Subscription Panel */}
                     {sub ? (
                       <div>
-                        <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>SaaS Subscription Plan</h5>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                          <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, margin: 0 }}>SaaS Subscription Plan</h5>
+                          <button
+                            onClick={() => openRenewModal(selectedGym, sub)}
+                            className="btn btn-primary"
+                            style={{
+                              padding: '0.4rem 0.75rem',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                              border: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}
+                          >
+                            <TrendingUp size={12} /> Renew & Update
+                          </button>
+                        </div>
+                        
                         <div style={{ 
                           display: 'flex', 
                           flexDirection: 'column', 
@@ -622,7 +803,7 @@ const ClientsList = () => {
                               </h4>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Monthly Rate</span>
+                              <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Pricing Rate</span>
                               <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-success)', marginTop: '0.1rem' }}>
                                 {sub.price?.toLocaleString()} {sub.currency}
                               </div>
@@ -631,41 +812,17 @@ const ClientsList = () => {
 
                           <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
-                              <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Member Limit</span>
-                              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{sub.maxMembers === 99999 ? 'Unlimited' : sub.maxMembers} members</span>
+                              <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Billing Schedule</span>
+                              <span style={{ fontWeight: 600, fontSize: '0.85rem', textTransform: 'capitalize' }}>
+                                {sub.billingPeriod === 'one_time' ? '1 Time / Annual' : (sub.billingPeriod === 'installment_3mo' ? '3 Month Installment' : 'Monthly Recurring')}
+                              </span>
                             </div>
                             <div>
-                              <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Staff Limit</span>
-                              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{sub.maxStaff === 99999 ? 'Unlimited' : sub.maxStaff} employees</span>
-                            </div>
-                          </div>
-
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)' }}>Next Renewal Date</span>
+                              <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Renewal Date</span>
                               <span style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
                                 <Calendar size={13} /> {sub.nextRenewalDate ? new Date(sub.nextRenewalDate).toLocaleDateString() : 'N/A'}
                               </span>
                             </div>
-
-                            {/* Renew Subscription Action Button */}
-                            <button
-                              onClick={handleRenewSubscription}
-                              disabled={isRenewing}
-                              className="btn btn-primary"
-                              style={{
-                                padding: '0.5rem 1rem',
-                                background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
-                                border: 'none',
-                                fontWeight: 600,
-                                fontSize: '0.75rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.35rem'
-                              }}
-                            >
-                              <TrendingUp size={13} /> {isRenewing ? 'Renewing...' : 'Renew 30 Days'}
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -725,7 +882,7 @@ const ClientsList = () => {
                       <div>
                         <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>SaaS Health Index</h4>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0' }}>
-                          Calculated using active member ratio, attendance log rate, and collection ratios.
+                          Calculated using tenant engagement, database activity, and status transitions.
                         </p>
                       </div>
                     </div>
@@ -733,7 +890,7 @@ const ClientsList = () => {
                     {/* Member quota progress */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.35rem' }}>
-                        <span style={{ fontWeight: 600 }}>SaaS Member Quota Limit</span>
+                        <span style={{ fontWeight: 600 }}>Tenant Member Limit</span>
                         <span style={{ color: 'var(--text-muted)' }}>
                           {gymMembers.length} / {maxMembersAllowed === 99999 ? 'Unlimited' : maxMembersAllowed} ({percentQuotaUsed}%)
                         </span>
@@ -750,14 +907,14 @@ const ClientsList = () => {
 
                     {/* Breakdown */}
                     <div>
-                      <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>Database Directory Metrics</h5>
+                      <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>Database metrics</h5>
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: '1fr 1fr',
                         gap: '0.75rem'
                       }}>
                         <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Total Members Database</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Total Database Members</span>
                           <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.15rem 0 0 0' }}>{gymMembers.length}</h4>
                         </div>
                         <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
@@ -769,7 +926,7 @@ const ClientsList = () => {
                           <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.15rem 0 0 0', color: '#f59e0b' }}>{frozenMembers.length}</h4>
                         </div>
                         <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Inactive / Cancelled</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Cancelled / Inactive</span>
                           <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.15rem 0 0 0', color: '#525252' }}>{cancelledMembers.length}</h4>
                         </div>
                       </div>
@@ -786,7 +943,7 @@ const ClientsList = () => {
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, margin: 0 }}>SaaS Payments Billing History</h5>
+                      <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, margin: 0 }}>Billing History</h5>
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{receipts.length} Payments recorded</span>
                     </div>
 
@@ -1050,6 +1207,150 @@ const ClientsList = () => {
         </div>
       )}
 
+      {/* DETAILED SUBSCRIPTION RENEWAL & UPDATE MODAL */}
+      {showRenewModal && selectedGym && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 999
+        }}>
+          <div style={{
+            background: '#0c0c0c',
+            border: '1px solid rgba(168, 85, 247, 0.25)',
+            boxShadow: '0 10px 40px rgba(168, 85, 247, 0.1)',
+            borderRadius: '16px',
+            padding: '2rem',
+            width: '480px',
+            animation: 'fadeIn 0.25s ease-out'
+          }}>
+            <style>{`
+              @keyframes fadeIn {
+                from { opacity: 0; transform: scale(0.95); }
+                to { opacity: 1; transform: scale(1); }
+              }
+            `}</style>
+            
+            <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(to right, #a855f7, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <Sparkles size={20} style={{ color: '#a855f7' }} /> Renew & Update Subscription
+            </h4>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              Gym Workspace: <strong style={{ color: 'var(--text-primary)' }}>{selectedGym.gymName}</strong>
+            </p>
+
+            <form onSubmit={handleRenewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Subscription Plan</label>
+                  <select 
+                    className="form-control" 
+                    value={renewForm.planId} 
+                    onChange={e => handleRenewFormChange({ planId: e.target.value })}
+                  >
+                    <option value="trial">Trial Plan</option>
+                    <option value="starter">Starter Plan</option>
+                    <option value="professional">Professional Plan</option>
+                    <option value="enterprise">Enterprise Plan</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Installment / Billing Cycle</label>
+                  <select 
+                    className="form-control" 
+                    value={renewForm.installmentPlan} 
+                    onChange={e => handleRenewFormChange({ installmentPlan: e.target.value })}
+                  >
+                    <option value="Monthly Subscription">Monthly Recurring</option>
+                    <option value="3 Month Installment Plan">3 Month Installment</option>
+                    <option value="1 Time Payment">1 Time (Annual)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Price rate ({renewForm.currency})</label>
+                  <div style={{ position: 'relative' }}>
+                    <DollarSign size={13} style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                    <input 
+                      type="number" 
+                      className="form-control" 
+                      style={{ paddingLeft: '1.75rem' }}
+                      value={renewForm.price}
+                      onChange={e => setRenewForm({ ...renewForm, price: parseFloat(e.target.value) })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: '0.75rem' }}>Extension Duration (Days)</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={renewForm.durationDays}
+                    onChange={e => setRenewForm({ ...renewForm, durationDays: parseInt(e.target.value) })}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Limits Information Card */}
+              <div style={{
+                background: 'rgba(255,255,255,0.01)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: '8px',
+                padding: '0.85rem',
+                fontSize: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem'
+              }}>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <AlertCircle size={12} style={{ color: '#a855f7' }} /> New Quota Quota Parameters:
+                </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '0.85rem' }}>
+                  <span>Max Members:</span>
+                  <strong>
+                    {renewForm.planId === 'enterprise' ? 'Unlimited' : (renewForm.planId === 'professional' ? '500' : (renewForm.planId === 'trial' ? '20' : '100'))}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: '0.85rem' }}>
+                  <span>Max Staff:</span>
+                  <strong>
+                    {renewForm.planId === 'enterprise' ? 'Unlimited' : (renewForm.planId === 'professional' ? '10' : (renewForm.planId === 'trial' ? '2' : '3'))}
+                  </strong>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowRenewModal(false)}
+                  disabled={renewIsSubmitting}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={renewIsSubmitting}
+                  style={{ background: 'linear-gradient(135deg, #a855f7, #3b82f6)', borderColor: 'transparent', fontWeight: 600 }}
+                >
+                  {renewIsSubmitting ? 'Processing Renewal...' : 'Renew & Generate Receipt'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* PREMIUM SAAS INVOICE/RECEIPT MODAL (PDF style viewer) */}
       {viewingReceipt && (
         <div style={{
@@ -1063,25 +1364,57 @@ const ClientsList = () => {
           zIndex: 1000,
           padding: '2rem'
         }}>
-          <div style={{
-            background: '#ffffff',
-            color: '#1a1a1a',
-            borderRadius: '12px',
-            width: '600px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            {/* Modal Header actions */}
-            <div style={{
-              background: '#f8fafc',
-              padding: '1rem 1.5rem',
-              borderBottom: '1px solid #e2e8f0',
+          {/* Print only styling wrapper */}
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              .printable-receipt-area, .printable-receipt-area * {
+                visibility: visible !important;
+              }
+              .printable-receipt-area {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 3rem !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                box-shadow: none !important;
+                border: none !important;
+                z-index: 99999 !important;
+              }
+            }
+          `}</style>
+
+          <div 
+            className="printable-receipt-area"
+            style={{
+              background: '#ffffff',
+              color: '#1a1a1a',
+              borderRadius: '12px',
+              width: '620px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header actions - hidden on print by print CSS above since we only make .printable-receipt-area visible */}
+            <div 
+              style={{
+                background: '#f8fafc',
+                padding: '1rem 1.5rem',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+              className="no-print-header"
+            >
               <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <Receipt size={16} /> Fitgencore SaaS Subscription Invoice
               </span>
@@ -1097,10 +1430,13 @@ const ClientsList = () => {
                     padding: '0.35rem 0.75rem',
                     fontSize: '0.75rem',
                     fontWeight: 600,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
                   }}
                 >
-                  Print / Save PDF
+                  <Printer size={13} /> Print / Save PDF
                 </button>
                 <button
                   onClick={() => setViewingReceipt(null)}
@@ -1184,7 +1520,7 @@ const ClientsList = () => {
                   <div>
                     <span style={{ display: 'block', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700 }}>BILLING CYCLE</span>
                     <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', textTransform: 'capitalize' }}>
-                      Monthly ({viewingReceipt.billingPeriod || 'monthly'})
+                      {viewingReceipt.billingPeriod === 'one_time' ? '1 Time (Annual)' : (viewingReceipt.billingPeriod === 'installment_3mo' ? '3 Month Installment' : 'Monthly')}
                     </span>
                   </div>
                 </div>
@@ -1195,7 +1531,7 @@ const ClientsList = () => {
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0', fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
                     <th style={{ padding: '0.75rem 0.5rem', textAlign: 'left' }}>Description</th>
-                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', width: '100px' }}>Billing Qty</th>
+                    <th style={{ padding: '0.75rem 0.5rem', textAlign: 'center', width: '120px' }}>Billing Term</th>
                     <th style={{ padding: '0.75rem 0.5rem', textAlign: 'right', width: '150px' }}>Amount</th>
                   </tr>
                 </thead>
@@ -1204,11 +1540,11 @@ const ClientsList = () => {
                     <td style={{ padding: '1rem 0.5rem' }}>
                       <strong>Fitgencore SaaS Platform - {viewingReceipt.plan_id ? viewingReceipt.plan_id.charAt(0).toUpperCase() + viewingReceipt.plan_id.slice(1) : 'Starter'} Plan</strong>
                       <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748b', marginTop: '0.2rem' }}>
-                        Real-time analytics, automated access control integrations, multi-tenant directory service.
+                        Automated directory isolation, cloud workspace access, member quota management, online support desk.
                       </span>
                     </td>
-                    <td style={{ padding: '1rem 0.5rem', textAlign: 'center' }}>
-                      1 Month
+                    <td style={{ padding: '1rem 0.5rem', textAlign: 'center', textTransform: 'capitalize' }}>
+                      {viewingReceipt.billingPeriod === 'one_time' ? '1 Year' : (viewingReceipt.billingPeriod === 'installment_3mo' ? '3 Months' : '1 Month')}
                     </td>
                     <td style={{ padding: '1rem 0.5rem', textAlign: 'right', fontWeight: 600 }}>
                       {formatCurrency(viewingReceipt.subtotal, viewingReceipt.currency)}
@@ -1217,18 +1553,16 @@ const ClientsList = () => {
                 </tbody>
               </table>
 
-              {/* Invoice Totals */}
+              {/* Invoice Totals (NO TAX OR TAX % MENTIONED OR INCLUDED ANYWHERE) */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
                 <div style={{ width: '250px', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                     <span>Subtotal:</span>
                     <span>{formatCurrency(viewingReceipt.subtotal, viewingReceipt.currency)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                    <span>Tax & Duties (0%):</span>
-                    <span>0.00 {viewingReceipt.currency || 'LKR'}</span>
-                  </div>
+                  
                   <hr style={{ border: 'none', borderTop: '1px solid #cbd5e1', margin: '0.25rem 0' }} />
+                  
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1rem', color: '#1e293b' }}>
                     <span>Total Amount Paid:</span>
                     <span>{formatCurrency(viewingReceipt.total_amount, viewingReceipt.currency)}</span>
@@ -1238,7 +1572,7 @@ const ClientsList = () => {
 
               {/* Invoice Footer */}
               <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
-                Thank you for partner gym onboarding with Fitgencore. If you have any billing concerns, please file a support ticket in the Support Center.
+                Thank you for your partner gym workspace onboarding with Fitgencore. If you have any billing concerns, please file a support ticket in the Support Center.
               </div>
 
             </div>

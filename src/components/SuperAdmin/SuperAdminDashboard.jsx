@@ -37,7 +37,7 @@ const SuperAdminDashboard = () => {
       case 'overview':
         return <SuperAdminOverview setActiveTab={setActiveTab} />;
       case 'clients':
-        return <ClientsList />;
+        return <ClientsList setActiveTab={setActiveTab} />;
       case 'create_gym':
         return <CreateGym />;
       case 'subscriptions':

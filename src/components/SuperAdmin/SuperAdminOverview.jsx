@@ -17,6 +17,7 @@ const SuperAdminOverview = ({ setActiveTab }) => {
   const totalGyms = gyms.length;
   const activeGymsCount = gyms.filter(g => g.status === 'active').length;
   const trialGymsCount = gyms.filter(g => g.status === 'trial').length;
+  const frozenGymsCount = gyms.filter(g => g.status === 'frozen').length;
   const suspendedGymsCount = gyms.filter(g => g.status === 'suspended').length;
   
   // Calculate MRR from active subscriptions
@@ -242,7 +243,7 @@ const SuperAdminOverview = ({ setActiveTab }) => {
       {/* Quick Summary Cards (Status indicators) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         gap: '1.25rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.03)', border: '1px solid rgba(16, 185, 129, 0.1)', borderRadius: '8px' }}>
@@ -265,13 +266,23 @@ const SuperAdminOverview = ({ setActiveTab }) => {
           </div>
         </div>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(245, 158, 11, 0.03)', border: '1px solid rgba(245, 158, 11, 0.1)', borderRadius: '8px' }}>
+          <div style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '0.5rem', borderRadius: '6px' }}>
+            <AlertTriangle size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f59e0b' }}>{frozenGymsCount}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Frozen Client Workspaces</div>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.03)', border: '1px solid rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
           <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--color-danger)', padding: '0.5rem', borderRadius: '6px' }}>
             <AlertTriangle size={20} />
           </div>
           <div>
             <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-danger)' }}>{suspendedGymsCount}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Suspended client workspaces</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Deactivated client workspaces</div>
           </div>
         </div>
       </div>
