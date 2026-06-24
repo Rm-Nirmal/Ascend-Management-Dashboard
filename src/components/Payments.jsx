@@ -872,10 +872,6 @@ const Payments = () => {
                   <span style={{ color: 'var(--text-muted)' }}>Subtotal:</span>
                   <span style={{ color: '#fff' }}>LKR {viewingInvoice.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Tax (8.5%):</span>
-                  <span style={{ color: '#fff' }}>+LKR {viewingInvoice.tax_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                </div>
                 {viewingInvoice.discount_amount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-success)' }}>
                     <span>Discounts:</span>

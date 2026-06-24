@@ -4,7 +4,7 @@ import {
   Users, 
   UserPlus, 
   QrCode, 
-
+  CreditCard,
   Sparkles, 
   ClipboardList,
   Shield,
@@ -26,6 +26,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
     { id: 'access', name: 'Access Console', icon: QrCode },
+    { id: 'console', name: 'Console', icon: CreditCard },
     { id: 'finance', name: 'Finance', icon: DollarSign },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
     { id: 'audit', name: 'System Audit Logs', icon: ClipboardList },
@@ -37,13 +38,17 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   // Filter based on currentUser role
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
-    
+
     // Regular gym staff can only access members, registrations, access
     if (currentUser.role !== 'gym_owner' && currentUser.role !== 'super_admin') {
       return ['members', 'registrations', 'access'].includes(item.id);
     }
     
-    // Gym owners can access everything except superadmin specific features
+    // Gym owners can access everything except Console
+    if (currentUser.role === 'gym_owner') {
+      return item.id !== 'console';
+    }
+    
     return true;
   });
 

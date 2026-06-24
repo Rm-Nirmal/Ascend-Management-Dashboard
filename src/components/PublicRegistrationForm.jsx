@@ -21,6 +21,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
     date_of_birth: '',
     branch_id: 'org_ascend_hq',
     plan_id: '',
+    installment_plan: '1 time',
     medical_conditions: '',
     fitness_goals: '',
     emergency_contact_name: '',
@@ -82,6 +83,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
         date_of_birth: '',
         branch_id: 'org_ascend_hq',
         plan_id: '',
+        installment_plan: '1 time',
         medical_conditions: '',
         fitness_goals: '',
         emergency_contact_name: '',
@@ -185,7 +187,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
         </p>
       </div>
 
-      <form onSubmit={handleSubmitRegistration} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <form onSubmit={handleSubmitRegistration} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Profile Photo Upload */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.5rem', gap: '0.5rem' }}>
           <div 
@@ -240,75 +242,87 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
           </span>
         </div>
 
-        <div className="pub-form-grid">
-          <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
-            <input 
-              type="text" 
-              required
-              placeholder="Amara Walker"
-              value={publicForm.full_name}
-              onChange={(e) => setPublicForm({...publicForm, full_name: e.target.value})}
-              className="glass-input"
-              style={{ marginTop: '0.25rem' }}
-            />
-            {formErrors.full_name && <span style={{ fontSize: '0.7rem', color: '#ffffff' }}>{formErrors.full_name}</span>}
-          </div>
-          <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address *</label>
-            <input 
-              type="email" 
-              required
-              placeholder="amara@gmail.com"
-              value={publicForm.email}
-              onChange={(e) => setPublicForm({...publicForm, email: e.target.value})}
-              className="glass-input"
-              style={{ marginTop: '0.25rem' }}
-            />
-            {formErrors.email && <span style={{ fontSize: '0.7rem', color: '#ffffff' }}>{formErrors.email}</span>}
-          </div>
-          <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mobile Number *</label>
-            <input 
-              type="tel" 
-              required
-              placeholder="+1 (555) 998-1234"
-              value={publicForm.phone}
-              onChange={(e) => setPublicForm({...publicForm, phone: e.target.value})}
-              className="glass-input"
-              style={{ marginTop: '0.25rem' }}
-            />
-            {formErrors.phone && <span style={{ fontSize: '0.7rem', color: '#ffffff' }}>{formErrors.phone}</span>}
-          </div>
-          <div className="pub-form-nested-grid">
+        {/* Section 1: Personal Details */}
+        <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h4 style={{ color: '#ffffff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
+            1. Personal & Contact Details
+          </h4>
+          <div className="pub-form-grid">
             <div>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gender</label>
-              <select 
-                value={publicForm.gender}
-                onChange={(e) => setPublicForm({...publicForm, gender: e.target.value})}
-                className="glass-select"
-                style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
-              >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Date of Birth *</label>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
               <input 
-                type="date" 
+                type="text" 
                 required
-                value={publicForm.date_of_birth}
-                onChange={(e) => setPublicForm({...publicForm, date_of_birth: e.target.value})}
+                placeholder="Amara Walker"
+                value={publicForm.full_name}
+                onChange={(e) => setPublicForm({...publicForm, full_name: e.target.value})}
                 className="glass-input"
-                style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+                style={{ marginTop: '0.25rem' }}
               />
-              {formErrors.date_of_birth && <span style={{ fontSize: '0.7rem', color: '#ffffff' }}>{formErrors.date_of_birth}</span>}
+              {formErrors.full_name && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.full_name}</span>}
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address *</label>
+              <input 
+                type="email" 
+                required
+                placeholder="amara@gmail.com"
+                value={publicForm.email}
+                onChange={(e) => setPublicForm({...publicForm, email: e.target.value})}
+                className="glass-input"
+                style={{ marginTop: '0.25rem' }}
+              />
+              {formErrors.email && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.email}</span>}
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mobile Number *</label>
+              <input 
+                type="tel" 
+                required
+                placeholder="+1 (555) 998-1234"
+                value={publicForm.phone}
+                onChange={(e) => setPublicForm({...publicForm, phone: e.target.value})}
+                className="glass-input"
+                style={{ marginTop: '0.25rem' }}
+              />
+              {formErrors.phone && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.phone}</span>}
+            </div>
+            <div className="pub-form-nested-grid">
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gender</label>
+                <select 
+                  value={publicForm.gender}
+                  onChange={(e) => setPublicForm({...publicForm, gender: e.target.value})}
+                  className="glass-select"
+                  style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Date of Birth *</label>
+                <input 
+                  type="date" 
+                  required
+                  value={publicForm.date_of_birth}
+                  onChange={(e) => setPublicForm({...publicForm, date_of_birth: e.target.value})}
+                  className="glass-input"
+                  style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+                />
+                {formErrors.date_of_birth && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.date_of_birth}</span>}
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Section 2: Health Profile */}
+        <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h4 style={{ color: '#ffffff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
+            2. Health Profile & Metrics
+          </h4>
           
-          {/* Weight, Height, and Body Fat */}
           <div className="pub-form-triple-grid">
             <div>
               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Weight (kg)</label>
@@ -344,74 +358,104 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
               />
             </div>
           </div>
-        </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Select Membership Plan *</label>
-          <select 
-            required
-            value={publicForm.plan_id}
-            onChange={(e) => setPublicForm({...publicForm, plan_id: e.target.value})}
-            className="glass-select"
-            style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
-          >
-            <option value="">Select Plan...</option>
-            {plans.map(p => (
-              <option key={p.id} value={p.id}>{p.name} (LKR {p.price.toLocaleString()}/mo)</option>
-            ))}
-          </select>
-          {formErrors.plan_id && <span style={{ fontSize: '0.7rem', color: '#ffffff' }}>{formErrors.plan_id}</span>}
-        </div>
-
-        <div>
-          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Any Medical Conditions / Injuries</label>
-          <textarea 
-            placeholder="Brief details if applicable..."
-            value={publicForm.medical_conditions}
-            onChange={(e) => setPublicForm({...publicForm, medical_conditions: e.target.value})}
-            className="glass-input"
-            style={{ marginTop: '0.25rem', resize: 'none', height: '60px', padding: '0.5rem' }}
-          />
-        </div>
-
-        <div>
-          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Primary Fitness Goals</label>
-          <input 
-            type="text" 
-            placeholder="Cardio fitness, strength training..."
-            value={publicForm.fitness_goals}
-            onChange={(e) => setPublicForm({...publicForm, fitness_goals: e.target.value})}
-            className="glass-input"
-            style={{ marginTop: '0.25rem' }}
-          />
-        </div>
-
-        <div className="pub-form-grid">
           <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Name</label>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fitness Goals</label>
             <input 
               type="text" 
-              placeholder="Parent / Spouse Name"
-              value={publicForm.emergency_contact_name}
-              onChange={(e) => setPublicForm({...publicForm, emergency_contact_name: e.target.value})}
-              className="glass-input"
-              style={{ marginTop: '0.25rem' }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Mobile</label>
-            <input 
-              type="text" 
-              placeholder="+1 (555) 000-0000"
-              value={publicForm.emergency_contact_phone}
-              onChange={(e) => setPublicForm({...publicForm, emergency_contact_phone: e.target.value})}
+              placeholder="Cardio fitness, strength training, weight loss..."
+              value={publicForm.fitness_goals}
+              onChange={(e) => setPublicForm({...publicForm, fitness_goals: e.target.value})}
               className="glass-input"
               style={{ marginTop: '0.25rem' }}
             />
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', gap: '0.5rem', background: '#ffffff', color: '#000000' }}>
+        {/* Section 3: Membership & Installment Options */}
+        <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h4 style={{ color: '#ffffff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
+            3. Membership & Installment Options
+          </h4>
+
+          <div className="pub-form-grid">
+            <div>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Subscription Plan *</label>
+              <select 
+                required
+                value={publicForm.plan_id}
+                onChange={(e) => setPublicForm({...publicForm, plan_id: e.target.value})}
+                className="glass-select"
+                style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+              >
+                <option value="">Select Plan...</option>
+                {plans.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} (LKR {p.price.toLocaleString()}/mo)</option>
+                ))}
+              </select>
+              {formErrors.plan_id && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.plan_id}</span>}
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Payment Installment Plan *</label>
+              <select 
+                required
+                value={publicForm.installment_plan}
+                onChange={(e) => setPublicForm({...publicForm, installment_plan: e.target.value})}
+                className="glass-select"
+                style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
+              >
+                <option value="1 time">1 Time (Pay in full)</option>
+                <option value="3 month installment plan">3 Month Installment Plan</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: Medical & Emergency Contact */}
+        <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h4 style={{ color: '#ffffff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
+            4. Medical & Emergency Info
+          </h4>
+
+          <div>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Any Medical Conditions / Injuries</label>
+            <textarea 
+              placeholder="Brief details if applicable..."
+              value={publicForm.medical_conditions}
+              onChange={(e) => setPublicForm({...publicForm, medical_conditions: e.target.value})}
+              className="glass-input"
+              style={{ marginTop: '0.25rem', resize: 'none', height: '60px', padding: '0.5rem' }}
+            />
+          </div>
+
+          <div className="pub-form-grid">
+            <div>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Name</label>
+              <input 
+                type="text" 
+                placeholder="Parent / Spouse Name"
+                value={publicForm.emergency_contact_name}
+                onChange={(e) => setPublicForm({...publicForm, emergency_contact_name: e.target.value})}
+                className="glass-input"
+                style={{ marginTop: '0.25rem' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Mobile</label>
+              <input 
+                type="text" 
+                placeholder="+1 (555) 000-0000"
+                value={publicForm.emergency_contact_phone}
+                onChange={(e) => setPublicForm({...publicForm, emergency_contact_phone: e.target.value})}
+                className="glass-input"
+                style={{ marginTop: '0.25rem' }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', gap: '0.5rem', background: '#ffffff', color: '#000000', fontWeight: 750 }}>
           <Send size={16} /> Submit Registration
         </button>
       </form>

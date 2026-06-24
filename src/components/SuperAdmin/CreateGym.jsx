@@ -14,11 +14,15 @@ import {
   Check,
   ShieldAlert,
   CheckCircle,
-  Loader2
+  Loader2,
+  HelpCircle,
+  Sparkles,
+  Info,
+  Calendar
 } from 'lucide-react';
 
 const CreateGym = () => {
-  const { onboardNewGym } = useDashboard();
+  const { onboardNewGym, saasPlans } = useDashboard();
   
   // States
   const [gymName, setGymName] = useState('');
@@ -27,6 +31,7 @@ const CreateGym = () => {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [subscriptionPlan, setSubscriptionPlan] = useState('Starter');
+  const [installmentPlan, setInstallmentPlan] = useState('Monthly Subscription');
   const [country, setCountry] = useState('Sri Lanka');
   const [currency, setCurrency] = useState('LKR');
   const [timezone, setTimezone] = useState('Asia/Colombo');
@@ -41,6 +46,43 @@ const CreateGym = () => {
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(''), 2000);
   };
+
+  // Fallback to defaults if saasPlans is empty, otherwise map from database
+  const plansToUse = saasPlans && saasPlans.length > 0 ? saasPlans : [
+    { id: 'trial', name: 'Trial', price: 0, maxMembers: 20, maxStaff: 2 },
+    { id: 'starter', name: 'Starter', price: 6000, maxMembers: 100, maxStaff: 3 },
+    { id: 'professional', name: 'Professional', price: 12000, maxMembers: 500, maxStaff: 10 },
+    { id: 'enterprise', name: 'Enterprise', price: 30000, maxMembers: 99999, maxStaff: 99999 }
+  ];
+
+  const getPriceBreakdown = () => {
+    const selectedPlanObj = plansToUse.find(p => p.name.toLowerCase() === subscriptionPlan.toLowerCase()) || plansToUse[0];
+    const base = selectedPlanObj.price || 0;
+    if (installmentPlan === '1 Time Payment') {
+      return {
+        baseRate: base,
+        multiplier: 10,
+        label: 'Annual upfront (10 months rate)',
+        total: base * 10
+      };
+    } else if (installmentPlan === '3 Month Installment Plan') {
+      return {
+        baseRate: base,
+        multiplier: 3,
+        label: '3 Months upfront contract',
+        total: base * 3
+      };
+    } else {
+      return {
+        baseRate: base,
+        multiplier: 1,
+        label: 'Monthly subscription rate',
+        total: base
+      };
+    }
+  };
+
+  const breakdown = getPriceBreakdown();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,6 +102,7 @@ const CreateGym = () => {
         phone,
         address,
         subscriptionPlan,
+        installmentPlan,
         country,
         currency,
         timezone
@@ -106,7 +149,7 @@ const CreateGym = () => {
           <CheckCircle size={48} style={{ color: 'var(--color-success)' }} />
           
           <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Gym Onboarded Successfully!</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Gym Workspace Onboarded!</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
               Copy the credentials below and provide them to the client.
             </p>
@@ -181,7 +224,6 @@ const CreateGym = () => {
               className="btn btn-secondary" 
               style={{ flex: 1, justifyContent: 'center' }}
               onClick={() => {
-                // Return to form or another tab
                 setCredentials(null);
               }}
             >
@@ -203,47 +245,63 @@ const CreateGym = () => {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '750px', margin: '0 auto' }}>
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.01)',
-        border: '1px solid rgba(255, 255, 255, 0.04)',
-        borderRadius: '12px',
-        padding: '2rem'
-      }}>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 1.5rem 0', color: 'var(--text-primary)' }}>
+    <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
           Onboard Client Gym Workspace
         </h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+          Provision isolated SaaS subdomains, assign owner profiles, and configure billing plans.
+        </p>
+      </div>
 
-        {error && (
+      {error && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.05)',
+          border: '1px solid rgba(239, 68, 68, 0.15)',
+          color: 'var(--color-danger)',
+          borderRadius: '8px',
+          padding: '0.75rem 1rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontSize: '0.85rem'
+        }}>
+          <ShieldAlert size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Main layout split: Form (left) + Calculator (right) */}
+      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        
+        {/* Left Side: Onboarding Fields Form */}
+        <form onSubmit={handleSubmit} style={{ flex: '1 1 650px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Card 1: Workspace Identity */}
           <div style={{
-            background: 'rgba(239, 68, 68, 0.05)',
-            border: '1px solid rgba(239, 68, 68, 0.15)',
-            color: 'var(--color-danger)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-            marginBottom: '1.5rem',
+            background: 'rgba(255, 255, 255, 0.01)',
+            border: '1px solid rgba(255, 255, 255, 0.04)',
+            borderRadius: '12px',
+            padding: '1.5rem',
             display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontSize: '0.85rem'
+            flexDirection: 'column',
+            gap: '1rem'
           }}>
-            <ShieldAlert size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Gym & Owner Name */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              1. Workspace Identity
+            </h5>
+            
             <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Gym Name *</label>
+              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Gym Workspace Name *</label>
               <div style={{ position: 'relative' }}>
-                <Building2 size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                <Building2 size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
                 <input 
                   type="text" 
                   className="form-control" 
-                  style={{ paddingLeft: '2.5rem' }} 
-                  placeholder="e.g. Iron Forge Gym"
+                  style={{ paddingLeft: '2.3rem' }} 
+                  placeholder="e.g. Iron Titan Gym"
                   value={gymName} 
                   onChange={e => setGymName(e.target.value)} 
                   required
@@ -251,49 +309,112 @@ const CreateGym = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Owner Full Name *</label>
-              <div style={{ position: 'relative' }}>
-                <User size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  style={{ paddingLeft: '2.5rem' }} 
-                  placeholder="e.g. Robert Smith"
-                  value={ownerName} 
-                  onChange={e => setOwnerName(e.target.value)} 
-                  required
-                />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Country Location</label>
+                <div style={{ position: 'relative' }}>
+                  <Globe size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    style={{ paddingLeft: '2.3rem' }} 
+                    value={country} 
+                    onChange={e => setCountry(e.target.value)} 
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Currency Code</label>
+                <div style={{ position: 'relative' }}>
+                  <DollarSign size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    style={{ paddingLeft: '2.3rem' }} 
+                    value={currency} 
+                    onChange={e => setCurrency(e.target.value)} 
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Timezone</label>
+                <div style={{ position: 'relative' }}>
+                  <Clock size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <select 
+                    className="form-control" 
+                    style={{ paddingLeft: '2.3rem', appearance: 'none' }}
+                    value={timezone}
+                    onChange={e => setTimezone(e.target.value)}
+                  >
+                    <option value="Asia/Colombo">Asia/Colombo</option>
+                    <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                    <option value="UTC">UTC (GMT)</option>
+                    <option value="America/New_York">America/New_York</option>
+                    <option value="Europe/London">Europe/London</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Contact details */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Owner Email *</label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                <input 
-                  type="email" 
-                  className="form-control" 
-                  style={{ paddingLeft: '2.5rem' }} 
-                  placeholder="e.g. robert@gymowner.com"
-                  value={ownerEmail} 
-                  onChange={e => setOwnerEmail(e.target.value)} 
-                  required
-                />
+          {/* Card 2: Owner Credentials */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.01)',
+            border: '1px solid rgba(255, 255, 255, 0.04)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              2. Workspace Owner Credentials
+            </h5>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Owner Full Name *</label>
+                <div style={{ position: 'relative' }}>
+                  <User size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    style={{ paddingLeft: '2.3rem' }} 
+                    placeholder="e.g. John Doe"
+                    value={ownerName} 
+                    onChange={e => setOwnerName(e.target.value)} 
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Owner Email Address *</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <input 
+                    type="email" 
+                    className="form-control" 
+                    style={{ paddingLeft: '2.3rem' }} 
+                    placeholder="e.g. owner@irontitan.com"
+                    value={ownerEmail} 
+                    onChange={e => setOwnerEmail(e.target.value)} 
+                    required
+                  />
+                </div>
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Contact Phone *</label>
+              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Contact Phone *</label>
               <div style={{ position: 'relative' }}>
-                <Phone size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                <Phone size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
                 <input 
                   type="text" 
                   className="form-control" 
-                  style={{ paddingLeft: '2.5rem' }} 
+                  style={{ paddingLeft: '2.3rem' }} 
                   placeholder="e.g. +94 77 123 4567"
                   value={phone} 
                   onChange={e => setPhone(e.target.value)} 
@@ -301,90 +422,72 @@ const CreateGym = () => {
                 />
               </div>
             </div>
-          </div>
-
-          {/* Physical Address */}
-          <div className="form-group">
-            <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Physical Address *</label>
-            <div style={{ position: 'relative' }}>
-              <MapPin size={16} style={{ position: 'absolute', left: '0.75rem', top: '12px', color: 'var(--text-dark)' }} />
-              <textarea 
-                className="form-control" 
-                style={{ paddingLeft: '2.5rem', minHeight: '60px' }} 
-                placeholder="Street address, city, region"
-                value={address} 
-                onChange={e => setAddress(e.target.value)} 
-                required
-              />
-            </div>
-          </div>
-
-          {/* Subscription details */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>SaaS Subscription Plan</label>
-              <div style={{ position: 'relative' }}>
-                <CreditCard size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                <select 
-                  className="form-control" 
-                  style={{ paddingLeft: '2.5rem', appearance: 'none' }}
-                  value={subscriptionPlan}
-                  onChange={e => setSubscriptionPlan(e.target.value)}
-                >
-                  <option value="Trial">Free Trial Plan</option>
-                  <option value="Starter">Starter Plan</option>
-                  <option value="Professional">Professional Plan</option>
-                  <option value="Enterprise">Enterprise Plan</option>
-                </select>
-              </div>
-            </div>
 
             <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Country Location</label>
+              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Physical Address *</label>
               <div style={{ position: 'relative' }}>
-                <Globe size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                <input 
-                  type="text" 
+                <MapPin size={15} style={{ position: 'absolute', left: '0.75rem', top: '12px', color: 'var(--text-dark)' }} />
+                <textarea 
                   className="form-control" 
-                  style={{ paddingLeft: '2.5rem' }} 
-                  value={country} 
-                  onChange={e => setCountry(e.target.value)} 
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Currency code</label>
-              <div style={{ position: 'relative' }}>
-                <DollarSign size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  style={{ paddingLeft: '2.5rem' }} 
-                  value={currency} 
-                  onChange={e => setCurrency(e.target.value)} 
+                  style={{ paddingLeft: '2.3rem', minHeight: '60px' }} 
+                  placeholder="e.g. 200 Temple Road, Colombo 07, Sri Lanka"
+                  value={address} 
+                  onChange={e => setAddress(e.target.value)} 
+                  required
                 />
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Workspace Timezone</label>
-              <div style={{ position: 'relative' }}>
-                <Clock size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                <select 
-                  className="form-control" 
-                  style={{ paddingLeft: '2.5rem', appearance: 'none' }}
-                  value={timezone}
-                  onChange={e => setTimezone(e.target.value)}
-                >
-                  <option value="Asia/Colombo">Asia/Colombo (Sri Lanka)</option>
-                  <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                  <option value="UTC">UTC (GMT)</option>
-                  <option value="America/New_York">America/New_York (EST/EDT)</option>
-                  <option value="Europe/London">Europe/London (BST)</option>
-                </select>
+          {/* Card 3: Subscription & Billing */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.01)',
+            border: '1px solid rgba(255, 255, 255, 0.04)',
+            borderRadius: '12px',
+            padding: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              3. Plan & Installment Selection
+            </h5>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Monthly Subscription Plan</label>
+                <div style={{ position: 'relative' }}>
+                  <CreditCard size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <select 
+                    className="form-control" 
+                    style={{ paddingLeft: '2.3rem', appearance: 'none' }}
+                    value={subscriptionPlan}
+                    onChange={e => setSubscriptionPlan(e.target.value)}
+                  >
+                    {plansToUse.map(p => (
+                      <option key={p.id || p.name.toLowerCase()} value={p.name}>
+                        {p.name} Plan
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Installment / Billing Term</label>
+                <div style={{ position: 'relative' }}>
+                  <Calendar size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <select 
+                    className="form-control" 
+                    style={{ paddingLeft: '2.3rem', appearance: 'none' }}
+                    value={installmentPlan}
+                    onChange={e => setInstallmentPlan(e.target.value)}
+                  >
+                    <option value="Monthly Subscription">Monthly Recurring</option>
+                    <option value="3 Month Installment Plan">3 Month Installment Plan</option>
+                    <option value="1 Time Payment">1 Time Payment (Annual)</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -394,11 +497,12 @@ const CreateGym = () => {
             className="btn btn-primary" 
             disabled={isSubmitting}
             style={{ 
-              marginTop: '1rem', 
+              marginTop: '0.5rem', 
               justifyContent: 'center', 
               background: 'linear-gradient(135deg, #a855f7, #3b82f6)', 
               borderColor: 'transparent',
-              padding: '0.85rem'
+              padding: '0.85rem',
+              fontWeight: 700
             }}
           >
             {isSubmitting ? (
@@ -410,6 +514,104 @@ const CreateGym = () => {
             )}
           </button>
         </form>
+
+        {/* Right Side: Live Pricing & Quota Calculator */}
+        <div style={{
+          flex: '1 1 300px',
+          background: 'rgba(168, 85, 247, 0.02)',
+          border: '1px solid rgba(168, 85, 247, 0.15)',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          position: 'sticky',
+          top: '2rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.25rem'
+        }}>
+          <div>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Sparkles size={16} style={{ color: '#a855f7' }} /> Onboarding Billing Summary
+            </h4>
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Real-time quote calculation.</span>
+          </div>
+
+          {/* Plan Limits Info */}
+          {(() => {
+            const selectedPlanObj = plansToUse.find(p => p.name.toLowerCase() === subscriptionPlan.toLowerCase()) || plansToUse[0];
+            return (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)', pb: '1rem', paddingBottom: '1rem' }}>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Selected Plan:</span>
+                    <strong style={{ textTransform: 'capitalize', color: '#a855f7' }}>{subscriptionPlan}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Workspace Limit:</span>
+                    <strong>{selectedPlanObj.maxMembers === 99999 ? 'Unlimited' : `${selectedPlanObj.maxMembers} Members`}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Staff Quota:</span>
+                    <strong>{selectedPlanObj.maxStaff === 99999 ? 'Unlimited' : `${selectedPlanObj.maxStaff} Staff`}</strong>
+                  </div>
+                </div>
+
+                {/* Pricing Math Breakdown */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Base Monthly Rate:</span>
+                    <span>{selectedPlanObj.price?.toLocaleString()} {currency}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Billing Period:</span>
+                    <span style={{ fontWeight: 600 }}>{installmentPlan}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-dark)' }}>
+                    <span>Term Duration:</span>
+                    <span>{installmentPlan === '1 Time Payment' ? '365 Days' : (installmentPlan === '3 Month Installment Plan' ? '90 Days' : '30 Days')}</span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+
+          <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: 0 }} />
+
+          {/* DUE NOW CARD (NO TAX DISPLAYED OR INCLUDED) */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '8px',
+            padding: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
+          }}>
+            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <span>Subtotal Due:</span>
+              <span>{breakdown.total.toLocaleString()} {currency}</span>
+            </div>
+            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <span>Discounts:</span>
+              <span style={{ color: '#10b981' }}>- 0.00 {currency}</span>
+            </div>
+            
+            <hr style={{ border: 'none', borderTop: '1px dashed rgba(255,255,255,0.08)', margin: '0.25rem 0' }} />
+            
+            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Total Due Today:</span>
+              <strong style={{ fontSize: '1.2rem', color: '#10b981' }}>
+                {breakdown.total.toLocaleString()} {currency}
+              </strong>
+            </div>
+          </div>
+
+          {/* Trust badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.65rem', color: 'var(--text-dark)', marginTop: '0.25rem' }}>
+            <Info size={12} />
+            <span>Onboarding creates database instance & initial payment invoice.</span>
+          </div>
+        </div>
+
       </div>
     </div>
   );

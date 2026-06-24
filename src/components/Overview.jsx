@@ -12,13 +12,25 @@ const Overview = () => {
   const { 
     members, 
     accessEvents, 
-    invoices, 
+    invoices: rawInvoices, 
     registrations,
     trainers,
-    income,
-    expenses,
+    income: rawIncome,
+    expenses: rawExpenses,
     showToast
   } = useDashboard();
+
+  const invoices = useMemo(() => {
+    return (rawInvoices || []).filter(inv => !inv.isSaaS && inv.invoice_number);
+  }, [rawInvoices]);
+
+  const income = useMemo(() => {
+    return (rawIncome || []).filter(inc => !inc.isSaaS && inc.source && inc.amount !== undefined);
+  }, [rawIncome]);
+
+  const expenses = useMemo(() => {
+    return (rawExpenses || []).filter(exp => !exp.isSaaS);
+  }, [rawExpenses]);
 
   const [now] = useState(() => Date.now());
 

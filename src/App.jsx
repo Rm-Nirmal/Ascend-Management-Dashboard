@@ -5,6 +5,7 @@ import Overview from './components/Overview';
 import Members from './components/Members';
 import Registrations from './components/Registrations';
 import AccessConsole from './components/AccessConsole';
+import SubscriptionConsole from './components/SubscriptionConsole';
 
 import AIInsights from './components/AIInsights';
 import AuditSettings from './components/AuditSettings';
@@ -149,22 +150,24 @@ const DashboardContentShell = () => {
   } = useDashboard();
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Inject custom theme color dynamically
+  // Inject custom theme color & mode dynamically
   useEffect(() => {
-    if (gymSettings?.themeColor) {
-      document.documentElement.style.setProperty('--color-primary', gymSettings.themeColor);
-      let hex = gymSettings.themeColor;
-      if (hex.startsWith('#')) {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        document.documentElement.style.setProperty('--color-primary-glow', `rgba(${r}, ${g}, ${b}, 0.15)`);
-      } else {
-        document.documentElement.style.setProperty('--color-primary-glow', `${hex}26`);
-      }
+    const isDark = gymSettings?.darkMode !== false;
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+    let accentColor = gymSettings?.themeColor || '#ffffff';
+    if (!isDark && (accentColor === '#ffffff' || accentColor.toLowerCase() === '#fff')) {
+      accentColor = '#000000';
+    }
+
+    document.documentElement.style.setProperty('--color-primary', accentColor);
+    if (accentColor.startsWith('#')) {
+      const r = parseInt(accentColor.slice(1, 3), 16);
+      const g = parseInt(accentColor.slice(3, 5), 16);
+      const b = parseInt(accentColor.slice(5, 7), 16);
+      document.documentElement.style.setProperty('--color-primary-glow', `rgba(${r}, ${g}, ${b}, 0.15)`);
     } else {
-      document.documentElement.style.setProperty('--color-primary', '#ffffff');
-      document.documentElement.style.setProperty('--color-primary-glow', 'rgba(255, 255, 255, 0.15)');
+      document.documentElement.style.setProperty('--color-primary-glow', `${accentColor}26`);
     }
   }, [gymSettings]);
 
@@ -212,9 +215,7 @@ const DashboardContentShell = () => {
 
   // Security Gate: Redirect standard admin to members if they try to access disallowed tabs
   const isAllowedTab = (tab) => {
-    if (currentUser.role === 'super_admin') {
-      return true;
-    }
+    if (currentUser.role === 'super_admin') return true;
     if (currentUser.role === 'gym_owner') {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',
@@ -238,6 +239,8 @@ const DashboardContentShell = () => {
         return <Employees />;
       case 'access':
         return <AccessConsole />;
+      case 'console':
+        return <SubscriptionConsole />;
 
       case 'finance':
         return <Finance />;
