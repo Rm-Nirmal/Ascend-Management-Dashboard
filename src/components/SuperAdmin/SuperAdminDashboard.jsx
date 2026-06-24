@@ -11,7 +11,8 @@ import {
   ShieldCheck, 
   Dumbbell,
   Sliders,
-  ClipboardList
+  ClipboardList,
+  DollarSign
 } from 'lucide-react';
 
 import SuperAdminOverview from './SuperAdminOverview';
@@ -22,6 +23,7 @@ import SupportCenter from './SupportCenter';
 import Announcements from './Announcements';
 import SaaSSubscriptionConsole from './SaaSSubscriptionConsole';
 import ClientAuditLogs from './ClientAuditLogs';
+import SaaSFinance from './SaaSFinance';
 
 const SuperAdminDashboard = () => {
   const { currentUser, logout, showToast } = useDashboard();
@@ -30,6 +32,7 @@ const SuperAdminDashboard = () => {
   const navItems = [
     { id: 'overview', name: 'SaaS Overview', icon: LayoutDashboard },
     { id: 'clients', name: 'Clients Directory', icon: Building2 },
+    { id: 'finance', name: 'SaaS Revenue', icon: DollarSign },
     { id: 'audit_logs', name: 'Client Audit Logs', icon: ClipboardList },
     { id: 'create_gym', name: 'Onboard Gym', icon: UserPlus },
     { id: 'subscriptions', name: 'Subscriptions', icon: CreditCard },
@@ -44,6 +47,8 @@ const SuperAdminDashboard = () => {
         return <SuperAdminOverview setActiveTab={setActiveTab} />;
       case 'clients':
         return <ClientsList setActiveTab={setActiveTab} />;
+      case 'finance':
+        return <SaaSFinance />;
       case 'audit_logs':
         return <ClientAuditLogs />;
       case 'create_gym':

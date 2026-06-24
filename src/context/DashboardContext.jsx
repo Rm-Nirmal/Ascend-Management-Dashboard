@@ -392,7 +392,7 @@ export const DashboardProvider = ({ children }) => {
     if (currentUser.role === 'super_admin') {
       // ─── SUPER ADMIN REAL-TIME LISTENERS ───
       let loadedCount = 0;
-      const totalCollections = 8;
+      const totalCollections = 9;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -468,6 +468,16 @@ export const DashboardProvider = ({ children }) => {
           setAuditLogs(logs);
           markLoaded();
         }, (err) => { console.error('Superadmin audit logs error:', err); markLoaded(); })
+      );
+
+      // 9. Expenses (all - for global SaaS expense tracking)
+      unsubscribers.push(
+        onSnapshot(collection(db, COLLECTIONS.EXPENSES), (snap) => {
+          const exp = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          exp.sort((a, b) => new Date(b.date) - new Date(a.date));
+          setExpenses(exp);
+          markLoaded();
+        }, (err) => { console.error('Superadmin expenses error:', err); markLoaded(); })
       );
 
     } else {
