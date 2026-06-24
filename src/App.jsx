@@ -212,6 +212,9 @@ const DashboardContentShell = () => {
 
   // Security Gate: Redirect standard admin to members if they try to access disallowed tabs
   const isAllowedTab = (tab) => {
+    if (currentUser.role === 'super_admin') {
+      return true;
+    }
     if (currentUser.role === 'gym_owner') {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',

@@ -39,7 +39,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     if (!currentUser) return false;
     
     // Regular gym staff can only access members, registrations, access
-    if (currentUser.role === 'admin') {
+    if (currentUser.role !== 'gym_owner' && currentUser.role !== 'super_admin') {
       return ['members', 'registrations', 'access'].includes(item.id);
     }
     
@@ -49,15 +49,15 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
   return (
     <aside className="sidebar">
-      <div>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* Brand Logo */}
-        <div className="sidebar-logo" style={{ marginBottom: '2.5rem' }}>
+        <div className="sidebar-logo" style={{ marginBottom: '2.5rem', flexShrink: 0 }}>
           <Dumbbell className="icon" style={{ color: 'var(--color-primary)' }} />
           <span className="logo-text">ASCEND FITNESS</span>
         </div>
 
         {/* Navigation links */}
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" style={{ overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: '4px' }}>
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -76,7 +76,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       </div>
 
       {/* Footer Profile with Logout Capability */}
-      <div className="sidebar-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+      <div className="sidebar-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', flexShrink: 0, marginTop: '1rem' }}>
         <img 
           src={currentUser?.photo_url || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
           alt={`${currentUser?.name || 'Admin'} Avatar`} 

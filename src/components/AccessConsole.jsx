@@ -279,7 +279,7 @@ const AccessConsole = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
           {/* Quick-Scan Helper Panel */}
-          {currentUser?.role !== 'admin' && (
+          {(currentUser?.role === 'gym_owner' || currentUser?.role === 'super_admin') && (
             <div className="glass-card" style={{ maxHeight: '320px', overflowY: 'auto' }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 Quick Scan Simulation Desk
