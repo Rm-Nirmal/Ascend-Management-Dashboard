@@ -56,9 +56,9 @@ const incomeSources = ['Registration Fees', 'Personal Training Sessions', 'Produ
 
 const Finance = () => {
   const {
-    invoices,
-    expenses,
-    income,
+    invoices: rawInvoices,
+    expenses: rawExpenses,
+    income: rawIncome,
     currentUser,
     addExpense,
     updateExpense,
@@ -69,6 +69,18 @@ const Finance = () => {
     employees,
     updateEmployee
   } = useDashboard();
+
+  const invoices = useMemo(() => {
+    return (rawInvoices || []).filter(inv => !inv.isSaaS && inv.invoice_number);
+  }, [rawInvoices]);
+
+  const income = useMemo(() => {
+    return (rawIncome || []).filter(inc => !inc.isSaaS && inc.source && inc.amount !== undefined);
+  }, [rawIncome]);
+
+  const expenses = useMemo(() => {
+    return (rawExpenses || []).filter(exp => !exp.isSaaS);
+  }, [rawExpenses]);
 
   // Navigation states
   const [activeFinanceTab, setActiveFinanceTab] = useState('overview');
