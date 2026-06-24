@@ -44,7 +44,11 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       return ['members', 'registrations', 'access', 'console'].includes(item.id);
     }
     
-    // Gym owners can access everything except superadmin specific features
+    // Gym owners can access everything except Console
+    if (currentUser.role === 'gym_owner') {
+      return item.id !== 'console';
+    }
+    
     return true;
   });
 

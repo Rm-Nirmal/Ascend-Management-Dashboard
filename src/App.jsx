@@ -218,7 +218,7 @@ const DashboardContentShell = () => {
     if (currentUser.role === 'super_admin') return true;
     if (currentUser.role === 'gym_owner') {
       return [
-        'overview', 'members', 'registrations', 'employees', 'access', 'console',
+        'overview', 'members', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets'
       ].includes(tab);
     }
