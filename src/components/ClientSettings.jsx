@@ -11,8 +11,8 @@ import {
   DollarSign, 
   Clock,
   Lock,
-  Palette,
-  Eye,
+  Sun,
+  Moon,
   Check,
   Save,
   Loader2
@@ -24,7 +24,7 @@ const ClientSettings = () => {
   // States
   const [gymName, setGymName] = useState(gymSettings?.gymName || '');
   const [ownerName, setOwnerName] = useState(currentUser?.name || gymSettings?.ownerName || '');
-  const [themeColor, setThemeColor] = useState(gymSettings?.themeColor || '#3b82f6');
+  const [darkMode, setDarkMode] = useState(gymSettings?.darkMode !== false);
   const [phone, setPhone] = useState(gymSettings?.phone || '');
   const [email, setEmail] = useState(gymSettings?.email || '');
   const [address, setAddress] = useState(gymSettings?.address || '');
@@ -36,15 +36,6 @@ const ClientSettings = () => {
   
   const [isSaving, setIsSaving] = useState(false);
 
-  const presetColors = [
-    { name: 'Royal Blue', hex: '#3b82f6' },
-    { name: 'Emerald', hex: '#10b981' },
-    { name: 'Sunset', hex: '#f97316' },
-    { name: 'Crimson', hex: '#f43f5e' },
-    { name: 'Amethyst', hex: '#8b5cf6' },
-    { name: 'Steel', hex: '#64748b' }
-  ];
-
   const handleSave = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -52,7 +43,8 @@ const ClientSettings = () => {
     await updateGymSettings({
       gymName,
       ownerName,
-      themeColor,
+      themeColor: darkMode ? '#ffffff' : '#000000',
+      darkMode,
       phone,
       email,
       address,
@@ -80,80 +72,117 @@ const ClientSettings = () => {
 
         <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* THEME SELECTION & PREVIEW */}
+          {/* THEME SELECTION */}
           <div style={{ 
             background: 'rgba(255,255,255,0.01)', 
             border: '1px solid rgba(255,255,255,0.03)', 
             borderRadius: '10px', 
             padding: '1.25rem' 
           }}>
-            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Palette size={16} /> Console Appearance Theme
+            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Sun size={16} /> Console Appearance Theme
             </h4>
             
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
-              {presetColors.map(color => {
-                const isSelected = themeColor === color.hex;
-                return (
-                  <button
-                    key={color.hex}
-                    type="button"
-                    onClick={() => setThemeColor(color.hex)}
-                    style={{
-                      background: 'rgba(255,255,255,0.02)',
-                      border: isSelected ? `2px solid ${color.hex}` : '1px solid rgba(255,255,255,0.05)',
-                      borderRadius: '8px',
-                      padding: '0.5rem 0.85rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      color: isSelected ? 'var(--text-primary)' : 'var(--text-muted)',
-                      transition: 'var(--transition-fast)'
-                    }}
-                  >
-                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: color.hex, display: 'inline-block' }} />
-                    {color.name}
-                    {isSelected && <Check size={12} style={{ color: color.hex }} />}
-                  </button>
-                );
-              })}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              {/* Light Mode Option */}
+              <button
+                type="button"
+                onClick={() => setDarkMode(false)}
+                style={{
+                  background: !darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.02)',
+                  border: !darkMode ? '2px solid var(--color-primary)' : '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  padding: '1.5rem 1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  transition: 'var(--transition-fast)',
+                  outline: 'none'
+                }}
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: !darkMode ? '#000000' : 'rgba(255,255,255,0.05)',
+                  color: !darkMode ? '#ffffff' : 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'var(--transition-fast)'
+                }}>
+                  <Sun size={20} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>Light Mode</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Clean white layout with dark text</div>
+                </div>
+                {!darkMode && (
+                  <span style={{
+                    fontSize: '0.65rem',
+                    background: 'var(--color-primary)',
+                    color: 'var(--bg-primary)',
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '99px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase'
+                  }}>
+                    Active
+                  </span>
+                )}
+              </button>
 
-              {/* Custom Picker */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Custom:</span>
-                <input 
-                  type="color" 
-                  value={themeColor} 
-                  onChange={e => setThemeColor(e.target.value)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    width: '32px',
-                    height: '32px',
-                    padding: 0
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Live Preview Bar */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '1rem', 
-              padding: '0.75rem 1rem', 
-              background: 'rgba(255,255,255,0.02)', 
-              borderRadius: '8px',
-              borderLeft: `4px solid ${themeColor}`
-            }}>
-              <Eye size={16} style={{ color: themeColor }} />
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Visual Preview: Active elements and buttons will adapt to <strong style={{ color: themeColor }}>{themeColor}</strong> accent color.
-              </span>
+              {/* Dark Mode Option */}
+              <button
+                type="button"
+                onClick={() => setDarkMode(true)}
+                style={{
+                  background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.02)',
+                  border: darkMode ? '2px solid var(--color-primary)' : '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  padding: '1.5rem 1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  transition: 'var(--transition-fast)',
+                  outline: 'none'
+                }}
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: darkMode ? '#ffffff' : 'rgba(0,0,0,0.05)',
+                  color: darkMode ? '#000000' : 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'var(--transition-fast)'
+                }}>
+                  <Moon size={20} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>Dark Mode</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Premium dark slate layout with white text</div>
+                </div>
+                {darkMode && (
+                  <span style={{
+                    fontSize: '0.65rem',
+                    background: 'var(--color-primary)',
+                    color: 'var(--bg-primary)',
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '99px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase'
+                  }}>
+                    Active
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
