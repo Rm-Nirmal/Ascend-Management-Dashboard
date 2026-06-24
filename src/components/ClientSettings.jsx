@@ -385,7 +385,7 @@ const ClientSettings = () => {
             style={{ 
               marginTop: '1rem', 
               justifyContent: 'center', 
-              background: `linear-gradient(135deg, ${themeColor}, rgba(255,255,255,0.15))`,
+              background: `linear-gradient(135deg, var(--color-primary), rgba(255,255,255,0.15))`,
               borderColor: 'transparent',
               padding: '0.8rem',
               gap: '0.5rem'
