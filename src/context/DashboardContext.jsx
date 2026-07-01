@@ -2263,7 +2263,8 @@ export const DashboardProvider = ({ children }) => {
   const sendSMS = useCallback(async (toPhone, memberName, amount, sourceName, receiptLink, memberId = null) => {
     try {
       const fromPhone = '0779688582';
-      const message = `Welcome to Ascend Fit! Hello ${memberName}, your payment of LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} for ${sourceName} has been received. View your receipt: ${receiptLink}`;
+      const gymName = gymSettings?.gymName || 'Ascend Fit';
+      const message = `Welcome to ${gymName}! Hello ${memberName}, your payment of LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} for ${sourceName} has been received. View your receipt: ${receiptLink}`;
       
       console.log("%c[SMS Gateway] Sending SMS...", "color: #10b981; font-weight: bold;", {
         from: fromPhone,
@@ -2300,7 +2301,7 @@ export const DashboardProvider = ({ children }) => {
       showToast('Failed to send SMS receipt simulation.', 'error');
       return { success: false, error: err.message };
     }
-  }, [currentUser, logAudit, showToast]);
+  }, [currentUser, logAudit, showToast, gymSettings]);
 
   // ═══════════════════════════════════════════════════════════════════
   // MEMBERSHIP RENEWAL
@@ -2331,7 +2332,7 @@ export const DashboardProvider = ({ children }) => {
 
       // Create paid renewal invoice
       const invoiceData = {
-        gymId: DEFAULT_ORG_ID,
+        gymId: member.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
         member_id: member.id,
         member_name: member.full_name,
         invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -2372,7 +2373,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [members, plans, sendSMS, logAudit]);
+  }, [members, plans, sendSMS, logAudit, currentUser]);
   // ═══════════════════════════════════════════════════════════════════
   // PLAN (MEMBERSHIP PACKAGE) CRUD ACTIONS
   // ═══════════════════════════════════════════════════════════════════
