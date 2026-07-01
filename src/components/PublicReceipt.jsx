@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Dumbbell, Printer, Check, AlertTriangle, Loader2 } from 'lucide-react';
 
@@ -8,6 +8,7 @@ const PublicReceipt = () => {
   const [error, setError] = useState(null);
   const [receiptData, setReceiptData] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [gymDetails, setGymDetails] = useState(null);
 
   // Extract query parameters
   const queryParams = new URLSearchParams(window.location.search);
@@ -37,7 +38,26 @@ const PublicReceipt = () => {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setReceiptData({ id: docSnap.id, ...docSnap.data() });
+          const rData = { id: docSnap.id, ...docSnap.data() };
+          setReceiptData(rData);
+
+          if (rData.gymId) {
+            try {
+              const gymSettingsQuery = query(collection(db, 'gymSettings'), where('gymId', '==', rData.gymId));
+              const gymSettingsSnap = await getDocs(gymSettingsQuery);
+              if (!gymSettingsSnap.empty) {
+                setGymDetails(gymSettingsSnap.docs[0].data());
+              } else {
+                const gymsQuery = query(collection(db, 'gyms'), where('gymId', '==', rData.gymId));
+                const gymsSnap = await getDocs(gymsQuery);
+                if (!gymsSnap.empty) {
+                  setGymDetails(gymsSnap.docs[0].data());
+                }
+              }
+            } catch (gymErr) {
+              console.error('Error fetching gym details for receipt:', gymErr);
+            }
+          }
         } else {
           setError('Receipt not found. Please check the URL or contact gym management.');
         }
@@ -189,11 +209,23 @@ const PublicReceipt = () => {
         {/* Brand identity */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#ffffff', fontWeight: 800, fontSize: '1.45rem', fontFamily: 'var(--font-display)', letterSpacing: '0.04em' }} className="text-glow">
-            <Dumbbell size={22} /> ASCEND FITNESS HQ
+            <Dumbbell size={22} /> {gymDetails?.gymName ? gymDetails.gymName.toUpperCase() : 'ASCEND FITNESS HQ'}
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: '0.25rem', fontFamily: 'var(--font-body)' }} className="muted-text">
             Official Payment Receipt
           </span>
+          {gymDetails && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem', fontFamily: 'var(--font-body)', display: 'flex', flexDirection: 'column', gap: '0.15rem', textAlign: 'center' }} className="muted-text">
+              {gymDetails.address && <span>{gymDetails.address}</span>}
+              {(gymDetails.phone || gymDetails.email) && (
+                <span>
+                  {gymDetails.phone && `Tel: ${gymDetails.phone}`}
+                  {gymDetails.phone && gymDetails.email && ' | '}
+                  {gymDetails.email && `Email: ${gymDetails.email}`}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Status indicator */}

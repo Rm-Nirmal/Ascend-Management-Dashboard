@@ -86,7 +86,6 @@ const ClientSettings = () => {
         }}>
           {[
             { id: 'details', name: 'Gym Details', icon: Building2 },
-            { id: 'localization', name: 'Localization & Hours', icon: Clock },
             { id: 'appearance', name: 'Theme & Appearance', icon: Sliders },
             { id: 'subscription', name: 'Subscription & Limits', icon: CreditCard }
           ].map(tab => {
@@ -191,20 +190,7 @@ const ClientSettings = () => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Website Domain URL</label>
-                <div style={{ position: 'relative' }}>
-                  <Globe size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                  <input 
-                    type="text" 
-                    className="glass-input" 
-                    style={{ paddingLeft: '2.5rem' }} 
-                    placeholder="https://yourgym.com"
-                    value={website} 
-                    onChange={e => setWebsite(e.target.value)} 
-                  />
-                </div>
-              </div>
+
 
               <div className="form-group">
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Location Address *</label>
@@ -222,78 +208,7 @@ const ClientSettings = () => {
             </div>
           )}
 
-          {/* TAB 2: LOCALIZATION & HOURS */}
-          {activeTab === 'localization' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <div className="form-group">
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Operating Hours</label>
-                  <div style={{ position: 'relative' }}>
-                    <Clock size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                    <input 
-                      type="text" 
-                      className="glass-input" 
-                      style={{ paddingLeft: '2.5rem' }} 
-                      value={openingHours} 
-                      onChange={e => setOpeningHours(e.target.value)} 
-                    />
-                  </div>
-                </div>
 
-                <div className="form-group">
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Display Currency</label>
-                  <div style={{ position: 'relative' }}>
-                    <DollarSign size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                    <input 
-                      type="text" 
-                      className="glass-input" 
-                      style={{ paddingLeft: '2.5rem' }} 
-                      value={currency} 
-                      onChange={e => setCurrency(e.target.value)} 
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                <div className="form-group">
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Display Timezone</label>
-                  <div style={{ position: 'relative' }}>
-                    <Clock size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                    <select 
-                      className="glass-select" 
-                      style={{ paddingLeft: '2.5rem' }}
-                      value={timezone}
-                      onChange={e => setTimezone(e.target.value)}
-                    >
-                      <option value="Asia/Colombo">Asia/Colombo</option>
-                      <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                      <option value="UTC">UTC</option>
-                      <option value="America/New_York">America/New_York (EST)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Console Language</label>
-                  <div style={{ position: 'relative' }}>
-                    <Globe size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
-                    <select 
-                      className="glass-select" 
-                      style={{ paddingLeft: '2.5rem' }}
-                      value={language}
-                      onChange={e => setLanguage(e.target.value)}
-                    >
-                      <option value="en">English (US)</option>
-                      <option value="es">Español (ES)</option>
-                      <option value="fr">Français (FR)</option>
-                      <option value="de">Deutsch (DE)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* TAB 3: THEME & APPEARANCE */}
           {activeTab === 'appearance' && (
@@ -429,22 +344,17 @@ const ClientSettings = () => {
                 </h4>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                      <span style={{ display: 'block', color: 'var(--text-dark)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Tenant Workspace ID</span>
-                      <strong style={{ color: 'var(--text-main)', fontSize: '0.9rem', display: 'block', marginTop: '0.25rem' }}>{currentUser?.gymId}</strong>
-                    </div>
-                    
-                    <div style={{ background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative', overflow: 'hidden' }}>
-                      <span style={{ display: 'block', color: 'var(--text-dark)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Subscription Plan Tier</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
-                        <strong style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{currentUser?.subscriptionPlan || 'Starter'}</strong>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.01)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-color)', position: 'relative', overflow: 'hidden' }}>
+                      <span style={{ display: 'block', color: 'var(--text-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Subscription Plan Tier</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <strong style={{ color: 'var(--text-main)', fontSize: '1.1rem' }}>{currentUser?.subscriptionPlan || 'Starter'}</strong>
                         <span style={{
-                          fontSize: '0.6rem',
+                          fontSize: '0.65rem',
                           background: 'rgba(255, 255, 255, 0.1)',
                           color: 'var(--color-primary)',
                           border: '1px solid var(--border-color)',
-                          padding: '0.1rem 0.4rem',
+                          padding: '0.2rem 0.5rem',
                           borderRadius: '4px',
                           fontWeight: 700
                         }}>
@@ -452,33 +362,6 @@ const ClientSettings = () => {
                         </span>
                       </div>
                     </div>
-
-                    <div style={{ background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                      <span style={{ display: 'block', color: 'var(--text-dark)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 700 }}>Owner Account Uid</span>
-                      <strong style={{ 
-                        color: 'var(--text-main)', 
-                        fontSize: '0.9rem', 
-                        display: 'block', 
-                        marginTop: '0.25rem',
-                        textOverflow: 'ellipsis', 
-                        overflow: 'hidden', 
-                        whiteSpace: 'nowrap'
-                      }} title={currentUser?.uid}>
-                        {currentUser?.uid}
-                      </strong>
-                    </div>
-                  </div>
-                  
-                  <div style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--text-muted)',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    padding: '0.75rem 1rem',
-                    borderRadius: '6px',
-                    borderLeft: '3px solid var(--text-dark)',
-                    marginTop: '0.5rem'
-                  }}>
-                    These parameters are bound to your SaaS license agreement and cannot be altered from the local preference desk. Contact support to request a tenant upgrade or billing update.
                   </div>
                 </div>
               </div>

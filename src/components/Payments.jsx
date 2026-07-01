@@ -21,7 +21,8 @@ const Payments = () => {
     invoices,
     recordPayment,
     trainers,
-    processStaffPayroll
+    processStaffPayroll,
+    gymSettings
   } = useDashboard();
 
   const [now] = useState(() => Date.now());
@@ -771,10 +772,10 @@ const Payments = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '0.05em' }}>
-                  <Sparkles size={20} /> ASCEND FITNESS HQ
+                  <Sparkles size={20} /> {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS HQ'}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Ascend HQ Single Gym franchise console
+                  {gymSettings?.address || 'Ascend HQ Single Gym franchise console'}
                 </div>
               </div>
               <button 

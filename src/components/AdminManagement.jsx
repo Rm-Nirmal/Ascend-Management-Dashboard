@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { uploadToCloudinary } from '../lib/cloudinary';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   UserPlus, Shield, ShieldCheck, Mail, Lock, User, Info, CheckCircle2, XCircle, 
@@ -256,6 +257,31 @@ const AdminManagement = () => {
     hourly_rate: '',
     photo_url: ''
   });
+
+  const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const data = await uploadToCloudinary(file, {
+        onProgress: (pct) => setUploadProgress(pct)
+      });
+      setTrainerForm(prev => ({ ...prev, photo_url: data.secure_url }));
+      if (showToast) showToast('Trainer photo uploaded successfully.', 'success');
+    } catch (err) {
+      console.error('Trainer photo upload failed:', err);
+      if (showToast) showToast(`Photo upload failed: ${err.message || err}`, 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleOpenAddTrainer = () => {
     setEditingTrainer(null);
@@ -934,11 +960,42 @@ const AdminManagement = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Profile Photo URL</label>
-                <input 
-                  type="text" placeholder="https://unsplash.com/..." className="glass-input"
-                  value={trainerForm.photo_url} onChange={(e) => setTrainerForm({...trainerForm, photo_url: e.target.value})}
-                />
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Profile Photo</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem' }}>
+                  {trainerForm.photo_url && (
+                    <img 
+                      src={trainerForm.photo_url} 
+                      alt="Trainer Preview" 
+                      style={{ width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+                    />
+                  )}
+                  <button 
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                  >
+                    {isUploading ? `Uploading ${uploadProgress}%` : 'Upload from Device'}
+                  </button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handlePhotoUpload} 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                  />
+                  {trainerForm.photo_url && (
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary" 
+                      style={{ color: 'var(--color-danger)', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                      onClick={() => setTrainerForm(prev => ({ ...prev, photo_url: '' }))}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
