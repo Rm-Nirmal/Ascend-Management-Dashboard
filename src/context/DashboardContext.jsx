@@ -143,6 +143,90 @@ export const isBareRootUrl = () => {
   return path === '/' || path === '/Ascend-Management-Dashboard' || path === '/Ascend-Management-Dashboard/';
 };
 
+// Normalize device document to map between legacy format and new enterprise nested format
+export const normalizeDevice = (docSnapshot) => {
+  const data = docSnapshot.data();
+  const id = docSnapshot.id;
+
+  // If it is in the new enterprise format:
+  if (data && data.device && data.device.serial !== undefined) {
+    return {
+      id,
+      ...data,
+      // Legacy root-level fields for compatibility with existing components
+      name: data.device.name || '',
+      serialNumber: data.device.serial || '',
+      brand: data.device.brand || '',
+      model: data.device.model || '',
+      ipAddress: data.network?.ip || '',
+      macAddress: data.network?.mac || '',
+      firmware: data.network?.firmware || '',
+      isEnabled: data.health?.status !== 'Disabled',
+      status: (data.health?.status || 'Offline').toLowerCase(),
+      lastHeartbeat: data.health?.lastHeartbeat || null,
+      lastSync: data.health?.lastSync || null,
+      doorStatus: data.health?.doorStatus || 'locked',
+      gymId: data.gymId
+    };
+  }
+
+  // Otherwise, it's a legacy flat format document. Normalize it into the nested structure
+  return {
+    id,
+    ...data,
+    device: {
+      serial: data.serialNumber || '',
+      brand: data.brand || 'ZKTeco',
+      model: data.model || 'SpeedFace V5L',
+      name: data.name || ''
+    },
+    configuration: {
+      entranceType: data.entranceType || 'Main Entrance',
+      physicalLocation: data.physicalLocation || 'Reception',
+      purpose: data.devicePurpose || 'Door Access + Attendance',
+      deviceNumber: data.deviceNumber || 1,
+      doorNumber: data.doorNumber || 1,
+      readerNumber: data.readerNumber || 1
+    },
+    network: {
+      ip: data.ipAddress || '192.168.1.100',
+      port: parseInt(data.communicationSettings?.port || data.port || '4370'),
+      protocol: data.communicationSettings?.protocol || data.protocol || 'TCP/IP',
+      mac: data.macAddress || ''
+    },
+    capabilities: data.capabilities || {
+      face: true,
+      fingerprint: true,
+      rfid: true,
+      qr: false,
+      pin: true,
+      palm: false
+    },
+    health: {
+      status: data.status ? (data.status.charAt(0).toUpperCase() + data.status.slice(1)) : (data.isEnabled ? 'Offline' : 'Disabled'),
+      lastHeartbeat: data.lastHeartbeat || null,
+      latency: data.latency || null,
+      heartbeatInterval: data.heartbeatInterval || 30,
+      doorStatus: data.doorStatus || 'locked',
+      lastSync: data.lastSync || null
+    },
+    // Legacies mapped back to root to prevent any undefined issues
+    name: data.name || '',
+    serialNumber: data.serialNumber || '',
+    brand: data.brand || '',
+    model: data.model || '',
+    ipAddress: data.ipAddress || '',
+    macAddress: data.macAddress || '',
+    firmware: data.firmware || '',
+    isEnabled: data.isEnabled !== false,
+    status: (data.status || (data.isEnabled !== false ? 'offline' : 'disabled')).toLowerCase(),
+    lastHeartbeat: data.lastHeartbeat || null,
+    lastSync: data.lastSync || null,
+    doorStatus: data.doorStatus || 'locked',
+    gymId: data.gymId
+  };
+};
+
 // ═══════════════════════════════════════════════════════════════════════
 // PROVIDER COMPONENT
 // ═══════════════════════════════════════════════════════════════════════
@@ -485,7 +569,7 @@ export const DashboardProvider = ({ children }) => {
       // 10. Devices (all - for global device monitoring)
       unsubscribers.push(
         onSnapshot(collection(db, COLLECTIONS.DEVICES), (snap) => {
-          setDevices(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          setDevices(snap.docs.map(normalizeDevice));
           markLoaded();
         }, (err) => { console.error('Superadmin devices error:', err); markLoaded(); })
       );
@@ -700,7 +784,7 @@ export const DashboardProvider = ({ children }) => {
       );
       unsubscribers.push(
         onSnapshot(devicesQ, (snap) => {
-          setDevices(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          setDevices(snap.docs.map(normalizeDevice));
           markLoaded();
         }, (err) => { console.error('Devices error:', err); markLoaded(); })
       );
@@ -2453,50 +2537,179 @@ export const DashboardProvider = ({ children }) => {
 
   const addDevice = useCallback(async (deviceData) => {
     try {
-      const newDevice = {
-        name: deviceData.name,
-        brand: deviceData.brand || 'ZKTeco',
-        model: deviceData.model || 'SpeedFace V5L',
-        serialNumber: deviceData.serialNumber.trim(),
-        gymId: deviceData.gymId || DEFAULT_ORG_ID,
-        ipAddress: deviceData.ipAddress || '192.168.1.100',
-        macAddress: deviceData.macAddress || '00:1A:2B:3C:4D:' + Math.floor(10 + Math.random() * 89).toString(16).toUpperCase() + ':5E',
-        firmware: deviceData.firmware || 'v2.5.1',
-        status: 'offline', // Starts offline by default
-        doorStatus: 'locked',
-        lastHeartbeat: null,
-        lastSync: null,
-        registrationDate: new Date().toISOString().split('T')[0],
-        isEnabled: deviceData.isEnabled !== false,
-        createdAt: new Date().toISOString(),
-        communicationSettings: {
-          port: deviceData.port || '4370',
-          protocol: deviceData.protocol || 'TCP/IP',
-          serverUrl: deviceData.serverUrl || ''
-        }
+      const gymId = deviceData.gymId || DEFAULT_ORG_ID;
+      const gymDevices = devices.filter(d => d.gymId === gymId);
+      
+      const deviceNumber = gymDevices.length + 1;
+      const doorNumber = gymDevices.length + 1;
+      const readerNumber = 1;
+
+      const name = deviceData.name;
+      const brand = deviceData.brand || 'ZKTeco';
+      const model = deviceData.model || 'SpeedFace V5L';
+      const serial = (deviceData.serialNumber || '').trim();
+
+      const entranceType = deviceData.entranceType || 'Main Entrance';
+      const physicalLocation = deviceData.physicalLocation || 'Reception';
+      const purpose = deviceData.devicePurpose || 'Door Access + Attendance';
+
+      const ip = deviceData.ipAddress || '192.168.1.100';
+      const port = parseInt(deviceData.port || '4370');
+      const protocol = deviceData.protocol || 'TCP/IP';
+      const mac = deviceData.macAddress || '00:1A:2B:3C:4D:' + Math.floor(10 + Math.random() * 89).toString(16).toUpperCase() + ':5E';
+      const firmware = deviceData.firmware || '';
+
+      const isActivated = deviceData.isEnabled !== false;
+      const status = isActivated ? 'Offline' : 'Disabled';
+
+      const capabilities = deviceData.capabilities || {
+        face: true,
+        fingerprint: true,
+        rfid: true,
+        qr: false,
+        pin: true,
+        palm: false
       };
+
+      const newDevice = {
+        gymId,
+        device: {
+          serial,
+          brand,
+          model,
+          name
+        },
+        configuration: {
+          entranceType,
+          physicalLocation,
+          purpose,
+          deviceNumber,
+          doorNumber,
+          readerNumber
+        },
+        network: {
+          ip,
+          port,
+          protocol,
+          mac,
+          firmware
+        },
+        capabilities,
+        health: {
+          status,
+          lastHeartbeat: null,
+          latency: null,
+          heartbeatInterval: 30,
+          doorStatus: 'locked',
+          lastSync: null
+        },
+        registeredAt: new Date().toISOString(),
+        installedAt: new Date().toISOString(),
+        activatedAt: isActivated ? new Date().toISOString() : null
+      };
+
       const docRef = await addDoc(collection(db, COLLECTIONS.DEVICES), newDevice);
-      await logAudit('device.create', 'device', docRef.id, `Registered security device: ${newDevice.name} (${newDevice.serialNumber})`);
+      
+      // Log structured audits
+      await logAudit('device.create', 'device', docRef.id, `Registered security device: ${name} (${serial})`);
+      if (isActivated) {
+        await logAudit('device.activate', 'device', docRef.id, `Activated device ${name}. Eligible for communication.`);
+      }
+
       return { success: true, id: docRef.id };
     } catch (err) {
       console.error('addDevice error:', err);
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [logAudit]);
+  }, [devices, logAudit]);
 
   const updateDevice = useCallback(async (id, updatedFields) => {
     try {
+      const device = devices.find(d => d.id === id);
+      const name = device ? device.name : 'Unknown Device';
+      
       const deviceRef = doc(db, COLLECTIONS.DEVICES, id);
-      await updateDoc(deviceRef, updatedFields);
-      await logAudit('device.update', 'device', id, `Updated security device settings: ${Object.keys(updatedFields).join(', ')}`);
+      
+      // Map flat updatedFields to nested format
+      const mapped = {};
+      
+      if (updatedFields.name !== undefined) mapped["device.name"] = updatedFields.name;
+      if (updatedFields.brand !== undefined) mapped["device.brand"] = updatedFields.brand;
+      if (updatedFields.model !== undefined) mapped["device.model"] = updatedFields.model;
+      if (updatedFields.serialNumber !== undefined) mapped["device.serial"] = updatedFields.serialNumber;
+
+      if (updatedFields.entranceType !== undefined) mapped["configuration.entranceType"] = updatedFields.entranceType;
+      if (updatedFields.physicalLocation !== undefined) mapped["configuration.physicalLocation"] = updatedFields.physicalLocation;
+      if (updatedFields.devicePurpose !== undefined) mapped["configuration.purpose"] = updatedFields.devicePurpose;
+      if (updatedFields.deviceNumber !== undefined) mapped["configuration.deviceNumber"] = updatedFields.deviceNumber;
+      if (updatedFields.doorNumber !== undefined) mapped["configuration.doorNumber"] = updatedFields.doorNumber;
+      if (updatedFields.readerNumber !== undefined) mapped["configuration.readerNumber"] = updatedFields.readerNumber;
+
+      if (updatedFields.ipAddress !== undefined) mapped["network.ip"] = updatedFields.ipAddress;
+      if (updatedFields.port !== undefined) mapped["network.port"] = parseInt(updatedFields.port);
+      if (updatedFields.protocol !== undefined) mapped["network.protocol"] = updatedFields.protocol;
+      if (updatedFields.macAddress !== undefined) mapped["network.mac"] = updatedFields.macAddress;
+      if (updatedFields.firmware !== undefined) mapped["network.firmware"] = updatedFields.firmware;
+
+      if (updatedFields.capabilities !== undefined) mapped["capabilities"] = updatedFields.capabilities;
+
+      if (updatedFields.isEnabled !== undefined) {
+        mapped["health.status"] = updatedFields.isEnabled ? "Offline" : "Disabled";
+        mapped["activatedAt"] = updatedFields.isEnabled ? new Date().toISOString() : null;
+      }
+      if (updatedFields.status !== undefined) {
+        const formattedStatus = updatedFields.status.charAt(0).toUpperCase() + updatedFields.status.slice(1);
+        mapped["health.status"] = formattedStatus;
+      }
+      if (updatedFields.lastHeartbeat !== undefined) mapped["health.lastHeartbeat"] = updatedFields.lastHeartbeat;
+      if (updatedFields.lastSync !== undefined) mapped["health.lastSync"] = updatedFields.lastSync;
+      if (updatedFields.latency !== undefined) mapped["health.latency"] = updatedFields.latency;
+      if (updatedFields.doorStatus !== undefined) mapped["health.doorStatus"] = updatedFields.doorStatus;
+
+      // Pass through any other fields directly
+      for (const k in updatedFields) {
+        if (![
+          'name', 'brand', 'model', 'serialNumber', 'entranceType', 'physicalLocation',
+          'devicePurpose', 'deviceNumber', 'doorNumber', 'readerNumber', 'ipAddress', 'port',
+          'protocol', 'macAddress', 'firmware', 'isEnabled', 'status', 'lastHeartbeat',
+          'lastSync', 'latency', 'doorStatus', 'capabilities'
+        ].includes(k)) {
+          mapped[k] = updatedFields[k];
+        }
+      }
+
+      await updateDoc(deviceRef, mapped);
+
+      // Perform structured audit logging based on changes
+      if (updatedFields.isEnabled !== undefined) {
+        if (updatedFields.isEnabled) {
+          await logAudit('device.activate', 'device', id, `Activated device ${name}. Eligible for communication.`);
+        } else {
+          await logAudit('device.disable', 'device', id, `Disabled device ${name}. Communication blocked.`);
+        }
+      }
+      if (updatedFields.ipAddress !== undefined || updatedFields.port !== undefined || updatedFields.protocol !== undefined) {
+        const ip = updatedFields.ipAddress || (device ? device.network?.ip : '');
+        const port = updatedFields.port || (device ? device.network?.port : '');
+        const protocol = updatedFields.protocol || (device ? device.network?.protocol : '');
+        await logAudit('device.network_change', 'device', id, `Updated network settings for device ${name}: IP ${ip}, Port ${port}, Protocol ${protocol}`);
+      }
+      if (updatedFields.capabilities !== undefined) {
+        await logAudit('device.capabilities_update', 'device', id, `Updated authentication capabilities for device ${name}`);
+      }
+      if (updatedFields.firmware !== undefined) {
+        await logAudit('device.firmware_update', 'device', id, `Updated firmware for device ${name} to ${updatedFields.firmware}`);
+      }
+      
+      await logAudit('device.update', 'device', id, `Updated device settings for ${name}`);
       return { success: true };
     } catch (err) {
       console.error('updateDevice error:', err);
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [logAudit]);
+  }, [devices, logAudit]);
 
   const deleteDevice = useCallback(async (id) => {
     try {
@@ -2504,7 +2717,9 @@ export const DashboardProvider = ({ children }) => {
       const deviceRef = doc(db, COLLECTIONS.DEVICES, id);
       await deleteDoc(deviceRef);
       if (device) {
-        await logAudit('device.delete', 'device', id, `Deleted security device: ${device.name} (${device.serialNumber})`);
+        const name = device.device?.name || device.name;
+        const serial = device.device?.serial || device.serialNumber;
+        await logAudit('device.delete', 'device', id, `Deleted security device: ${name} (${serial})`);
       }
       return { success: true };
     } catch (err) {
@@ -2514,36 +2729,130 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [devices, logAudit]);
 
-  const testDeviceConnection = useCallback(async (deviceId) => {
+  const testDeviceConnection = useCallback(async (deviceIdOrData) => {
     try {
-      const device = devices.find(d => d.id === deviceId);
-      if (!device) return { success: false, message: 'Device not found' };
+      let isSuccess = false;
+      let name = '';
+      let serialNumber = '';
+      let isEnabled = false;
+      let ip = '';
+      let port = 4370;
+      let protocol = 'TCP/IP';
+      let deviceId = 'unsaved';
 
-      const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
-      await updateDoc(deviceRef, { status: 'connecting' });
-      await logAudit('device.connecting', 'device', deviceId, `Initiated connection diagnostic test for ${device.name}`);
+      if (typeof deviceIdOrData === 'string') {
+        deviceId = deviceIdOrData;
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return { success: false, message: 'Device not found' };
+        
+        name = device.device?.name || device.name;
+        serialNumber = device.device?.serial || device.serialNumber;
+        isEnabled = device.health?.status !== 'Disabled';
+        ip = device.network?.ip || device.ipAddress;
+        port = device.network?.port || device.port || 4370;
+        protocol = device.network?.protocol || device.protocol || 'TCP/IP';
 
+        const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+        await updateDoc(deviceRef, { "health.status": "Connecting" });
+        await logAudit('device.connecting', 'device', deviceId, `Initiated connection diagnostic test for ${name}`);
+      } else {
+        // Raw form data passed
+        name = deviceIdOrData.name;
+        serialNumber = deviceIdOrData.serialNumber || '';
+        isEnabled = deviceIdOrData.isEnabled !== false;
+        ip = deviceIdOrData.ipAddress || '';
+        port = parseInt(deviceIdOrData.port || '4370');
+        protocol = deviceIdOrData.protocol || 'TCP/IP';
+      }
+
+      // Simulate multi-stage connection loader
+      const steps = {
+        ping: 'OK',
+        tcp: 'OK',
+        auth: 'OK',
+        firmware: 'OK'
+      };
+      
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const isSuccess = !device.serialNumber.toLowerCase().includes('fail') && device.isEnabled;
-      
-      if (isSuccess) {
-        const heartbeatTime = new Date().toISOString();
-        await updateDoc(deviceRef, { 
-          status: 'online', 
-          lastHeartbeat: heartbeatTime 
-        });
-        await logAudit('device.online', 'device', deviceId, `Device ${device.name} connected successfully. Latency: 42ms`);
-        // Log to AuditLogs: Device Reconnected / Device Online
-        await logAudit('device.reconnect', 'device', deviceId, `Device Reconnected: ${device.name} is now online`);
-        return { success: true, latency: 42, status: 'online' };
-      } else {
-        await updateDoc(deviceRef, { status: 'error' });
-        await logAudit('device.offline', 'device', deviceId, `Device ${device.name} connection failed. Packet loss: 100%`);
-        // Log to AuditLogs: Device Offline / Device Connection Error
-        await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${device.name} failed connection diagnostic`);
-        return { success: false, latency: 0, status: 'error', message: 'Connection timed out. Check network configuration or IP Address.' };
+      const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+      if (!ipRegex.test(ip)) {
+        steps.ping = 'FAIL';
+        steps.tcp = 'FAIL';
+        steps.auth = 'FAIL';
+        steps.firmware = 'FAIL';
+        const failMessage = 'Incorrect IP Address.';
+        await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} failed: ${failMessage}`);
+        
+        if (typeof deviceIdOrData === 'string') {
+          const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+          await updateDoc(deviceRef, { "health.status": "Error" });
+          await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${name} failed connection diagnostic: ${failMessage}`);
+        }
+        return { success: false, latency: 0, steps, message: failMessage };
       }
+
+      if (serialNumber.toLowerCase().includes('timeout')) {
+        steps.tcp = 'FAIL';
+        steps.auth = 'FAIL';
+        steps.firmware = 'FAIL';
+        const failMessage = 'Communication Timeout.';
+        await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} failed: ${failMessage}`);
+        
+        if (typeof deviceIdOrData === 'string') {
+          const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+          await updateDoc(deviceRef, { "health.status": "Error" });
+          await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${name} failed connection diagnostic: ${failMessage}`);
+        }
+        return { success: false, latency: 0, steps, message: failMessage };
+      }
+
+      if (serialNumber.toLowerCase().includes('protocol')) {
+        steps.auth = 'FAIL';
+        steps.firmware = 'FAIL';
+        const failMessage = 'Protocol Mismatch.';
+        await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} failed: ${failMessage}`);
+        
+        if (typeof deviceIdOrData === 'string') {
+          const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+          await updateDoc(deviceRef, { "health.status": "Error" });
+          await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${name} failed connection diagnostic: ${failMessage}`);
+        }
+        return { success: false, latency: 0, steps, message: failMessage };
+      }
+
+      if (serialNumber.toLowerCase().includes('fail') || !isEnabled) {
+        steps.auth = 'FAIL';
+        steps.firmware = 'FAIL';
+        const failMessage = 'Unable to connect to the device.';
+        await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} failed: ${failMessage}`);
+        
+        if (typeof deviceIdOrData === 'string') {
+          const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+          await updateDoc(deviceRef, { "health.status": "Error" });
+          await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${name} failed connection diagnostic: ${failMessage}`);
+        }
+        return { success: false, latency: 0, steps, message: failMessage };
+      }
+
+      // Success
+      const latencyVal = Math.floor(Math.random() * 25) + 30; // 30ms - 55ms
+      const heartbeatTime = new Date().toISOString();
+
+      await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} passed. Latency: ${latencyVal}ms`);
+
+      if (typeof deviceIdOrData === 'string') {
+        const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+        await updateDoc(deviceRef, { 
+          "health.status": "Online", 
+          "health.lastHeartbeat": heartbeatTime,
+          "health.latency": latencyVal
+        });
+        await logAudit('device.online', 'device', deviceId, `Device ${name} connected successfully. Latency: ${latencyVal}ms`);
+        await logAudit('device.reconnect', 'device', deviceId, `Device Reconnected: ${name} is now online`);
+      }
+
+      return { success: true, latency: latencyVal, steps, status: 'Online' };
     } catch (err) {
       console.error('testDeviceConnection error:', err);
       return { success: false, message: err.message };
