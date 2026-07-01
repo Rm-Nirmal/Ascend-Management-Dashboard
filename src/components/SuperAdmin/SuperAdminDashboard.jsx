@@ -12,7 +12,8 @@ import {
   Dumbbell,
   Sliders,
   ClipboardList,
-  DollarSign
+  DollarSign,
+  Cpu
 } from 'lucide-react';
 
 import SuperAdminOverview from './SuperAdminOverview';
@@ -24,6 +25,7 @@ import Announcements from './Announcements';
 import SaaSSubscriptionConsole from './SaaSSubscriptionConsole';
 import ClientAuditLogs from './ClientAuditLogs';
 import SaaSFinance from './SaaSFinance';
+import SecurityDevices from './SecurityDevices';
 
 const SuperAdminDashboard = () => {
   const { currentUser, logout, showToast } = useDashboard();
@@ -35,6 +37,7 @@ const SuperAdminDashboard = () => {
     { id: 'finance', name: 'SaaS Revenue', icon: DollarSign },
     { id: 'audit_logs', name: 'Client Audit Logs', icon: ClipboardList },
     { id: 'create_gym', name: 'Onboard Gym', icon: UserPlus },
+    { id: 'devices', name: 'Security Devices', icon: Cpu },
     { id: 'subscriptions', name: 'Subscriptions', icon: CreditCard },
     { id: 'console', name: 'Plan Console', icon: Sliders },
     { id: 'support', name: 'Support Center', icon: LifeBuoy },
@@ -53,6 +56,8 @@ const SuperAdminDashboard = () => {
         return <ClientAuditLogs />;
       case 'create_gym':
         return <CreateGym />;
+      case 'devices':
+        return <SecurityDevices />;
       case 'subscriptions':
         return <Subscriptions />;
       case 'console':
