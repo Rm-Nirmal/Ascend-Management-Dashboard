@@ -688,16 +688,14 @@ const Members = () => {
                           >
                             <Eye size={14} />
                           </button>
-                          {currentUser?.role === 'super_admin' && (
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
-                              title="Edit Member Details"
-                              onClick={() => handleEditClick(member)}
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                          )}
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
+                            title="Edit Member Details"
+                            onClick={() => handleEditClick(member)}
+                          >
+                            <Edit2 size={14} />
+                          </button>
                           <button 
                             className="btn btn-secondary" 
                             style={{ padding: '0.4rem', color: 'var(--color-danger)' }}
@@ -1007,15 +1005,13 @@ const Members = () => {
                   </div>
                 </div>
               </div>
-              {currentUser?.role === 'super_admin' && (
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
-                  onClick={() => handleEditClick(selectedMember)}
-                >
-                  <Edit2 size={12} /> Edit Details
-                </button>
-              )}
+              <button 
+                className="btn btn-secondary" 
+                style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
+                onClick={() => handleEditClick(selectedMember)}
+              >
+                <Edit2 size={12} /> Edit Details
+              </button>
             </div>
 
             {/* Core details */}
@@ -1038,17 +1034,6 @@ const Members = () => {
                 <div style={{ fontSize: '0.85rem' }}>
                   Trainer: {trainers.find(t => t.id === selectedMember.trainer_id)?.name || 'Unassigned'}
                 </div>
-              </div>
-
-              {/* Auto Renewal toggle (FR-MEM-04) */}
-              <div style={{ display: 'flex', justifySelf: 'flex-start', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Auto Renewal Status</span>
-                <button 
-                  onClick={() => handleToggleAutoRenew(selectedMember)} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: selectedMember.auto_renew ? 'var(--color-success)' : 'var(--text-dark)' }}
-                >
-                  {selectedMember.auto_renew ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                </button>
               </div>
             </div>
 
