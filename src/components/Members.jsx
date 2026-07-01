@@ -211,7 +211,7 @@ const Members = () => {
     
     const diff = new Date(member.countdown_end).getTime() - time;
     if (diff <= 0) {
-      return <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>Expired</span>;
+      return <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>00</span>;
     }
     
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));

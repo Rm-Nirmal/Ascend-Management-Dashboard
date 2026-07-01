@@ -1932,7 +1932,6 @@ export const DashboardProvider = ({ children }) => {
     try {
       const req = registrations.find(r => r.id === requestId);
       if (req) {
-        // Create member from registration data
         const newMember = await addMember({
           full_name: req.full_name,
           email: req.email,
@@ -1949,6 +1948,8 @@ export const DashboardProvider = ({ children }) => {
           weight_kg: req.weight_kg ? parseFloat(req.weight_kg) : 75.0,
           height_cm: req.height_cm ? parseInt(req.height_cm) : 175,
           body_fat_pct: req.body_fat_pct ? parseFloat(req.body_fat_pct) : 18.0,
+          countdown_end: new Date().toISOString(),
+          next_payment_date: new Date().toISOString(),
         });
 
         // Update registration status in Firestore
