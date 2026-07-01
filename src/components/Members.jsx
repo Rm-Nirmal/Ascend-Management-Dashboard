@@ -340,6 +340,13 @@ const Members = () => {
     return [...memberInvoices].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0];
   }, [selectedMember, invoices]);
 
+  const memberInvoices = useMemo(() => {
+    if (!selectedMember || !invoices) return [];
+    return invoices
+      .filter(inv => inv.member_id === selectedMember.id)
+      .sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at));
+  }, [selectedMember, invoices]);
+
   // Calculate member-level financials
   const memberFinancials = useMemo(() => {
     return uniqueMembers.map(member => {
@@ -634,6 +641,10 @@ const Members = () => {
               ) : (
                 displayedMembers.map(member => {
                   const plan = plans.find(p => p.id === member.plan_id);
+                  const memberInvs = invoices ? invoices.filter(inv => inv.member_id === member.id) : [];
+                  const latestInv = memberInvs.length > 0 
+                    ? [...memberInvs].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0]
+                    : null;
                   return (
                     <tr key={member.id}>
                       <td style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{member.member_code}</td>
@@ -688,6 +699,16 @@ const Members = () => {
                           >
                             <Eye size={14} />
                           </button>
+                          {latestInv && (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
+                              title="View Payment Receipt"
+                              onClick={() => setViewingReceipt(latestInv)}
+                            >
+                              <Printer size={14} />
+                            </button>
+                          )}
                           <button 
                             className="btn btn-secondary" 
                             style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
@@ -846,6 +867,10 @@ const Members = () => {
                   ) : (
                     displayedFinancials.map(member => {
                       const plan = plans.find(p => p.id === member.plan_id);
+                      const memberInvs = invoices ? invoices.filter(inv => inv.member_id === member.id) : [];
+                      const latestInv = memberInvs.length > 0 
+                        ? [...memberInvs].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0]
+                        : null;
                       return (
                         <tr key={member.id}>
                           <td style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{member.member_code}</td>
@@ -899,6 +924,17 @@ const Members = () => {
                               >
                                 <Eye size={14} />
                               </button>
+                              {latestInv && (
+                                <button 
+                                  type="button"
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
+                                  title="View Payment Receipt"
+                                  onClick={() => setViewingReceipt(latestInv)}
+                                >
+                                  <Printer size={14} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1085,6 +1121,57 @@ const Members = () => {
               >
                 <CreditCard size={12} /> Collect & Renew
               </button>
+            </div>
+
+            {/* Payment History & Receipts Section */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>
+                Payment History & Receipts
+              </span>
+              {memberInvoices.length === 0 ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-dark)', fontStyle: 'italic' }}>
+                  No payment history found.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {memberInvoices.map(inv => (
+                    <div 
+                      key={inv.id} 
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '0.5rem 0.75rem', 
+                        background: 'rgba(0,0,0,0.15)', 
+                        borderRadius: '6px', 
+                        border: '1px solid rgba(255,255,255,0.03)',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#fff' }}>{inv.invoice_number}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {new Date(inv.paid_at || inv.issued_at).toLocaleDateString()} &bull; {inv.payment_method?.replace('_', ' ') || 'Card'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
+                          LKR {inv.total_amount?.toLocaleString()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setViewingReceipt(inv)}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                          title="View Receipt"
+                        >
+                          <Printer size={10} /> View
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Health & Body measurements & Goal (FR-MEM-05) */}
