@@ -734,18 +734,6 @@ const Payments = () => {
                   </label>
 
                   <label style={{ 
-                    display: 'flex', alignItems: 'center', gap: '0.5rem', background: paymentMethod === 'upi' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.02)',
-                    border: paymentMethod === 'upi' ? '1px solid var(--color-warning)' : '1px solid var(--border-color)',
-                    padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
-                  }}>
-                    <input 
-                      type="radio" name="paymethod" value="upi" checked={paymentMethod === 'upi'} 
-                      onChange={() => setPaymentMethod('upi')} style={{ display: 'none' }}
-                    />
-                    <Smartphone size={16} /> Mobile UPI
-                  </label>
-
-                  <label style={{ 
                     display: 'flex', alignItems: 'center', gap: '0.5rem', background: paymentMethod === 'bank_transfer' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
                     border: paymentMethod === 'bank_transfer' ? '1px solid var(--color-ai)' : '1px solid var(--border-color)',
                     padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
@@ -967,7 +955,6 @@ const Payments = () => {
                   <option value="bank_transfer">🏦 Bank Wire Transfer (Recommended)</option>
                   <option value="cash">💵 Cash Payout</option>
                   <option value="card">💳 Credit/Debit Card</option>
-                  <option value="upi">📱 Mobile UPI</option>
                 </select>
               </div>
 

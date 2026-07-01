@@ -284,6 +284,15 @@ const Members = () => {
       if (seen.has(m.member_code)) return false;
       seen.add(m.member_code);
       return true;
+    }).sort((a, b) => {
+      const codeA = a.member_code || '';
+      const codeB = b.member_code || '';
+      const numA = parseInt(codeA.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(codeB.replace(/\D/g, ''), 10) || 0;
+      if (numA !== numB) {
+        return numB - numA;
+      }
+      return codeB.localeCompare(codeA);
     });
   }, [members]);
 
@@ -1471,9 +1480,8 @@ const Members = () => {
       {selectedRenewMember && (() => {
         const plan = plans.find(p => p.id === selectedRenewMember.plan_id) || plans[0];
         const subtotal = parseFloat(renewPrice || 0);
-        const taxRate = plan ? plan.tax_rate / 100 : 0.085;
-        const tax = subtotal * taxRate;
-        const total = subtotal + tax;
+        const tax = 0.0;
+        const total = subtotal;
 
         // Calculate dynamic new expiry date
         const baseDate = selectedRenewMember.countdown_end && new Date(selectedRenewMember.countdown_end).getTime() > time
@@ -1566,10 +1574,6 @@ const Members = () => {
                     <span style={{ color: 'var(--text-muted)' }}>Base Subtotal:</span>
                     <span>LKR {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Tax ({plan?.tax_rate || 8.5}%):</span>
-                    <span>+LKR {tax.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
                   <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.6rem 0', paddingTop: '0.6rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-success)' }}>
                       <span>Total Collection:</span>
@@ -1593,7 +1597,6 @@ const Members = () => {
                   >
                     <option value="card">💳 Credit / Debit Card</option>
                     <option value="cash">💵 Cash Payment</option>
-                    <option value="upi">📱 UPI / Instant Pay</option>
                     <option value="bank_transfer">🏦 Bank Wire Transfer</option>
                   </select>
                 </div>
@@ -1955,10 +1958,12 @@ const Members = () => {
                   <span>Subtotal:</span>
                   <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Tax & Fees:</span>
-                  <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.tax_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
-                </div>
+                {viewingReceipt.tax_amount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Tax & Fees:</span>
+                    <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.tax_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                  </div>
+                )}
               </div>
               <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>TOTAL AMOUNT PAID</span>

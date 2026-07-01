@@ -336,14 +336,14 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
           </div>
         </div>
 
-        {/* Section 3: Membership & Installment Options */}
+        {/* Section 3: Membership Option */}
         <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h4 style={{ color: '#ffffff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
-            {isStandalone ? "3. Membership & Installment Options" : "3. Membership Option"}
+            3. Membership Option
           </h4>
 
-          <div className={isStandalone ? "pub-form-grid" : ""}>
-            <div style={isStandalone ? {} : { width: '100%' }}>
+          <div>
+            <div style={{ width: '100%' }}>
               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Subscription Plan *</label>
               <select 
                 required
@@ -359,22 +359,6 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
               </select>
               {formErrors.plan_id && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.plan_id}</span>}
             </div>
-
-            {isStandalone && (
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Payment Installment Plan *</label>
-                <select 
-                  required
-                  value={publicForm.installment_plan}
-                  onChange={(e) => setPublicForm({...publicForm, installment_plan: e.target.value})}
-                  className="glass-select"
-                  style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
-                >
-                  <option value="1 time">1 Time (Pay in full)</option>
-                  <option value="3 month installment plan">3 Month Installment Plan</option>
-                </select>
-              </div>
-            )}
           </div>
         </div>
 

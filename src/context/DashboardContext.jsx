@@ -2284,8 +2284,8 @@ export const DashboardProvider = ({ children }) => {
 
       const isCustom = customPrice !== null && parseFloat(customPrice) !== plan.price * parseInt(periodMonths);
       const priceToCharge = isCustom ? parseFloat(customPrice) : plan.price * parseInt(periodMonths);
-      const tax = isCustom ? 0 : priceToCharge * (plan.tax_rate / 100);
-      const total = priceToCharge + tax;
+      const tax = 0.0;
+      const total = priceToCharge;
 
       const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end, periodMonths);
 

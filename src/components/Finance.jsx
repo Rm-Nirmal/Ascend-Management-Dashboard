@@ -2544,7 +2544,6 @@ const Finance = () => {
                   >
                     <option value="card">Card Payment</option>
                     <option value="cash">Cash Payment</option>
-                    <option value="upi">UPI/Mobile Pay</option>
                     <option value="bank_transfer">Bank Wire</option>
                   </select>
                 </div>
@@ -2668,7 +2667,6 @@ const Finance = () => {
                     <option value="card">Card</option>
                     <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank Wire</option>
-                    <option value="upi">UPI Mobile</option>
                   </select>
                 </div>
               </div>
