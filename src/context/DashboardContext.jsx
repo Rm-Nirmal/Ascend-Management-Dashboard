@@ -30,11 +30,11 @@ const DashboardContext = createContext();
  * Build a new member data object suitable for writing to Firestore.
  * Generates member_code, qr_token, and sets defaults.
  */
-const helperCreateMemberObject = (memberData, memberCode) => {
+const helperCreateMemberObject = (memberData, memberCode, gymId) => {
   const now = new Date();
   const countdownEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   return {
-    gymId: DEFAULT_ORG_ID,
+    gymId: gymId || DEFAULT_ORG_ID,
     member_code: memberCode,
     joined_at: now.toISOString().split('T')[0],
     status: 'active',
@@ -55,12 +55,12 @@ const helperCreateMemberObject = (memberData, memberCode) => {
 /**
  * Build an invoice object for a new member enrollment.
  */
-const helperCreateInvoiceForMember = (memberId, memberName, plan) => {
+const helperCreateInvoiceForMember = (memberId, memberName, plan, gymId) => {
   const tax = 0.0;
   const total = plan.price;
   const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
   return {
-    gymId: DEFAULT_ORG_ID,
+    gymId: gymId || DEFAULT_ORG_ID,
     member_id: memberId,
     member_name: memberName,
     invoice_number: invNumber,
@@ -215,9 +215,9 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [currentUser]);
 
-  const createInvoiceForMember = useCallback(async (memberId, memberName, plan) => {
+  const createInvoiceForMember = useCallback(async (memberId, memberName, plan, gymId) => {
     try {
-      const invoiceData = helperCreateInvoiceForMember(memberId, memberName, plan);
+      const invoiceData = helperCreateInvoiceForMember(memberId, memberName, plan, gymId);
       await addDoc(collection(db, COLLECTIONS.INVOICES), invoiceData);
     } catch (err) {
       console.error('createInvoiceForMember error:', err);
@@ -1793,20 +1793,37 @@ export const DashboardProvider = ({ children }) => {
 
   const addMember = useCallback(async (memberData) => {
     try {
+      const { gymId: memberDataGymId, ...restMemberData } = memberData;
+      const resolvedGymId = memberDataGymId || currentUser?.gymId || DEFAULT_ORG_ID;
+
+      let gymName = gymSettings?.gymName;
+      if (resolvedGymId !== gymSettings?.gymId) {
+        const targetGym = gyms.find(g => g.gymId === resolvedGymId);
+        if (targetGym) {
+          gymName = targetGym.gymName;
+        }
+      }
+      if (!gymName) {
+        gymName = resolvedGymId === 'gym_ascend_hq' ? 'Ascend Gym' : 'Client Gym';
+      }
+
+      const cleanName = gymName.trim().replace(/[^a-zA-Z]/g, '');
+      const prefix = (cleanName.substring(0, 3).toUpperCase() || 'GYM') + '-';
+
       // Find the next member code sequentially (in order starting with 1000)
       let maxNum = 999;
       members.forEach(m => {
-        if (m.member_code && m.member_code.startsWith('ASC-')) {
-          const numStr = m.member_code.replace('ASC-', '');
+        if (m.member_code && m.member_code.startsWith(prefix)) {
+          const numStr = m.member_code.replace(prefix, '');
           const num = parseInt(numStr, 10);
           if (!isNaN(num) && num > maxNum) {
             maxNum = num;
           }
         }
       });
-      const memberCode = `ASC-${maxNum + 1}`;
+      const memberCode = `${prefix}${maxNum + 1}`;
 
-      const newMemberData = helperCreateMemberObject(memberData, memberCode);
+      const newMemberData = helperCreateMemberObject(restMemberData, memberCode, resolvedGymId);
 
       // Write to Firestore — returns a DocumentReference
       const docRef = await addDoc(collection(db, COLLECTIONS.MEMBERS), newMemberData);
@@ -1820,7 +1837,7 @@ export const DashboardProvider = ({ children }) => {
       // Auto-generate invoice for membership
       const plan = plans.find(p => p.id === newMember.plan_id);
       if (plan) {
-        await createInvoiceForMember(docRef.id, newMember.full_name, plan);
+        await createInvoiceForMember(docRef.id, newMember.full_name, plan, resolvedGymId);
       }
 
       return newMember;
@@ -1829,7 +1846,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return null;
     }
-  }, [plans, members, createInvoiceForMember, logAudit]);
+  }, [plans, members, createInvoiceForMember, logAudit, currentUser, gymSettings, gyms]);
 
   const updateMember = useCallback(async (id, updatedFields) => {
     try {
@@ -1917,13 +1934,17 @@ export const DashboardProvider = ({ children }) => {
 
   const addRegistrationRequest = useCallback(async (formData) => {
     try {
+      const queryParams = new URLSearchParams(window.location.search);
+      const urlGymId = queryParams.get('gymId') || queryParams.get('gym_id');
+      const resolvedGymId = formData.gymId || urlGymId || currentUser?.gymId || DEFAULT_ORG_ID;
+
       const newReq = {
-        gymId: DEFAULT_ORG_ID,
         status: 'pending_approval',
         captcha_verified: true,
         ip_address: '192.168.1.10',
         created_at: new Date().toISOString(),
         ...formData,
+        gymId: resolvedGymId,
       };
       const docRef = await addDoc(collection(db, COLLECTIONS.REGISTRATIONS), newReq);
       return { id: docRef.id, ...newReq };
@@ -1932,7 +1953,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return null;
     }
-  }, []);
+  }, [currentUser]);
 
   const approveRegistration = useCallback(async (requestId) => {
     try {
@@ -1956,6 +1977,7 @@ export const DashboardProvider = ({ children }) => {
           body_fat_pct: req.body_fat_pct ? parseFloat(req.body_fat_pct) : 18.0,
           countdown_end: new Date().toISOString(),
           next_payment_date: new Date().toISOString(),
+          gymId: req.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
         });
 
         // Update registration status in Firestore
@@ -1973,7 +1995,7 @@ export const DashboardProvider = ({ children }) => {
       console.error('approveRegistration error:', err);
       setError(friendlyFirestoreError(err));
     }
-  }, [registrations, addMember, logAudit]);
+  }, [registrations, addMember, logAudit, currentUser]);
 
   const rejectRegistration = useCallback(async (requestId, reason) => {
     try {
@@ -2055,11 +2077,15 @@ export const DashboardProvider = ({ children }) => {
 
   const addEmployeeRegistrationRequest = useCallback(async (formData) => {
     try {
+      const queryParams = new URLSearchParams(window.location.search);
+      const urlGymId = queryParams.get('gymId') || queryParams.get('gym_id');
+      const resolvedGymId = formData.gymId || urlGymId || currentUser?.gymId || DEFAULT_ORG_ID;
+
       const newReq = {
-        gymId: DEFAULT_ORG_ID,
         status: 'pending_approval',
         created_at: new Date().toISOString(),
         ...formData,
+        gymId: resolvedGymId,
         expected_salary: parseFloat(formData.expected_salary),
       };
       const docRef = await addDoc(collection(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS), newReq);
@@ -2069,7 +2095,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, []);
+  }, [currentUser]);
 
   const approveEmployeeRegistration = useCallback(async (requestId, finalSalary, nextSalaryDate) => {
     try {
@@ -2169,7 +2195,7 @@ export const DashboardProvider = ({ children }) => {
       // Helper to write a denied event
       const writeDeniedEvent = async (membObj, reason, denyReason) => {
         const event = {
-          gymId: DEFAULT_ORG_ID,
+          gymId: membObj?.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
           member_id: membObj?.id || null,
           member_name: membObj?.full_name || 'Unknown Member',
           member_code: membObj?.member_code || memberCode,
@@ -2201,7 +2227,7 @@ export const DashboardProvider = ({ children }) => {
 
       // ── ACCESS GRANTED ──
       const grantedEvent = {
-        gymId: DEFAULT_ORG_ID,
+        gymId: member.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
         member_id: member.id,
         member_name: member.full_name,
         member_code: member.member_code,
@@ -2216,7 +2242,7 @@ export const DashboardProvider = ({ children }) => {
       console.error('checkInMember error:', err);
       return { success: false, reason: 'System error during check-in. Please try again.' };
     }
-  }, [members, logAudit]);
+  }, [members, logAudit, currentUser]);
 
   const checkOutMember = useCallback(async (eventId) => {
     try {
