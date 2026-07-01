@@ -658,13 +658,6 @@ const Overview = () => {
               </button>
             ))}
           </div>
-
-          <button className="btn btn-secondary" onClick={() => handleExport('csv')} style={{ gap: '0.35rem' }}>
-            <Download size={14} /> Export CSV
-          </button>
-          <button className="btn btn-secondary" onClick={() => handleExport('pdf')} style={{ gap: '0.35rem' }}>
-            <Download size={14} /> Print Report
-          </button>
         </div>
       </div>
 

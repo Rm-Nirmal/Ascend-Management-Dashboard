@@ -282,28 +282,6 @@ const DashboardContentShell = () => {
 
           {/* User actions */}
           <div className="topbar-actions">
-            {/* Firebase status light */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(16, 185, 129, 0.05)', padding: '0.4rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.15)', fontSize: '0.75rem', color: 'var(--color-success)', fontWeight: 600 }}>
-              <ShieldCheck size={14} /> Firebase Live
-            </div>
-
-            {/* Notification bell */}
-            <button 
-              className="btn btn-secondary" 
-              style={{ padding: '0.5rem', borderRadius: '50%', position: 'relative' }}
-              onClick={() => showToast(`Logged in as ${currentUser.name} | Gym ID: ${currentUser.gymId || 'N/A'}`, 'info')}
-            >
-              <Bell size={16} />
-              <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', background: 'var(--color-danger)', borderRadius: '50%' }} />
-            </button>
-
-            <button 
-              className="btn btn-secondary" 
-              style={{ padding: '0.5rem', borderRadius: '50%' }}
-              onClick={() => showToast(`Access: ${currentUser.role === 'gym_owner' ? 'Gym Owner' : 'Gym Staff'}`, 'info')}
-            >
-              <HelpCircle size={16} />
-            </button>
           </div>
         </header>
 
