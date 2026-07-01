@@ -134,98 +134,171 @@ const CreateGym = () => {
 
   if (credentials) {
     return (
-      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          boxShadow: '0 0 20px rgba(16, 185, 129, 0.05)',
-          borderRadius: '12px',
-          padding: '2rem',
+      <div style={{ padding: '3rem 1.5rem', maxWidth: '650px', margin: '0 auto' }}>
+        <div className="glass-card" style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '1.5rem'
+          gap: '2rem',
+          padding: '2.5rem',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          <CheckCircle size={48} style={{ color: 'var(--color-success)' }} />
+          {/* Subtle top ambient light glow */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '150px',
+            height: '2px',
+            background: 'linear-gradient(to right, transparent, #a855f7, transparent)',
+            boxShadow: '0 0 20px 2px rgba(168, 85, 247, 0.4)'
+          }} />
+
+          <div style={{
+            background: 'rgba(168, 85, 247, 0.05)',
+            border: '1px solid rgba(168, 85, 247, 0.2)',
+            borderRadius: '50%',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 15px rgba(168, 85, 247, 0.15)'
+          }}>
+            <CheckCircle size={36} style={{ color: '#a855f7' }} />
+          </div>
           
           <div style={{ textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Gym Workspace Onboarded!</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-              Copy the credentials below and provide them to the client.
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
+              Gym Workspace Onboarded!
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem', maxWidth: '400px' }}>
+              The workspace has been successfully provisioned. Copy these temporary credentials for the owner.
             </p>
           </div>
 
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {/* Gym ID */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.01)', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '8px', 
+              padding: '0.75rem 1rem', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              transition: 'var(--transition-fast)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+            >
               <div>
-                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Gym ID</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>{credentials.gymId}</span>
+                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Gym Workspace ID</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', fontFamily: 'monospace' }}>{credentials.gymId}</span>
               </div>
               <button 
                 onClick={() => handleCopy(credentials.gymId, 'gymId')}
                 className="btn btn-secondary" 
-                style={{ padding: '0.4rem' }}
+                style={{ padding: '0.5rem', borderRadius: '6px' }}
+                title="Copy Gym ID"
               >
-                {copiedField === 'gymId' ? <Check size={14} style={{ color: 'var(--color-success)' }} /> : <Copy size={14} />}
+                {copiedField === 'gymId' ? <Check size={14} style={{ color: '#10b981' }} /> : <Copy size={14} />}
               </button>
             </div>
 
             {/* Email */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.01)', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '8px', 
+              padding: '0.75rem 1rem', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              transition: 'var(--transition-fast)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+            >
               <div>
-                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Owner Username/Email</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)' }}>{credentials.ownerEmail}</span>
+                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Owner Email</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)' }}>{credentials.ownerEmail}</span>
               </div>
               <button 
                 onClick={() => handleCopy(credentials.ownerEmail, 'ownerEmail')}
                 className="btn btn-secondary" 
-                style={{ padding: '0.4rem' }}
+                style={{ padding: '0.5rem', borderRadius: '6px' }}
+                title="Copy Email"
               >
-                {copiedField === 'ownerEmail' ? <Check size={14} style={{ color: 'var(--color-success)' }} /> : <Copy size={14} />}
+                {copiedField === 'ownerEmail' ? <Check size={14} style={{ color: '#10b981' }} /> : <Copy size={14} />}
               </button>
             </div>
 
             {/* Password */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.01)', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '8px', 
+              padding: '0.75rem 1rem', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              transition: 'var(--transition-fast)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+            >
               <div>
-                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Temporary Password</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f59e0b', fontFamily: 'monospace' }}>{credentials.tempPassword}</span>
+                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Temporary Password</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f59e0b', fontFamily: 'monospace' }}>{credentials.tempPassword}</span>
               </div>
               <button 
                 onClick={() => handleCopy(credentials.tempPassword, 'tempPassword')}
                 className="btn btn-secondary" 
-                style={{ padding: '0.4rem' }}
+                style={{ padding: '0.5rem', borderRadius: '6px' }}
+                title="Copy Password"
               >
-                {copiedField === 'tempPassword' ? <Check size={14} style={{ color: 'var(--color-success)' }} /> : <Copy size={14} />}
+                {copiedField === 'tempPassword' ? <Check size={14} style={{ color: '#10b981' }} /> : <Copy size={14} />}
               </button>
             </div>
 
             {/* URL */}
-            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.01)', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '8px', 
+              padding: '0.75rem 1rem', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              transition: 'var(--transition-fast)'
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+            >
               <div style={{ overflow: 'hidden', paddingRight: '1rem' }}>
-                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Direct Dashboard URL</span>
-                <span style={{ fontSize: '0.8rem', color: '#3b82f6', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
+                <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Direct Login URL</span>
+                <span style={{ fontSize: '0.85rem', color: '#3b82f6', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block', fontWeight: 500 }}>
                   {credentials.dashboardUrl}
                 </span>
               </div>
               <button 
                 onClick={() => handleCopy(credentials.dashboardUrl, 'dashboardUrl')}
                 className="btn btn-secondary" 
-                style={{ padding: '0.4rem' }}
+                style={{ padding: '0.5rem', borderRadius: '6px' }}
+                title="Copy URL"
               >
-                {copiedField === 'dashboardUrl' ? <Check size={14} style={{ color: 'var(--color-success)' }} /> : <Copy size={14} />}
+                {copiedField === 'dashboardUrl' ? <Check size={14} style={{ color: '#10b981' }} /> : <Copy size={14} />}
               </button>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', width: '100%', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', width: '100%', marginTop: '0.5rem' }}>
             <button 
               className="btn btn-secondary" 
-              style={{ flex: 1, justifyContent: 'center' }}
-              onClick={() => {
-                setCredentials(null);
-              }}
+              style={{ flex: 1, justifyContent: 'center', height: '42px' }}
+              onClick={() => setCredentials(null)}
             >
               Onboard Another
             </button>
@@ -234,7 +307,18 @@ const CreateGym = () => {
               target="_blank" 
               rel="noreferrer" 
               className="btn btn-primary" 
-              style={{ flex: 1, textDecoration: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #a855f7, #3b82f6)', border: 'none' }}
+              style={{ 
+                flex: 1, 
+                textDecoration: 'none', 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                background: 'linear-gradient(135deg, #a855f7, #3b82f6)', 
+                color: '#ffffff',
+                border: 'none',
+                height: '42px',
+                boxShadow: '0 4px 12px rgba(168, 85, 247, 0.2)'
+              }}
             >
               Test Login URL
             </a>
@@ -245,12 +329,12 @@ const CreateGym = () => {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2.5rem' }}>
+        <h3 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
           Onboard Client Gym Workspace
         </h3>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
           Provision isolated SaaS subdomains, assign owner profiles, and configure billing plans.
         </p>
       </div>
@@ -259,16 +343,17 @@ const CreateGym = () => {
         <div style={{
           background: 'rgba(239, 68, 68, 0.05)',
           border: '1px solid rgba(239, 68, 68, 0.15)',
-          color: 'var(--color-danger)',
-          borderRadius: '8px',
-          padding: '0.75rem 1rem',
-          marginBottom: '1.5rem',
+          borderLeft: '4px solid #ef4444',
+          color: '#f87171',
+          borderRadius: '6px',
+          padding: '0.85rem 1.25rem',
+          marginBottom: '2rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
-          fontSize: '0.85rem'
+          gap: '0.75rem',
+          fontSize: '0.875rem'
         }}>
-          <ShieldAlert size={16} />
+          <ShieldAlert size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
           <span>{error}</span>
         </div>
       )}
@@ -280,27 +365,24 @@ const CreateGym = () => {
         <form onSubmit={handleSubmit} style={{ flex: '1 1 650px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* Card 1: Workspace Identity */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.01)',
-            border: '1px solid rgba(255, 255, 255, 0.04)',
-            borderRadius: '12px',
-            padding: '1.5rem',
+          <div className="glass-card" style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem'
+            gap: '1.25rem',
+            padding: '1.75rem'
           }}>
-            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              1. Workspace Identity
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              1. Workspace Profile
             </h5>
             
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Gym Workspace Name *</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Gym Workspace Name *</label>
               <div style={{ position: 'relative' }}>
-                <Building2 size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                <Building2 size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input 
                   type="text" 
-                  className="form-control" 
-                  style={{ paddingLeft: '2.3rem' }} 
+                  className="glass-input" 
+                  style={{ paddingLeft: '2.5rem' }} 
                   placeholder="e.g. Iron Titan Gym"
                   value={gymName} 
                   onChange={e => setGymName(e.target.value)} 
@@ -309,42 +391,42 @@ const CreateGym = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Country Location</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Country Location</label>
                 <div style={{ position: 'relative' }}>
-                  <Globe size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <Globe size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input 
                     type="text" 
-                    className="form-control" 
-                    style={{ paddingLeft: '2.3rem' }} 
+                    className="glass-input" 
+                    style={{ paddingLeft: '2.5rem' }} 
                     value={country} 
                     onChange={e => setCountry(e.target.value)} 
                   />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Currency Code</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Currency Code</label>
                 <div style={{ position: 'relative' }}>
-                  <DollarSign size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <DollarSign size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input 
                     type="text" 
-                    className="form-control" 
-                    style={{ paddingLeft: '2.3rem' }} 
+                    className="glass-input" 
+                    style={{ paddingLeft: '2.5rem' }} 
                     value={currency} 
                     onChange={e => setCurrency(e.target.value)} 
                   />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Timezone</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Timezone</label>
                 <div style={{ position: 'relative' }}>
-                  <Clock size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <Clock size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
                   <select 
-                    className="form-control" 
-                    style={{ paddingLeft: '2.3rem', appearance: 'none' }}
+                    className="glass-select" 
+                    style={{ width: '100%', paddingLeft: '2.5rem', height: '40px' }}
                     value={timezone}
                     onChange={e => setTimezone(e.target.value)}
                   >
@@ -359,29 +441,26 @@ const CreateGym = () => {
             </div>
           </div>
 
-          {/* Card 2: Owner Credentials */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.01)',
-            border: '1px solid rgba(255, 255, 255, 0.04)',
-            borderRadius: '12px',
-            padding: '1.5rem',
+          {/* Card 2: Workspace Owner Credentials */}
+          <div className="glass-card" style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem'
+            gap: '1.25rem',
+            padding: '1.75rem'
           }}>
-            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               2. Workspace Owner Credentials
             </h5>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Owner Full Name *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Owner Full Name *</label>
                 <div style={{ position: 'relative' }}>
-                  <User size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <User size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input 
                     type="text" 
-                    className="form-control" 
-                    style={{ paddingLeft: '2.3rem' }} 
+                    className="glass-input" 
+                    style={{ paddingLeft: '2.5rem' }} 
                     placeholder="e.g. John Doe"
                     value={ownerName} 
                     onChange={e => setOwnerName(e.target.value)} 
@@ -390,14 +469,14 @@ const CreateGym = () => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Owner Email Address *</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Owner Email Address *</label>
                 <div style={{ position: 'relative' }}>
-                  <Mail size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <Mail size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input 
                     type="email" 
-                    className="form-control" 
-                    style={{ paddingLeft: '2.3rem' }} 
+                    className="glass-input" 
+                    style={{ paddingLeft: '2.5rem' }} 
                     placeholder="e.g. owner@irontitan.com"
                     value={ownerEmail} 
                     onChange={e => setOwnerEmail(e.target.value)} 
@@ -407,14 +486,14 @@ const CreateGym = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Contact Phone *</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Contact Phone *</label>
               <div style={{ position: 'relative' }}>
-                <Phone size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                <Phone size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 <input 
                   type="text" 
-                  className="form-control" 
-                  style={{ paddingLeft: '2.3rem' }} 
+                  className="glass-input" 
+                  style={{ paddingLeft: '2.5rem' }} 
                   placeholder="e.g. +94 77 123 4567"
                   value={phone} 
                   onChange={e => setPhone(e.target.value)} 
@@ -423,13 +502,13 @@ const CreateGym = () => {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Physical Address *</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Physical Address *</label>
               <div style={{ position: 'relative' }}>
-                <MapPin size={15} style={{ position: 'absolute', left: '0.75rem', top: '12px', color: 'var(--text-dark)' }} />
+                <MapPin size={16} style={{ position: 'absolute', left: '0.85rem', top: '12px', color: 'var(--text-muted)' }} />
                 <textarea 
-                  className="form-control" 
-                  style={{ paddingLeft: '2.3rem', minHeight: '60px' }} 
+                  className="glass-input" 
+                  style={{ paddingLeft: '2.5rem', minHeight: '80px', resize: 'vertical' }} 
                   placeholder="e.g. 200 Temple Road, Colombo 07, Sri Lanka"
                   value={address} 
                   onChange={e => setAddress(e.target.value)} 
@@ -440,27 +519,24 @@ const CreateGym = () => {
           </div>
 
           {/* Card 3: Subscription & Billing */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.01)',
-            border: '1px solid rgba(255, 255, 255, 0.04)',
-            borderRadius: '12px',
-            padding: '1.5rem',
+          <div className="glass-card" style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '1rem'
+            gap: '1.25rem',
+            padding: '1.75rem'
           }}>
-            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               3. Plan & Installment Selection
             </h5>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Monthly Subscription Plan</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Monthly Subscription Plan</label>
                 <div style={{ position: 'relative' }}>
-                  <CreditCard size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <CreditCard size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
                   <select 
-                    className="form-control" 
-                    style={{ paddingLeft: '2.3rem', appearance: 'none' }}
+                    className="glass-select" 
+                    style={{ width: '100%', paddingLeft: '2.5rem', height: '40px' }}
                     value={subscriptionPlan}
                     onChange={e => setSubscriptionPlan(e.target.value)}
                   >
@@ -473,13 +549,13 @@ const CreateGym = () => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.75rem' }}>Installment / Billing Term</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Installment / Billing Term</label>
                 <div style={{ position: 'relative' }}>
-                  <Calendar size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)' }} />
+                  <Calendar size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1 }} />
                   <select 
-                    className="form-control" 
-                    style={{ paddingLeft: '2.3rem', appearance: 'none' }}
+                    className="glass-select" 
+                    style={{ width: '100%', paddingLeft: '2.5rem', height: '40px' }}
                     value={installmentPlan}
                     onChange={e => setInstallmentPlan(e.target.value)}
                   >
@@ -497,17 +573,24 @@ const CreateGym = () => {
             className="btn btn-primary" 
             disabled={isSubmitting}
             style={{ 
-              marginTop: '0.5rem', 
+              marginTop: '0.75rem', 
               justifyContent: 'center', 
               background: 'linear-gradient(135deg, #a855f7, #3b82f6)', 
+              color: '#ffffff',
               borderColor: 'transparent',
-              padding: '0.85rem',
-              fontWeight: 700
+              padding: '0.9rem',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(168, 85, 247, 0.25)',
+              transition: 'all 0.2s ease-in-out'
             }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 16px rgba(168, 85, 247, 0.35)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.25)'}
           >
             {isSubmitting ? (
               <>
-                <Loader2 size={16} className="spin" /> Generating Workspace & Credentials...
+                <Loader2 size={16} className="spin" style={{ marginRight: '0.5rem' }} /> Generating Workspace & Credentials...
               </>
             ) : (
               'Onboard Gym & Generate Credentials'
@@ -516,23 +599,33 @@ const CreateGym = () => {
         </form>
 
         {/* Right Side: Live Pricing & Quota Calculator */}
-        <div style={{
-          flex: '1 1 300px',
-          background: 'rgba(168, 85, 247, 0.02)',
-          border: '1px solid rgba(168, 85, 247, 0.15)',
-          borderRadius: '12px',
-          padding: '1.5rem',
+        <div className="glass-card" style={{
+          flex: '1 1 350px',
           position: 'sticky',
           top: '2rem',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1.25rem'
+          gap: '1.5rem',
+          border: '1px solid rgba(168, 85, 247, 0.2)',
+          boxShadow: '0 8px 32px 0 rgba(168, 85, 247, 0.05)',
+          padding: '1.75rem',
+          overflow: 'hidden'
         }}>
+          {/* Accent line */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '3px',
+            background: 'linear-gradient(to right, #a855f7, #3b82f6)'
+          }} />
+
           <div>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Sparkles size={16} style={{ color: '#a855f7' }} /> Onboarding Billing Summary
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
+              <Sparkles size={16} style={{ color: '#a855f7' }} /> Onboarding Summary
             </h4>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Real-time quote calculation.</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Real-time quote & workspace limits.</span>
           </div>
 
           {/* Plan Limits Info */}
@@ -540,75 +633,123 @@ const CreateGym = () => {
             const selectedPlanObj = plansToUse.find(p => p.name.toLowerCase() === subscriptionPlan.toLowerCase()) || plansToUse[0];
             return (
               <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)', pb: '1rem', paddingBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Selected Plan:</span>
-                    <strong style={{ textTransform: 'capitalize', color: '#a855f7' }}>{subscriptionPlan}</strong>
+                {/* Workspace Tier Badge */}
+                <div style={{
+                  background: 'rgba(168, 85, 247, 0.05)',
+                  border: '1px solid rgba(168, 85, 247, 0.1)',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>Plan Tier</span>
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    fontWeight: 700, 
+                    color: '#a855f7', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.05em',
+                    background: 'rgba(168, 85, 247, 0.1)',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '4px'
+                  }}>
+                    {subscriptionPlan}
+                  </span>
+                </div>
+
+                {/* Quota details */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.25rem 0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <User size={14} style={{ color: 'var(--text-dark)' }} /> Member Limit
+                    </span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                      {selectedPlanObj.maxMembers === 99999 ? (
+                        <span style={{ color: '#10b981', fontWeight: 700 }}>Unlimited</span>
+                      ) : (
+                        `${selectedPlanObj.maxMembers.toLocaleString()} Members`
+                      )}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Workspace Limit:</span>
-                    <strong>{selectedPlanObj.maxMembers === 99999 ? 'Unlimited' : `${selectedPlanObj.maxMembers} Members`}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Staff Quota:</span>
-                    <strong>{selectedPlanObj.maxStaff === 99999 ? 'Unlimited' : `${selectedPlanObj.maxStaff} Staff`}</strong>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
+                    <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Building2 size={14} style={{ color: 'var(--text-dark)' }} /> Staff Quota
+                    </span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                      {selectedPlanObj.maxStaff === 99999 ? (
+                        <span style={{ color: '#10b981', fontWeight: 700 }}>Unlimited</span>
+                      ) : (
+                        `${selectedPlanObj.maxStaff} Staff`
+                      )}
+                    </span>
                   </div>
                 </div>
 
+                <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: 0 }} />
+
                 {/* Pricing Math Breakdown */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem' }}>
-                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Base Monthly Rate:</span>
-                    <span>{selectedPlanObj.price?.toLocaleString()} {currency}</span>
+                    <span style={{ fontWeight: 500, color: 'var(--text-main)' }}>
+                      {selectedPlanObj.price === 0 ? 'Free' : `${selectedPlanObj.price?.toLocaleString()} ${currency}`}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Billing Period:</span>
-                    <span style={{ fontWeight: 600 }}>{installmentPlan}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Billing Cycle:</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                      {installmentPlan === '1 Time Payment' ? 'Annual (Prepaid)' : (installmentPlan === '3 Month Installment Plan' ? '3-Month Contract' : 'Monthly Recurring')}
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-dark)' }}>
-                    <span>Term Duration:</span>
-                    <span>{installmentPlan === '1 Time Payment' ? '365 Days' : (installmentPlan === '3 Month Installment Plan' ? '90 Days' : '30 Days')}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                    <span style={{ color: 'var(--text-dark)' }}>Contract Period:</span>
+                    <span style={{ color: 'var(--text-dark)', fontWeight: 500 }}>
+                      {installmentPlan === '1 Time Payment' ? '365 Days' : (installmentPlan === '3 Month Installment Plan' ? '90 Days' : '30 Days')}
+                    </span>
                   </div>
                 </div>
               </>
             );
           })()}
 
-          <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: 0 }} />
+          <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: 0 }} />
 
           {/* DUE NOW CARD (NO TAX DISPLAYED OR INCLUDED) */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            background: 'rgba(255, 255, 255, 0.01)',
+            border: '1px solid var(--border-color)',
             borderRadius: '8px',
-            padding: '1rem',
+            padding: '1.25rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.5rem'
+            gap: '0.75rem',
+            position: 'relative'
           }}>
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              <span>Subtotal Due:</span>
-              <span>{breakdown.total.toLocaleString()} {currency}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <span>Subtotal:</span>
+              <span style={{ color: 'var(--text-main)' }}>{breakdown.total.toLocaleString()} {currency}</span>
             </div>
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              <span>Discounts:</span>
-              <span style={{ color: '#10b981' }}>- 0.00 {currency}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <span>Registration Discounts:</span>
+              <span style={{ color: '#10b981', fontWeight: 500 }}>- 0.00 {currency}</span>
             </div>
             
-            <hr style={{ border: 'none', borderTop: '1px dashed rgba(255,255,255,0.08)', margin: '0.25rem 0' }} />
+            <hr style={{ border: 'none', borderTop: '1px dashed var(--border-color)', margin: '0.25rem 0' }} />
             
-            <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Total Due Today:</span>
-              <strong style={{ fontSize: '1.2rem', color: '#10b981' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>Total Due Today:</span>
+              <strong style={{ fontSize: '1.25rem', color: '#10b981', fontFamily: 'monospace', fontWeight: 700 }}>
                 {breakdown.total.toLocaleString()} {currency}
               </strong>
             </div>
           </div>
 
           {/* Trust badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.65rem', color: 'var(--text-dark)', marginTop: '0.25rem' }}>
-            <Info size={12} />
-            <span>Onboarding creates database instance & initial payment invoice.</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+            <Info size={14} style={{ color: '#a855f7', flexShrink: 0, marginTop: '1px' }} />
+            <span>Onboarding will instantly provision a dedicated database partition and generate the client's initial billing invoice.</span>
           </div>
         </div>
 

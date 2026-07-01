@@ -67,52 +67,125 @@ const Announcements = () => {
     }
   };
 
-  const getPriorityColor = (prio) => {
-    if (prio === 'high') return 'var(--color-danger)';
-    if (prio === 'medium') return 'var(--color-warning)';
-    return '#3b82f6';
+  const getPriorityBadge = (prio) => {
+    let bg = 'rgba(59, 130, 246, 0.05)';
+    let border = '1px solid rgba(59, 130, 246, 0.15)';
+    let text = '#60a5fa';
+    
+    if (prio === 'high') {
+      bg = 'rgba(239, 68, 68, 0.05)';
+      border = '1px solid rgba(239, 68, 68, 0.15)';
+      text = '#f87171';
+    } else if (prio === 'medium') {
+      bg = 'rgba(245, 158, 11, 0.05)';
+      border = '1px solid rgba(245, 158, 11, 0.15)';
+      text = '#fbbf24';
+    }
+    
+    return (
+      <span style={{
+        fontSize: '0.65rem',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        background: bg,
+        border: border,
+        color: text,
+        padding: '0.15rem 0.4rem',
+        borderRadius: '4px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.25rem'
+      }}>
+        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: text }} />
+        {prio}
+      </span>
+    );
+  };
+
+  const getCategoryBadge = (cat) => {
+    let label = 'Announcement';
+    let color = '#a855f7'; // purple
+    let bg = 'rgba(168, 85, 247, 0.05)';
+    let border = '1px solid rgba(168, 85, 247, 0.15)';
+
+    if (cat === 'maintenance') {
+      label = 'Maintenance';
+      color = '#fb7185'; // rose/pink
+      bg = 'rgba(251, 113, 133, 0.05)';
+      border = '1px solid rgba(251, 113, 133, 0.15)';
+    } else if (cat === 'update') {
+      label = 'Platform Update';
+      color = '#38bdf8'; // sky/light blue
+      bg = 'rgba(56, 189, 248, 0.05)';
+      border = '1px solid rgba(56, 189, 248, 0.15)';
+    }
+
+    return (
+      <span style={{
+        fontSize: '0.65rem',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        background: bg,
+        border: border,
+        color: color,
+        padding: '0.15rem 0.4rem',
+        borderRadius: '4px'
+      }}>
+        {label}
+      </span>
+    );
   };
 
   return (
-    <div style={{ padding: '2rem', display: 'flex', gap: '2rem', flexDirection: 'row', flexWrap: 'wrap' }}>
-      
-      {/* LEFT COLUMN: PUBLISH NEW ANNOUNCEMENT */}
-      <div style={{
-        flex: '1 1 350px',
-        background: 'rgba(255, 255, 255, 0.01)',
-        border: '1px solid rgba(255, 255, 255, 0.04)',
-        borderRadius: '12px',
-        padding: '1.5rem',
-        height: 'fit-content'
-      }}>
-        <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Megaphone size={18} style={{ color: '#a855f7' }} /> Broadcast New Notice
-        </h4>
+    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2.5rem' }}>
+        <h3 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
+          System Announcements
+        </h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: 0 }}>
+          Broadcast platform notifications, scheduled maintenance windows, or system updates to client workspaces.
+        </p>
+      </div>
 
-        {error && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.05)',
-            border: '1px solid rgba(239, 68, 68, 0.15)',
-            color: 'var(--color-danger)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-            marginBottom: '1.25rem',
-            fontSize: '0.8rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <ShieldAlert size={14} />
-            <span>{error}</span>
-          </div>
-        )}
+      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        
+        {/* LEFT COLUMN: PUBLISH NEW ANNOUNCEMENT */}
+        <form onSubmit={handlePublish} className="glass-card" style={{
+          flex: '1 1 380px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.25rem',
+          padding: '1.75rem'
+        }}>
+          <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
+            <Megaphone size={18} style={{ color: '#a855f7' }} /> Broadcast New Notice
+          </h4>
 
-        <form onSubmit={handlePublish} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div className="form-group">
-            <label className="form-label">Announcement Title *</label>
+          {error && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.05)',
+              border: '1px solid rgba(239, 68, 68, 0.15)',
+              borderLeft: '4px solid #ef4444',
+              color: '#f87171',
+              borderRadius: '6px',
+              padding: '0.85rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              fontSize: '0.85rem'
+            }}>
+              <ShieldAlert size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Announcement Title *</label>
             <input 
               type="text" 
-              className="form-control" 
+              className="glass-input" 
               placeholder="e.g. Scheduled System Upgrade"
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -120,23 +193,24 @@ const Announcements = () => {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Message Content *</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Message Content *</label>
             <textarea 
-              className="form-control" 
+              className="glass-input" 
               placeholder="Write the details of the broadcast..."
-              style={{ minHeight: '120px' }}
+              style={{ minHeight: '120px', resize: 'vertical' }}
               value={content}
               onChange={e => setContent(e.target.value)}
               required
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">Category</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Category</label>
               <select 
-                className="form-control"
+                className="glass-select"
+                style={{ width: '100%', height: '40px' }}
                 value={category}
                 onChange={e => setCategory(e.target.value)}
               >
@@ -146,10 +220,11 @@ const Announcements = () => {
               </select>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Priority</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>Priority</label>
               <select 
-                className="form-control"
+                className="glass-select"
+                style={{ width: '100%', height: '40px' }}
                 value={priority}
                 onChange={e => setPriority(e.target.value)}
               >
@@ -165,92 +240,138 @@ const Announcements = () => {
             className="btn btn-primary"
             disabled={isPublishing}
             style={{ 
-              marginTop: '0.5rem', 
+              marginTop: '0.75rem', 
               justifyContent: 'center', 
               background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+              color: '#ffffff',
               borderColor: 'transparent',
-              padding: '0.75rem',
-              gap: '0.35rem'
+              padding: '0.9rem',
+              fontWeight: 700,
+              borderRadius: '8px',
+              gap: '0.5rem',
+              boxShadow: '0 4px 12px rgba(168, 85, 247, 0.25)',
+              transition: 'all 0.2s ease-in-out'
             }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 16px rgba(168, 85, 247, 0.35)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.25)'}
           >
             <Plus size={16} /> {isPublishing ? 'Broadcasting...' : 'Publish Announcement'}
           </button>
         </form>
-      </div>
 
-      {/* RIGHT COLUMN: HISTORY LIST */}
-      <div style={{
-        flex: '1.5 1 450px',
-        background: 'rgba(255, 255, 255, 0.01)',
-        border: '1px solid rgba(255, 255, 255, 0.04)',
-        borderRadius: '12px',
-        padding: '1.5rem'
-      }}>
-        <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1.25rem 0' }}>Broadcast History</h4>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '450px', overflowY: 'auto', paddingRight: '0.25rem' }}>
-          {announcements.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              No past system announcements found.
-            </div>
-          ) : (
-            announcements.map(ann => {
-              const pColor = getPriorityColor(ann.priority);
-
-              return (
-                <div key={ann.id} style={{
-                  background: 'rgba(255,255,255,0.01)',
-                  border: '1px solid rgba(255,255,255,0.03)',
-                  borderRadius: '10px',
-                  padding: '1rem',
-                  position: 'relative'
-                }}>
-                  {/* Delete button */}
-                  <button 
-                    onClick={() => handleDeleteAnnouncement(ann.id)}
+        {/* RIGHT COLUMN: HISTORY LIST */}
+        <div className="glass-card" style={{
+          flex: '1.5 1 450px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.25rem',
+          padding: '1.75rem',
+          maxHeight: '700px'
+        }}>
+          <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
+            Broadcast History
+          </h4>
+          
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '1rem', 
+            overflowY: 'auto', 
+            paddingRight: '0.5rem',
+            marginRight: '-0.5rem'
+          }}>
+            {announcements.length === 0 ? (
+              <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                No past system announcements found.
+              </div>
+            ) : (
+              announcements.map(ann => {
+                return (
+                  <div 
+                    key={ann.id} 
                     style={{
-                      position: 'absolute',
-                      top: '1rem',
-                      right: '1rem',
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--text-dark)',
-                      cursor: 'pointer'
+                      background: 'rgba(255, 255, 255, 0.01)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '1.25rem',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      transition: 'all 0.2s ease-in-out'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'var(--color-danger)'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dark)'}
-                    title="Remove Announcement"
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)';
+                    }}
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    {/* Delete button */}
+                    <button 
+                      onClick={() => handleDeleteAnnouncement(ann.id)}
+                      style={{
+                        position: 'absolute',
+                        top: '1.25rem',
+                        right: '1.25rem',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-dark)',
+                        cursor: 'pointer',
+                        padding: '0.25rem',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.color = '#ef4444';
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = 'var(--text-dark)';
+                        e.currentTarget.style.background = 'none';
+                      }}
+                      title="Remove Announcement"
+                    >
+                      <Trash2 size={14} />
+                    </button>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    {/* Priority dot */}
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      background: pColor
-                    }} />
-                    <h5 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, paddingRight: '1.5rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingRight: '2rem' }}>
+                      {getPriorityBadge(ann.priority)}
+                      {getCategoryBadge(ann.category)}
+                    </div>
+
+                    <h5 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', paddingRight: '2rem' }}>
                       {ann.title}
                     </h5>
-                  </div>
 
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.5rem 0', lineHeight: '1.4' }}>
-                    {ann.content}
-                  </p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, lineHeight: '1.5' }}>
+                      {ann.content}
+                    </p>
 
-                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.65rem', color: 'var(--text-dark)', marginTop: '0.5rem' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><Calendar size={10} /> {new Date(ann.createdAt).toLocaleString()}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}><User size={10} /> {ann.publishedBy}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', textTransform: 'capitalize' }}><Layers size={10} /> {ann.category}</span>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '1rem', 
+                      fontSize: '0.7rem', 
+                      color: 'var(--text-dark)', 
+                      borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+                      paddingTop: '0.75rem',
+                      flexWrap: 'wrap'
+                    }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Calendar size={12} /> {new Date(ann.createdAt).toLocaleString()}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><User size={12} /> {ann.publishedBy}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
+
       </div>
     </div>
   );

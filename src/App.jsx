@@ -222,7 +222,7 @@ const DashboardContentShell = () => {
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets'
       ].includes(tab);
     }
-    return ['members', 'registrations', 'access', 'console'].includes(tab);
+    return ['members', 'registrations', 'access'].includes(tab);
   };
 
   const resolvedTab = isAllowedTab(activeTab) ? activeTab : 'members';
