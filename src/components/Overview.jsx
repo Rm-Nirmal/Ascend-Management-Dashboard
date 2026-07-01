@@ -514,7 +514,7 @@ const Overview = () => {
       .filter(t => t.date_of_birth)
       .map(t => ({
         id: t.id,
-        name: t.name,
+        name: t.name || t.full_name || 'Staff',
         type: 'Staff/Trainer',
         dob: t.date_of_birth,
         daysLeft: getDaysUntilBirthday(t.date_of_birth),

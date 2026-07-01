@@ -514,7 +514,13 @@ export const DashboardProvider = ({ children }) => {
               payment_status: payStatus
             };
           });
-          setTrainers(trainersData);
+          const filteredTrainers = trainersData.filter(emp => 
+            emp.role === 'Trainer' || 
+            emp.role === 'Personal Trainer' || 
+            emp.specialization !== undefined || 
+            emp.hourly_rate !== undefined
+          );
+          setTrainers(filteredTrainers);
           setEmployees(trainersData);
           markLoaded();
         }, (err) => { console.error('Trainers error:', err); markLoaded(); })
@@ -2472,6 +2478,7 @@ export const DashboardProvider = ({ children }) => {
       const newTrainer = {
         gymId: currentUser?.gymId || DEFAULT_ORG_ID,
         name: trainerData.name,
+        role: 'Personal Trainer',
         specialization: trainerData.specialization,
         bio: trainerData.bio || '',
         hourly_rate: parseFloat(trainerData.hourly_rate),

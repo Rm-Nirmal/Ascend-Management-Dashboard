@@ -272,10 +272,10 @@ const AdminManagement = () => {
   const handleOpenEditTrainer = (trainer) => {
     setEditingTrainer(trainer);
     setTrainerForm({
-      name: trainer.name,
-      specialization: trainer.specialization,
+      name: trainer.name || trainer.full_name || '',
+      specialization: trainer.specialization || '',
       bio: trainer.bio || '',
-      hourly_rate: trainer.hourly_rate.toString(),
+      hourly_rate: (trainer.hourly_rate || 0).toString(),
       photo_url: trainer.photo_url || ''
     });
     setShowTrainerModal(true);
@@ -716,13 +716,13 @@ const AdminManagement = () => {
               <div key={trainer.id} className="glass-card" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 <img 
                   src={trainer.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
-                  alt={trainer.name} 
+                  alt={trainer.name || trainer.full_name || 'Trainer'} 
                   style={{ width: '70px', height: '70px', borderRadius: '12px', border: '1.5px solid var(--border-color)', objectFit: 'cover' }}
                 />
                 
                 <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{trainer.name}</div>
+                    <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{trainer.name || trainer.full_name}</div>
                     {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner') && (
                       <div style={{ display: 'flex', gap: '0.15rem' }}>
                         <button 
@@ -746,7 +746,7 @@ const AdminManagement = () => {
                   </div>
 
                   <span className="badge badge-active" style={{ fontSize: '0.65rem', alignSelf: 'flex-start', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid var(--border-color)', padding: '0.15rem 0.5rem' }}>
-                    {trainer.specialization}
+                    {trainer.specialization || 'Fitness Coach'}
                   </span>
 
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.35', margin: '0.35rem 0' }}>
@@ -754,7 +754,7 @@ const AdminManagement = () => {
                   </p>
 
                   <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-success)', borderTop: '1px dashed var(--border-color)', paddingTop: '0.4rem', marginTop: '0.25rem' }}>
-                    LKR {trainer.hourly_rate.toLocaleString()} / hour
+                    LKR {Number(trainer.hourly_rate || 0).toLocaleString()} / hour
                   </div>
                 </div>
               </div>
