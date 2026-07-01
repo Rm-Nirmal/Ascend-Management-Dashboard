@@ -1437,7 +1437,7 @@ const Members = () => {
                     >
                       <option value="">Unassigned (Self-guided)</option>
                       {trainers.map(t => (
-                        <option key={t.id} value={t.id}>{t.name} ({t.specialization})</option>
+                        <option key={t.id} value={t.id}>{t.name || t.full_name} ({t.specialization || 'General'})</option>
                       ))}
                     </select>
                   </div>
@@ -1807,7 +1807,7 @@ const Members = () => {
                     >
                       <option value="">Unassigned (Self-guided)</option>
                       {trainers.map(t => (
-                        <option key={t.id} value={t.id}>{t.name} ({t.specialization})</option>
+                        <option key={t.id} value={t.id}>{t.name || t.full_name} ({t.specialization || 'General'})</option>
                       ))}
                     </select>
                   </div>
