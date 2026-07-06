@@ -126,13 +126,17 @@ async function updateDeviceHeartbeat(serial) {
     const q = query(devicesRef, where('device.serial', '==', serial));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
-      querySnapshot.forEach(async (deviceDoc) => {
+      for (const deviceDoc of querySnapshot.docs) {
         const deviceRef = doc(db, 'devices', deviceDoc.id);
-        await updateDoc(deviceRef, {
-          'health.status': 'online',
-          'health.lastHeartbeat': new Date().toISOString(),
-        });
-      });
+        try {
+          await updateDoc(deviceRef, {
+            'health.status': 'online',
+            'health.lastHeartbeat': new Date().toISOString(),
+          });
+        } catch (updateErr) {
+          console.error(`[Firestore Update Error] Failed to update doc ${deviceDoc.id}:`, updateErr);
+        }
+      }
     }
   } catch (error) {
     console.error(`[Firestore Update Error] Failed to update heartbeat for SN ${serial}:`, error);
@@ -169,9 +173,11 @@ app.get('/iclock/getrequest', async (req, res) => {
     const nextCmd = queue[0];
     const responsePayload = `C:${nextCmd.id}:${nextCmd.command}`;
     console.log(`[ADMS Dispatched] Sending command to SN ${serial} -> ${responsePayload}`);
+    res.setHeader('Content-Type', 'text/plain');
     res.send(responsePayload + '\n');
   } else {
     // If no commands, send OK (or empty response depending on device requirements)
+    res.setHeader('Content-Type', 'text/plain');
     res.send('OK\n');
   }
 });
@@ -195,10 +201,11 @@ app.post('/iclock/devicecmd', (req, res) => {
     }
   }
 
+  res.setHeader('Content-Type', 'text/plain');
   res.send('OK\n');
 });
 
-// 3. Device Data Uploads (Attendance logs, heartbeats, operational logs)
+// 3. Device Data Uploads (POSTs for attendance logs, heartbeats, operational logs)
 app.post('/iclock/cdata', (req, res) => {
   const serial = req.query.SN;
   const table = req.query.table || 'UNKNOWN';
@@ -211,7 +218,40 @@ app.post('/iclock/cdata', (req, res) => {
   }
 
   // Returning OK is crucial to prevent the device from constantly retrying log uploads
+  res.setHeader('Content-Type', 'text/plain');
   res.send('OK\n');
+});
+
+// 4. Device Configuration Handshake (GET /iclock/cdata)
+// Device calls this at startup to request settings
+app.get('/iclock/cdata', (req, res) => {
+  const serial = req.query.SN;
+  console.log(`[ADMS Get Config] SN: ${serial} requesting options...`);
+  
+  const responsePayload = [
+    'RegistryCode=12345678',
+    'ErrorDelay=30',
+    'RequestDelay=3', // Tells the device to poll /getrequest every 3 seconds
+    'TransTimes=00:00;23:59',
+    'TransInterval=1',
+    'TransTables=User Transaction',
+    'Realtime=1',
+    'SessionID=87654321',
+    'TimeoutSec=10',
+  ].join('\n') + '\n';
+  
+  res.setHeader('Content-Type', 'text/plain');
+  res.send(responsePayload);
+});
+
+// 5. Device Registry Handshake (POST /iclock/registry)
+// Device calls this to register with the server
+app.post('/iclock/registry', (req, res) => {
+  const serial = req.query.SN;
+  console.log(`[ADMS Registry Request] SN: ${serial}`);
+  
+  res.setHeader('Content-Type', 'text/plain');
+  res.send('RegistryCode=12345678\n');
 });
 
 // Start Express listening
