@@ -2553,11 +2553,11 @@ export const DashboardProvider = ({ children }) => {
       const physicalLocation = deviceData.physicalLocation || 'Reception';
       const purpose = deviceData.devicePurpose || 'Door Access + Attendance';
 
-      const ip = deviceData.ipAddress || '192.168.1.100';
+      const ip = (deviceData.ipAddress || '192.168.1.100').trim();
       const port = parseInt(deviceData.port || '4370');
       const protocol = deviceData.protocol || 'TCP/IP';
-      const mac = deviceData.macAddress || '00:1A:2B:3C:4D:' + Math.floor(10 + Math.random() * 89).toString(16).toUpperCase() + ':5E';
-      const firmware = deviceData.firmware || '';
+      const mac = (deviceData.macAddress || '00:1A:2B:3C:4D:' + Math.floor(10 + Math.random() * 89).toString(16).toUpperCase() + ':5E').trim();
+      const firmware = (deviceData.firmware || '').trim();
 
       const isActivated = deviceData.isEnabled !== false;
       const status = isActivated ? 'Offline' : 'Disabled';
@@ -2646,11 +2646,11 @@ export const DashboardProvider = ({ children }) => {
       if (updatedFields.doorNumber !== undefined) mapped["configuration.doorNumber"] = updatedFields.doorNumber;
       if (updatedFields.readerNumber !== undefined) mapped["configuration.readerNumber"] = updatedFields.readerNumber;
 
-      if (updatedFields.ipAddress !== undefined) mapped["network.ip"] = updatedFields.ipAddress;
+      if (updatedFields.ipAddress !== undefined) mapped["network.ip"] = updatedFields.ipAddress.trim();
       if (updatedFields.port !== undefined) mapped["network.port"] = parseInt(updatedFields.port);
       if (updatedFields.protocol !== undefined) mapped["network.protocol"] = updatedFields.protocol;
-      if (updatedFields.macAddress !== undefined) mapped["network.mac"] = updatedFields.macAddress;
-      if (updatedFields.firmware !== undefined) mapped["network.firmware"] = updatedFields.firmware;
+      if (updatedFields.macAddress !== undefined) mapped["network.mac"] = updatedFields.macAddress.trim();
+      if (updatedFields.firmware !== undefined) mapped["network.firmware"] = updatedFields.firmware.trim();
 
       if (updatedFields.capabilities !== undefined) mapped["capabilities"] = updatedFields.capabilities;
 
@@ -2748,7 +2748,7 @@ export const DashboardProvider = ({ children }) => {
         name = device.device?.name || device.name;
         serialNumber = device.device?.serial || device.serialNumber;
         isEnabled = device.health?.status !== 'Disabled';
-        ip = device.network?.ip || device.ipAddress;
+        ip = (device.network?.ip || device.ipAddress || '').trim();
         port = device.network?.port || device.port || 4370;
         protocol = device.network?.protocol || device.protocol || 'TCP/IP';
 
@@ -2760,7 +2760,7 @@ export const DashboardProvider = ({ children }) => {
         name = deviceIdOrData.name;
         serialNumber = deviceIdOrData.serialNumber || '';
         isEnabled = deviceIdOrData.isEnabled !== false;
-        ip = deviceIdOrData.ipAddress || '';
+        ip = (deviceIdOrData.ipAddress || '').trim();
         port = parseInt(deviceIdOrData.port || '4370');
         protocol = deviceIdOrData.protocol || 'TCP/IP';
       }
