@@ -17,7 +17,8 @@ const Members = () => {
     renewMemberMembership,
     invoices,
     currentUser,
-    showToast
+    showToast,
+    gymSettings
   } = useDashboard();
 
   // Component States
@@ -211,7 +212,7 @@ const Members = () => {
     
     const diff = new Date(member.countdown_end).getTime() - time;
     if (diff <= 0) {
-      return <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>Expired</span>;
+      return <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}>00</span>;
     }
     
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -284,6 +285,15 @@ const Members = () => {
       if (seen.has(m.member_code)) return false;
       seen.add(m.member_code);
       return true;
+    }).sort((a, b) => {
+      const codeA = a.member_code || '';
+      const codeB = b.member_code || '';
+      const numA = parseInt(codeA.replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(codeB.replace(/\D/g, ''), 10) || 0;
+      if (numA !== numB) {
+        return numB - numA;
+      }
+      return codeB.localeCompare(codeA);
     });
   }, [members]);
 
@@ -329,6 +339,13 @@ const Members = () => {
     const memberInvoices = invoices.filter(inv => inv.member_id === selectedMember.id);
     if (memberInvoices.length === 0) return null;
     return [...memberInvoices].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0];
+  }, [selectedMember, invoices]);
+
+  const memberInvoices = useMemo(() => {
+    if (!selectedMember || !invoices) return [];
+    return invoices
+      .filter(inv => inv.member_id === selectedMember.id)
+      .sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at));
   }, [selectedMember, invoices]);
 
   // Calculate member-level financials
@@ -625,6 +642,10 @@ const Members = () => {
               ) : (
                 displayedMembers.map(member => {
                   const plan = plans.find(p => p.id === member.plan_id);
+                  const memberInvs = invoices ? invoices.filter(inv => inv.member_id === member.id) : [];
+                  const latestInv = memberInvs.length > 0 
+                    ? [...memberInvs].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0]
+                    : null;
                   return (
                     <tr key={member.id}>
                       <td style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{member.member_code}</td>
@@ -679,16 +700,24 @@ const Members = () => {
                           >
                             <Eye size={14} />
                           </button>
-                          {currentUser?.role === 'super_admin' && (
+                          {latestInv && (
                             <button 
                               className="btn btn-secondary" 
                               style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
-                              title="Edit Member Details"
-                              onClick={() => handleEditClick(member)}
+                              title="View Payment Receipt"
+                              onClick={() => setViewingReceipt(latestInv)}
                             >
-                              <Edit2 size={14} />
+                              <Printer size={14} />
                             </button>
                           )}
+                          <button 
+                            className="btn btn-secondary" 
+                            style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
+                            title="Edit Member Details"
+                            onClick={() => handleEditClick(member)}
+                          >
+                            <Edit2 size={14} />
+                          </button>
                           <button 
                             className="btn btn-secondary" 
                             style={{ padding: '0.4rem', color: 'var(--color-danger)' }}
@@ -839,6 +868,10 @@ const Members = () => {
                   ) : (
                     displayedFinancials.map(member => {
                       const plan = plans.find(p => p.id === member.plan_id);
+                      const memberInvs = invoices ? invoices.filter(inv => inv.member_id === member.id) : [];
+                      const latestInv = memberInvs.length > 0 
+                        ? [...memberInvs].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0]
+                        : null;
                       return (
                         <tr key={member.id}>
                           <td style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{member.member_code}</td>
@@ -892,6 +925,17 @@ const Members = () => {
                               >
                                 <Eye size={14} />
                               </button>
+                              {latestInv && (
+                                <button 
+                                  type="button"
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '0.4rem', color: 'var(--color-primary)' }}
+                                  title="View Payment Receipt"
+                                  onClick={() => setViewingReceipt(latestInv)}
+                                >
+                                  <Printer size={14} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -998,15 +1042,13 @@ const Members = () => {
                   </div>
                 </div>
               </div>
-              {currentUser?.role === 'super_admin' && (
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
-                  onClick={() => handleEditClick(selectedMember)}
-                >
-                  <Edit2 size={12} /> Edit Details
-                </button>
-              )}
+              <button 
+                className="btn btn-secondary" 
+                style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
+                onClick={() => handleEditClick(selectedMember)}
+              >
+                <Edit2 size={12} /> Edit Details
+              </button>
             </div>
 
             {/* Core details */}
@@ -1029,17 +1071,6 @@ const Members = () => {
                 <div style={{ fontSize: '0.85rem' }}>
                   Trainer: {trainers.find(t => t.id === selectedMember.trainer_id)?.name || 'Unassigned'}
                 </div>
-              </div>
-
-              {/* Auto Renewal toggle (FR-MEM-04) */}
-              <div style={{ display: 'flex', justifySelf: 'flex-start', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Auto Renewal Status</span>
-                <button 
-                  onClick={() => handleToggleAutoRenew(selectedMember)} 
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: selectedMember.auto_renew ? 'var(--color-success)' : 'var(--text-dark)' }}
-                >
-                  {selectedMember.auto_renew ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                </button>
               </div>
             </div>
 
@@ -1091,6 +1122,57 @@ const Members = () => {
               >
                 <CreditCard size={12} /> Collect & Renew
               </button>
+            </div>
+
+            {/* Payment History & Receipts Section */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>
+                Payment History & Receipts
+              </span>
+              {memberInvoices.length === 0 ? (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-dark)', fontStyle: 'italic' }}>
+                  No payment history found.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {memberInvoices.map(inv => (
+                    <div 
+                      key={inv.id} 
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '0.5rem 0.75rem', 
+                        background: 'rgba(0,0,0,0.15)', 
+                        borderRadius: '6px', 
+                        border: '1px solid rgba(255,255,255,0.03)',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#fff' }}>{inv.invoice_number}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {new Date(inv.paid_at || inv.issued_at).toLocaleDateString()} &bull; {inv.payment_method?.replace('_', ' ') || 'Card'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>
+                          LKR {inv.total_amount?.toLocaleString()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setViewingReceipt(inv)}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                          title="View Receipt"
+                        >
+                          <Printer size={10} /> View
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Health & Body measurements & Goal (FR-MEM-05) */}
@@ -1356,7 +1438,7 @@ const Members = () => {
                     >
                       <option value="">Unassigned (Self-guided)</option>
                       {trainers.map(t => (
-                        <option key={t.id} value={t.id}>{t.name} ({t.specialization})</option>
+                        <option key={t.id} value={t.id}>{t.name || t.full_name} ({t.specialization || 'General'})</option>
                       ))}
                     </select>
                   </div>
@@ -1471,9 +1553,8 @@ const Members = () => {
       {selectedRenewMember && (() => {
         const plan = plans.find(p => p.id === selectedRenewMember.plan_id) || plans[0];
         const subtotal = parseFloat(renewPrice || 0);
-        const taxRate = plan ? plan.tax_rate / 100 : 0.085;
-        const tax = subtotal * taxRate;
-        const total = subtotal + tax;
+        const tax = 0.0;
+        const total = subtotal;
 
         // Calculate dynamic new expiry date
         const baseDate = selectedRenewMember.countdown_end && new Date(selectedRenewMember.countdown_end).getTime() > time
@@ -1566,10 +1647,6 @@ const Members = () => {
                     <span style={{ color: 'var(--text-muted)' }}>Base Subtotal:</span>
                     <span>LKR {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Tax ({plan?.tax_rate || 8.5}%):</span>
-                    <span>+LKR {tax.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                  </div>
                   <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.6rem 0', paddingTop: '0.6rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-success)' }}>
                       <span>Total Collection:</span>
@@ -1593,7 +1670,6 @@ const Members = () => {
                   >
                     <option value="card">💳 Credit / Debit Card</option>
                     <option value="cash">💵 Cash Payment</option>
-                    <option value="upi">📱 UPI / Instant Pay</option>
                     <option value="bank_transfer">🏦 Bank Wire Transfer</option>
                   </select>
                 </div>
@@ -1732,7 +1808,7 @@ const Members = () => {
                     >
                       <option value="">Unassigned (Self-guided)</option>
                       {trainers.map(t => (
-                        <option key={t.id} value={t.id}>{t.name} ({t.specialization})</option>
+                        <option key={t.id} value={t.id}>{t.name || t.full_name} ({t.specialization || 'General'})</option>
                       ))}
                     </select>
                   </div>
@@ -1895,9 +1971,15 @@ const Members = () => {
             {/* Header: Gym Info */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
               <div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>ASCEND FITNESS CENTER</h2>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>HQ Operations - Colombo, Sri Lanka</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Email: billing@ascend.lk | Tel: +94 11 234 5678</span>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>
+                  {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}
+                </h2>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                  {gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                  Email: {gymSettings?.email || 'billing@ascend.lk'} | Tel: {gymSettings?.phone || '+94 11 234 5678'}
+                </span>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', letterSpacing: '0.05em', color: '#fff' }}>MEMBERSHIP RECEIPT</h3>
@@ -1955,10 +2037,12 @@ const Members = () => {
                   <span>Subtotal:</span>
                   <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Tax & Fees:</span>
-                  <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.tax_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
-                </div>
+                {viewingReceipt.tax_amount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Tax & Fees:</span>
+                    <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.tax_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                  </div>
+                )}
               </div>
               <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>TOTAL AMOUNT PAID</span>

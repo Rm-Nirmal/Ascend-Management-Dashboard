@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Smartphone, Printer, Eye, Calendar 
+  DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Printer, Eye, Calendar 
 } from 'lucide-react';
 
 const createManualReminderLog = (invoice) => {
@@ -21,7 +21,8 @@ const Payments = () => {
     invoices,
     recordPayment,
     trainers,
-    processStaffPayroll
+    processStaffPayroll,
+    gymSettings
   } = useDashboard();
 
   const [now] = useState(() => Date.now());
@@ -47,10 +48,10 @@ const Payments = () => {
     e.preventDefault();
     if (!selectedTrainer) return;
     try {
-      const amount = selectedTrainer.hourly_rate * payrollHours;
+      const amount = (selectedTrainer.hourly_rate || 0) * payrollHours;
       const res = await processStaffPayroll(selectedTrainer.id, amount, payrollPaymentMethod);
       if (res.success) {
-        alert(`Payroll of LKR ${amount.toLocaleString()} processed successfully for ${selectedTrainer.name}!`);
+        alert(`Payroll of LKR ${amount.toLocaleString()} processed successfully for ${selectedTrainer.name || selectedTrainer.full_name || 'Staff'}!`);
         setSelectedTrainer(null);
       } else {
         alert(res.message || 'Failed to process payroll. Please try again.');
@@ -550,7 +551,7 @@ const Payments = () => {
                 <DollarSign size={18} style={{ color: 'var(--color-primary)' }} />
               </div>
               <div className="metric-value">
-                LKR {trainers.reduce((sum, t) => sum + (t.hourly_rate * 20), 0).toLocaleString()}
+                LKR {trainers.reduce((sum, t) => sum + ((t.hourly_rate || 0) * 20), 0).toLocaleString()}
               </div>
               <div className="metric-subtext">Based on 20 average hours/trainer</div>
             </div>
@@ -612,18 +613,18 @@ const Payments = () => {
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <img 
                               src={t.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
-                              alt={t.name} 
+                              alt={t.name || t.full_name || 'Staff'} 
                               style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                             />
                             <div>
-                              <div style={{ fontWeight: 600 }}>{t.name}</div>
+                              <div style={{ fontWeight: 600 }}>{t.name || t.full_name}</div>
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Trainer/Employee</div>
                             </div>
                           </div>
                         </td>
-                        <td>{t.specialization}</td>
+                        <td>{t.specialization || 'General'}</td>
                         <td>
-                          <div style={{ fontWeight: 600 }}>LKR {t.hourly_rate.toLocaleString()} / hr</div>
+                          <div style={{ fontWeight: 600 }}>LKR {Number(t.hourly_rate || 0).toLocaleString()} / hr</div>
                           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Hourly wages</span>
                         </td>
                         <td>
@@ -734,18 +735,6 @@ const Payments = () => {
                   </label>
 
                   <label style={{ 
-                    display: 'flex', alignItems: 'center', gap: '0.5rem', background: paymentMethod === 'upi' ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.02)',
-                    border: paymentMethod === 'upi' ? '1px solid var(--color-warning)' : '1px solid var(--border-color)',
-                    padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
-                  }}>
-                    <input 
-                      type="radio" name="paymethod" value="upi" checked={paymentMethod === 'upi'} 
-                      onChange={() => setPaymentMethod('upi')} style={{ display: 'none' }}
-                    />
-                    <Smartphone size={16} /> Mobile UPI
-                  </label>
-
-                  <label style={{ 
                     display: 'flex', alignItems: 'center', gap: '0.5rem', background: paymentMethod === 'bank_transfer' ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
                     border: paymentMethod === 'bank_transfer' ? '1px solid var(--color-ai)' : '1px solid var(--border-color)',
                     padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
@@ -783,10 +772,10 @@ const Payments = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '0.05em' }}>
-                  <Sparkles size={20} /> ASCEND FITNESS HQ
+                  <Sparkles size={20} /> {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS HQ'}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  Ascend HQ Single Gym franchise console
+                  {gymSettings?.address || 'Ascend HQ Single Gym franchise console'}
                 </div>
               </div>
               <button 
@@ -913,10 +902,10 @@ const Payments = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <img src={selectedTrainer.photo_url} alt={selectedTrainer.name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src={selectedTrainer.photo_url} alt={selectedTrainer.name || selectedTrainer.full_name || 'Staff'} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
               <div>
-                <div style={{ fontWeight: 700 }}>{selectedTrainer.name}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Specialization: {selectedTrainer.specialization}</div>
+                <div style={{ fontWeight: 700 }}>{selectedTrainer.name || selectedTrainer.full_name}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Specialization: {selectedTrainer.specialization || 'General'}</div>
               </div>
             </div>
 
@@ -925,7 +914,7 @@ const Payments = () => {
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Hourly Rate (LKR)</label>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, padding: '0.5rem 0', color: '#fff' }}>
-                    LKR {selectedTrainer.hourly_rate.toLocaleString()} / hr
+                    LKR {Number(selectedTrainer.hourly_rate || 0).toLocaleString()} / hr
                   </div>
                 </div>
                 <div>
@@ -946,7 +935,7 @@ const Payments = () => {
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Total Payout:</span>
                 <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-success)' }}>
-                  LKR {(selectedTrainer.hourly_rate * payrollHours).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  LKR {((selectedTrainer.hourly_rate || 0) * payrollHours).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
@@ -967,7 +956,6 @@ const Payments = () => {
                   <option value="bank_transfer">🏦 Bank Wire Transfer (Recommended)</option>
                   <option value="cash">💵 Cash Payout</option>
                   <option value="card">💳 Credit/Debit Card</option>
-                  <option value="upi">📱 Mobile UPI</option>
                 </select>
               </div>
 

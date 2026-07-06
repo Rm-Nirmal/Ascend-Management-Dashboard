@@ -30,11 +30,11 @@ const DashboardContext = createContext();
  * Build a new member data object suitable for writing to Firestore.
  * Generates member_code, qr_token, and sets defaults.
  */
-const helperCreateMemberObject = (memberData, memberCode) => {
+const helperCreateMemberObject = (memberData, memberCode, gymId) => {
   const now = new Date();
   const countdownEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   return {
-    gymId: DEFAULT_ORG_ID,
+    gymId: gymId || DEFAULT_ORG_ID,
     member_code: memberCode,
     joined_at: now.toISOString().split('T')[0],
     status: 'active',
@@ -55,12 +55,12 @@ const helperCreateMemberObject = (memberData, memberCode) => {
 /**
  * Build an invoice object for a new member enrollment.
  */
-const helperCreateInvoiceForMember = (memberId, memberName, plan) => {
+const helperCreateInvoiceForMember = (memberId, memberName, plan, gymId) => {
   const tax = 0.0;
   const total = plan.price;
   const invNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
   return {
-    gymId: DEFAULT_ORG_ID,
+    gymId: gymId || DEFAULT_ORG_ID,
     member_id: memberId,
     member_name: memberName,
     invoice_number: invNumber,
@@ -143,6 +143,90 @@ export const isBareRootUrl = () => {
   return path === '/' || path === '/Ascend-Management-Dashboard' || path === '/Ascend-Management-Dashboard/';
 };
 
+// Normalize device document to map between legacy format and new enterprise nested format
+export const normalizeDevice = (docSnapshot) => {
+  const data = docSnapshot.data();
+  const id = docSnapshot.id;
+
+  // If it is in the new enterprise format:
+  if (data && data.device && data.device.serial !== undefined) {
+    return {
+      id,
+      ...data,
+      // Legacy root-level fields for compatibility with existing components
+      name: data.device.name || '',
+      serialNumber: data.device.serial || '',
+      brand: data.device.brand || '',
+      model: data.device.model || '',
+      ipAddress: data.network?.ip || '',
+      macAddress: data.network?.mac || '',
+      firmware: data.network?.firmware || '',
+      isEnabled: data.health?.status !== 'Disabled',
+      status: (data.health?.status || 'Offline').toLowerCase(),
+      lastHeartbeat: data.health?.lastHeartbeat || null,
+      lastSync: data.health?.lastSync || null,
+      doorStatus: data.health?.doorStatus || 'locked',
+      gymId: data.gymId
+    };
+  }
+
+  // Otherwise, it's a legacy flat format document. Normalize it into the nested structure
+  return {
+    id,
+    ...data,
+    device: {
+      serial: data.serialNumber || '',
+      brand: data.brand || 'ZKTeco',
+      model: data.model || 'SpeedFace V5L',
+      name: data.name || ''
+    },
+    configuration: {
+      entranceType: data.entranceType || 'Main Entrance',
+      physicalLocation: data.physicalLocation || 'Reception',
+      purpose: data.devicePurpose || 'Door Access + Attendance',
+      deviceNumber: data.deviceNumber || 1,
+      doorNumber: data.doorNumber || 1,
+      readerNumber: data.readerNumber || 1
+    },
+    network: {
+      ip: data.ipAddress || '192.168.1.100',
+      port: parseInt(data.communicationSettings?.port || data.port || '4370'),
+      protocol: data.communicationSettings?.protocol || data.protocol || 'TCP/IP',
+      mac: data.macAddress || ''
+    },
+    capabilities: data.capabilities || {
+      face: true,
+      fingerprint: true,
+      rfid: true,
+      qr: false,
+      pin: true,
+      palm: false
+    },
+    health: {
+      status: data.status ? (data.status.charAt(0).toUpperCase() + data.status.slice(1)) : (data.isEnabled ? 'Offline' : 'Disabled'),
+      lastHeartbeat: data.lastHeartbeat || null,
+      latency: data.latency || null,
+      heartbeatInterval: data.heartbeatInterval || 30,
+      doorStatus: data.doorStatus || 'locked',
+      lastSync: data.lastSync || null
+    },
+    // Legacies mapped back to root to prevent any undefined issues
+    name: data.name || '',
+    serialNumber: data.serialNumber || '',
+    brand: data.brand || '',
+    model: data.model || '',
+    ipAddress: data.ipAddress || '',
+    macAddress: data.macAddress || '',
+    firmware: data.firmware || '',
+    isEnabled: data.isEnabled !== false,
+    status: (data.status || (data.isEnabled !== false ? 'offline' : 'disabled')).toLowerCase(),
+    lastHeartbeat: data.lastHeartbeat || null,
+    lastSync: data.lastSync || null,
+    doorStatus: data.doorStatus || 'locked',
+    gymId: data.gymId
+  };
+};
+
 // ═══════════════════════════════════════════════════════════════════════
 // PROVIDER COMPONENT
 // ═══════════════════════════════════════════════════════════════════════
@@ -188,6 +272,7 @@ export const DashboardProvider = ({ children }) => {
   const [employeeRegistrations, setEmployeeRegistrations] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [income, setIncome] = useState([]);
+  const [devices, setDevices] = useState([]);
   
   // FitGenCore SaaS States
   const [gyms, setGyms] = useState([]);
@@ -215,9 +300,9 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [currentUser]);
 
-  const createInvoiceForMember = useCallback(async (memberId, memberName, plan) => {
+  const createInvoiceForMember = useCallback(async (memberId, memberName, plan, gymId) => {
     try {
-      const invoiceData = helperCreateInvoiceForMember(memberId, memberName, plan);
+      const invoiceData = helperCreateInvoiceForMember(memberId, memberName, plan, gymId);
       await addDoc(collection(db, COLLECTIONS.INVOICES), invoiceData);
     } catch (err) {
       console.error('createInvoiceForMember error:', err);
@@ -377,6 +462,7 @@ export const DashboardProvider = ({ children }) => {
         setEmployeeRegistrations([]);
         setExpenses([]);
         setIncome([]);
+        setDevices([]);
         setGyms([]);
         setSubscriptions([]);
         setSupportTickets([]);
@@ -392,7 +478,7 @@ export const DashboardProvider = ({ children }) => {
     if (currentUser.role === 'super_admin') {
       // ─── SUPER ADMIN REAL-TIME LISTENERS ───
       let loadedCount = 0;
-      const totalCollections = 9;
+      const totalCollections = 10;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -480,11 +566,19 @@ export const DashboardProvider = ({ children }) => {
         }, (err) => { console.error('Superadmin expenses error:', err); markLoaded(); })
       );
 
+      // 10. Devices (all - for global device monitoring)
+      unsubscribers.push(
+        onSnapshot(collection(db, COLLECTIONS.DEVICES), (snap) => {
+          setDevices(snap.docs.map(normalizeDevice));
+          markLoaded();
+        }, (err) => { console.error('Superadmin devices error:', err); markLoaded(); })
+      );
+
     } else {
       // ─── GYM OWNER / STAFF REAL-TIME LISTENERS ───
       const orgId = currentUser.gymId || DEFAULT_ORG_ID;
       let loadedCount = 0;
-      const totalCollections = 13;
+      const totalCollections = 14;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -511,10 +605,17 @@ export const DashboardProvider = ({ children }) => {
               date_of_birth: dob,
               last_payment_date: lastPay,
               next_payment_date: nextPay,
-              payment_status: payStatus
+              payment_status: payStatus,
+              employee_code: data.employee_code || 'EMP-' + d.id.substring(0, 5).toUpperCase()
             };
           });
-          setTrainers(trainersData);
+          const filteredTrainers = trainersData.filter(emp => 
+            emp.role === 'Trainer' || 
+            emp.role === 'Personal Trainer' || 
+            emp.specialization !== undefined || 
+            emp.hourly_rate !== undefined
+          );
+          setTrainers(filteredTrainers);
           setEmployees(trainersData);
           markLoaded();
         }, (err) => { console.error('Trainers error:', err); markLoaded(); })
@@ -674,6 +775,18 @@ export const DashboardProvider = ({ children }) => {
           setSupportTickets(tickets);
           markLoaded();
         }, (err) => { console.error('Support tickets error:', err); markLoaded(); })
+      );
+
+      // 14. Devices (scoped)
+      const devicesQ = query(
+        collection(db, COLLECTIONS.DEVICES),
+        where('gymId', '==', orgId)
+      );
+      unsubscribers.push(
+        onSnapshot(devicesQ, (snap) => {
+          setDevices(snap.docs.map(normalizeDevice));
+          markLoaded();
+        }, (err) => { console.error('Devices error:', err); markLoaded(); })
       );
     }
 
@@ -1787,20 +1900,37 @@ export const DashboardProvider = ({ children }) => {
 
   const addMember = useCallback(async (memberData) => {
     try {
+      const { gymId: memberDataGymId, ...restMemberData } = memberData;
+      const resolvedGymId = memberDataGymId || currentUser?.gymId || DEFAULT_ORG_ID;
+
+      let gymName = gymSettings?.gymName;
+      if (resolvedGymId !== gymSettings?.gymId) {
+        const targetGym = gyms.find(g => g.gymId === resolvedGymId);
+        if (targetGym) {
+          gymName = targetGym.gymName;
+        }
+      }
+      if (!gymName) {
+        gymName = resolvedGymId === 'gym_ascend_hq' ? 'Ascend Gym' : 'Client Gym';
+      }
+
+      const cleanName = gymName.trim().replace(/[^a-zA-Z]/g, '');
+      const prefix = (cleanName.substring(0, 3).toUpperCase() || 'GYM') + '-';
+
       // Find the next member code sequentially (in order starting with 1000)
       let maxNum = 999;
       members.forEach(m => {
-        if (m.member_code && m.member_code.startsWith('ASC-')) {
-          const numStr = m.member_code.replace('ASC-', '');
+        if (m.member_code && m.member_code.startsWith(prefix)) {
+          const numStr = m.member_code.replace(prefix, '');
           const num = parseInt(numStr, 10);
           if (!isNaN(num) && num > maxNum) {
             maxNum = num;
           }
         }
       });
-      const memberCode = `ASC-${maxNum + 1}`;
+      const memberCode = `${prefix}${maxNum + 1}`;
 
-      const newMemberData = helperCreateMemberObject(memberData, memberCode);
+      const newMemberData = helperCreateMemberObject(restMemberData, memberCode, resolvedGymId);
 
       // Write to Firestore — returns a DocumentReference
       const docRef = await addDoc(collection(db, COLLECTIONS.MEMBERS), newMemberData);
@@ -1814,7 +1944,7 @@ export const DashboardProvider = ({ children }) => {
       // Auto-generate invoice for membership
       const plan = plans.find(p => p.id === newMember.plan_id);
       if (plan) {
-        await createInvoiceForMember(docRef.id, newMember.full_name, plan);
+        await createInvoiceForMember(docRef.id, newMember.full_name, plan, resolvedGymId);
       }
 
       return newMember;
@@ -1823,7 +1953,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return null;
     }
-  }, [plans, members, createInvoiceForMember, logAudit]);
+  }, [plans, members, createInvoiceForMember, logAudit, currentUser, gymSettings, gyms]);
 
   const updateMember = useCallback(async (id, updatedFields) => {
     try {
@@ -1911,13 +2041,17 @@ export const DashboardProvider = ({ children }) => {
 
   const addRegistrationRequest = useCallback(async (formData) => {
     try {
+      const queryParams = new URLSearchParams(window.location.search);
+      const urlGymId = queryParams.get('gymId') || queryParams.get('gym_id');
+      const resolvedGymId = formData.gymId || urlGymId || currentUser?.gymId || DEFAULT_ORG_ID;
+
       const newReq = {
-        gymId: DEFAULT_ORG_ID,
         status: 'pending_approval',
         captcha_verified: true,
         ip_address: '192.168.1.10',
         created_at: new Date().toISOString(),
         ...formData,
+        gymId: resolvedGymId,
       };
       const docRef = await addDoc(collection(db, COLLECTIONS.REGISTRATIONS), newReq);
       return { id: docRef.id, ...newReq };
@@ -1926,13 +2060,12 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return null;
     }
-  }, []);
+  }, [currentUser]);
 
   const approveRegistration = useCallback(async (requestId) => {
     try {
       const req = registrations.find(r => r.id === requestId);
       if (req) {
-        // Create member from registration data
         const newMember = await addMember({
           full_name: req.full_name,
           email: req.email,
@@ -1949,6 +2082,9 @@ export const DashboardProvider = ({ children }) => {
           weight_kg: req.weight_kg ? parseFloat(req.weight_kg) : 75.0,
           height_cm: req.height_cm ? parseInt(req.height_cm) : 175,
           body_fat_pct: req.body_fat_pct ? parseFloat(req.body_fat_pct) : 18.0,
+          countdown_end: new Date().toISOString(),
+          next_payment_date: new Date().toISOString(),
+          gymId: req.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
         });
 
         // Update registration status in Firestore
@@ -1966,7 +2102,7 @@ export const DashboardProvider = ({ children }) => {
       console.error('approveRegistration error:', err);
       setError(friendlyFirestoreError(err));
     }
-  }, [registrations, addMember, logAudit]);
+  }, [registrations, addMember, logAudit, currentUser]);
 
   const rejectRegistration = useCallback(async (requestId, reason) => {
     try {
@@ -2000,6 +2136,7 @@ export const DashboardProvider = ({ children }) => {
         joined_at: employeeData.joined_at || new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
         ...employeeData,
+        employee_code: employeeData.employee_code || 'EMP-' + Math.floor(10000 + Math.random() * 90000),
         salary: parseFloat(employeeData.salary),
       };
       const docRef = await addDoc(collection(db, COLLECTIONS.EMPLOYEES), newEmp);
@@ -2048,11 +2185,15 @@ export const DashboardProvider = ({ children }) => {
 
   const addEmployeeRegistrationRequest = useCallback(async (formData) => {
     try {
+      const queryParams = new URLSearchParams(window.location.search);
+      const urlGymId = queryParams.get('gymId') || queryParams.get('gym_id');
+      const resolvedGymId = formData.gymId || urlGymId || currentUser?.gymId || DEFAULT_ORG_ID;
+
       const newReq = {
-        gymId: DEFAULT_ORG_ID,
         status: 'pending_approval',
         created_at: new Date().toISOString(),
         ...formData,
+        gymId: resolvedGymId,
         expected_salary: parseFloat(formData.expected_salary),
       };
       const docRef = await addDoc(collection(db, COLLECTIONS.EMPLOYEE_REGISTRATIONS), newReq);
@@ -2062,7 +2203,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, []);
+  }, [currentUser]);
 
   const approveEmployeeRegistration = useCallback(async (requestId, finalSalary, nextSalaryDate) => {
     try {
@@ -2140,76 +2281,239 @@ export const DashboardProvider = ({ children }) => {
   }, [invoices, logAudit]);
 
   // ═══════════════════════════════════════════════════════════════════
-  // ACCESS CONTROL (Check-in / Check-out)
+  // ACCESS CONTROL (Check-in / Check-out & Device Operations)
   // ═══════════════════════════════════════════════════════════════════
 
-  const checkInMember = useCallback(async (memberCode, source = 'qr') => {
+  const checkInMember = useCallback(async (credentialCode, source = 'qr', deviceId = null) => {
     try {
-      const member = members.find(m => m.member_code.toLowerCase() === memberCode.trim().toLowerCase());
+      const code = credentialCode.trim();
+      const codeLower = code.toLowerCase();
 
-      // Check if membership has expired (countdown expired)
-      if (member && member.countdown_end && new Date(member.countdown_end).getTime() < Date.now()) {
-        if (member.status === 'active') {
-          // Auto-expire the member
-          const memberRef = doc(db, COLLECTIONS.MEMBERS, member.id);
-          await updateDoc(memberRef, { status: 'expired' });
-          await logAudit('member.expire', 'member', member.id, `Membership for ${member.full_name} automatically expired (Countdown over)`);
-          // Update local reference for the checks below
-          member.status = 'expired';
-        }
-      }
+      // Find matching device if provided
+      const device = deviceId ? devices.find(d => d.id === deviceId) : null;
+      const deviceName = device ? device.name : 'Web Console';
+      const deviceSerial = device ? device.serialNumber : 'WEB-CMD';
+
+      // 1. Try to find a Member
+      const member = members.find(m => m.member_code.toLowerCase() === codeLower);
+
+      // 2. Try to find an Employee (Trainers or Employees)
+      const employee = !member ? employees.find(e => 
+        (e.employee_code && e.employee_code.toLowerCase() === codeLower) || 
+        (e.phone && e.phone.replace(/[^0-9]/g, '') === code.replace(/[^0-9]/g, ''))
+      ) : null;
 
       // Helper to write a denied event
-      const writeDeniedEvent = async (membObj, reason, denyReason) => {
+      const writeDeniedEvent = async (entity, type, reason, denyReason) => {
         const event = {
-          gymId: DEFAULT_ORG_ID,
-          member_id: membObj?.id || null,
-          member_name: membObj?.full_name || 'Unknown Member',
-          member_code: membObj?.member_code || memberCode,
+          gymId: entity?.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
+          member_id: type === 'member' ? (entity?.id || null) : null,
+          employee_id: type === 'employee' ? (entity?.id || null) : null,
+          member_name: entity?.full_name || 'Unknown User',
+          member_code: code,
+          userType: type,
           source,
           result: 'denied',
           deny_reason: denyReason,
           occurred_at: new Date().toISOString(),
+          deviceId: deviceId || null,
+          device_name: deviceName,
+          device_serial: deviceSerial
         };
         const evtRef = await addDoc(collection(db, COLLECTIONS.ACCESS_EVENTS), event);
-        await logAudit('access.denied', 'access_event', evtRef.id, `Access denied for ${event.member_name} (${event.member_code}). Reason: ${reason}`);
-        return { success: false, reason };
+        await logAudit('access.denied', 'access_event', evtRef.id, `Access denied for ${event.member_name} (${code}). Reason: ${reason}`);
+        
+        // Audit Logs (Section 13)
+        await logAudit('access.failed', 'access_event', evtRef.id, `Failed Authentication: Access Denied on device ${deviceName} due to ${denyReason}`);
+        if (denyReason === 'expired') {
+          await logAudit('member.expired_attempt', 'member', entity?.id || 'unknown', `Membership Expired: Access denied attempt by ${event.member_name}`);
+        }
+        
+        return { success: false, reason, denyReason };
       };
 
-      if (!member) {
-        return await writeDeniedEvent(null, 'Invalid membership code.', 'invalid_qr');
+      // If neither member nor employee found
+      if (!member && !employee) {
+        return await writeDeniedEvent(null, 'unknown', 'Invalid credential code.', 'invalid_credential');
       }
 
-      if (member.status === 'frozen') {
-        return await writeDeniedEvent(member, `Membership is frozen. Freeze reason: ${member.freeze_reason || 'N/A'}`, 'frozen');
+      // 3. Member Validation Flow
+      if (member) {
+        // Check if membership has expired (countdown expired)
+        if (member.countdown_end && new Date(member.countdown_end).getTime() < Date.now()) {
+          if (member.status === 'active') {
+            const memberRef = doc(db, COLLECTIONS.MEMBERS, member.id);
+            await updateDoc(memberRef, { status: 'expired' });
+            await logAudit('member.expire', 'member', member.id, `Membership for ${member.full_name} automatically expired (Countdown over)`);
+            member.status = 'expired';
+          }
+        }
+
+        if (member.status === 'frozen') {
+          return await writeDeniedEvent(member, 'member', `Membership is frozen. Reason: ${member.freeze_reason || 'N/A'}`, 'frozen');
+        }
+
+        if (member.status === 'expired') {
+          return await writeDeniedEvent(member, 'member', 'Membership has expired.', 'expired');
+        }
+
+        if (member.status === 'cancelled' || member.status === 'suspended') {
+          return await writeDeniedEvent(member, 'member', `Membership status is ${member.status}.`, 'expired');
+        }
+
+        // Check if device is enabled
+        if (device && !device.isEnabled) {
+          return await writeDeniedEvent(member, 'member', 'Device is disabled.', 'device_disabled');
+        }
+
+        // Toggle Entry/Exit logic
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const activeEvent = accessEvents.find(e => 
+          e.member_id === member.id && 
+          e.result === 'granted' && 
+          !e.check_out_at && 
+          new Date(e.occurred_at) >= todayStart
+        );
+
+        if (activeEvent) {
+          // Perform Check-out (Exit)
+          const eventRef = doc(db, COLLECTIONS.ACCESS_EVENTS, activeEvent.id);
+          const checkoutTime = new Date().toISOString();
+          await updateDoc(eventRef, { check_out_at: checkoutTime });
+          
+          await logAudit('member.checkout', 'access_event', activeEvent.id, `Member checked out: ${member.full_name} from device ${deviceName}`);
+          await logAudit('member.exit', 'access_event', activeEvent.id, `Member Exit: ${member.full_name} on device ${deviceName}`);
+          
+          // Momentarily unlock the door relay if linked to a device
+          if (device) {
+            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'unlocked' });
+            setTimeout(async () => {
+              try {
+                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'locked' });
+              } catch (e) {}
+            }, 5000);
+          }
+
+          return { success: true, member, direction: 'exit', eventId: activeEvent.id };
+        } else {
+          // Perform Check-in (Entry)
+          const entryTime = new Date().toISOString();
+          const grantedEvent = {
+            gymId: member.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
+            member_id: member.id,
+            member_name: member.full_name,
+            member_code: member.member_code,
+            userType: 'member',
+            source,
+            result: 'granted',
+            occurred_at: entryTime,
+            check_out_at: null,
+            deviceId: deviceId || null,
+            device_name: deviceName,
+            device_serial: deviceSerial
+          };
+          const evtRef = await addDoc(collection(db, COLLECTIONS.ACCESS_EVENTS), grantedEvent);
+          await logAudit('member.checkin', 'access_event', evtRef.id, `Member checked in: ${member.full_name} at device ${deviceName}`);
+          await logAudit('member.entry', 'access_event', evtRef.id, `Member Entry: ${member.full_name} on device ${deviceName}`);
+          
+          // Momentarily unlock the door relay if linked to a device
+          if (device) {
+            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'unlocked' });
+            setTimeout(async () => {
+              try {
+                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'locked' });
+              } catch (e) {}
+            }, 5000);
+          }
+
+          return { success: true, member, direction: 'entry', eventId: evtRef.id };
+        }
       }
 
-      if (member.status === 'expired') {
-        return await writeDeniedEvent(member, 'Membership has expired. Please renew.', 'expired');
+      // 4. Employee Validation Flow
+      if (employee) {
+        if (employee.status !== 'active') {
+          return await writeDeniedEvent(employee, 'employee', `Employee status is ${employee.status}.`, 'suspended');
+        }
+
+        // Check if device is enabled
+        if (device && !device.isEnabled) {
+          return await writeDeniedEvent(employee, 'employee', 'Device is disabled.', 'device_disabled');
+        }
+
+        // Toggle Entry/Exit logic
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const activeEvent = accessEvents.find(e => 
+          e.employee_id === employee.id && 
+          e.result === 'granted' && 
+          !e.check_out_at && 
+          new Date(e.occurred_at) >= todayStart
+        );
+
+        if (activeEvent) {
+          // Perform Check-out (Exit)
+          const eventRef = doc(db, COLLECTIONS.ACCESS_EVENTS, activeEvent.id);
+          const checkoutTime = new Date().toISOString();
+          await updateDoc(eventRef, { check_out_at: checkoutTime });
+          
+          await logAudit('employee.checkout', 'access_event', activeEvent.id, `Employee checked out: ${employee.full_name} from device ${deviceName}`);
+          await logAudit('employee.exit', 'access_event', activeEvent.id, `Employee Exit: ${employee.full_name} on device ${deviceName}`);
+          
+          // Momentarily unlock the door relay if linked to a device
+          if (device) {
+            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'unlocked' });
+            setTimeout(async () => {
+              try {
+                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'locked' });
+              } catch (e) {}
+            }, 5000);
+          }
+
+          return { success: true, employee, direction: 'exit', eventId: activeEvent.id };
+        } else {
+          // Perform Check-in (Entry)
+          const entryTime = new Date().toISOString();
+          const grantedEvent = {
+            gymId: employee.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
+            employee_id: employee.id,
+            member_name: employee.full_name,
+            member_code: employee.employee_code || code,
+            userType: 'employee',
+            source,
+            result: 'granted',
+            occurred_at: entryTime,
+            check_out_at: null,
+            deviceId: deviceId || null,
+            device_name: deviceName,
+            device_serial: deviceSerial
+          };
+          const evtRef = await addDoc(collection(db, COLLECTIONS.ACCESS_EVENTS), grantedEvent);
+          await logAudit('employee.checkin', 'access_event', evtRef.id, `Employee checked in: ${employee.full_name} at device ${deviceName}`);
+          await logAudit('employee.entry', 'access_event', evtRef.id, `Employee Entry: ${employee.full_name} on device ${deviceName}`);
+          
+          // Momentarily unlock the door relay if linked to a device
+          if (device) {
+            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'unlocked' });
+            setTimeout(async () => {
+              try {
+                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'locked' });
+              } catch (e) {}
+            }, 5000);
+          }
+
+          return { success: true, employee, direction: 'entry', eventId: evtRef.id };
+        }
       }
 
-      if (member.status === 'cancelled' || member.status === 'suspended') {
-        return await writeDeniedEvent(member, `Membership is ${member.status}. Access blocked.`, 'expired');
-      }
-
-      // ── ACCESS GRANTED ──
-      const grantedEvent = {
-        gymId: DEFAULT_ORG_ID,
-        member_id: member.id,
-        member_name: member.full_name,
-        member_code: member.member_code,
-        source,
-        result: 'granted',
-        occurred_at: new Date().toISOString(),
-      };
-      const evtRef = await addDoc(collection(db, COLLECTIONS.ACCESS_EVENTS), grantedEvent);
-      await logAudit('member.checkin', 'access_event', evtRef.id, `Member checked in: ${member.full_name}`);
-      return { success: true, member };
     } catch (err) {
       console.error('checkInMember error:', err);
-      return { success: false, reason: 'System error during check-in. Please try again.' };
+      return { success: false, reason: 'System error during authentication. Please try again.' };
     }
-  }, [members, logAudit]);
+  }, [members, employees, devices, accessEvents, logAudit, currentUser]);
 
   const checkOutMember = useCallback(async (eventId) => {
     try {
@@ -2220,6 +2524,8 @@ export const DashboardProvider = ({ children }) => {
       });
       if (evt) {
         await logAudit('member.checkout', 'access_event', eventId, `Recorded checkout for ${evt.member_name}`);
+        const logType = evt.userType === 'employee' ? 'employee.exit' : 'member.exit';
+        await logAudit(logType, 'access_event', eventId, `${evt.userType === 'employee' ? 'Employee' : 'Member'} Exit: ${evt.member_name}`);
       }
     } catch (err) {
       console.error('checkOutMember error:', err);
@@ -2227,10 +2533,415 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [accessEvents, logAudit]);
 
+  // ─── Biometric Security Device Actions ───
+
+  const addDevice = useCallback(async (deviceData) => {
+    try {
+      const gymId = deviceData.gymId || DEFAULT_ORG_ID;
+      const gymDevices = devices.filter(d => d.gymId === gymId);
+      
+      const deviceNumber = gymDevices.length + 1;
+      const doorNumber = gymDevices.length + 1;
+      const readerNumber = 1;
+
+      const name = deviceData.name;
+      const brand = deviceData.brand || 'ZKTeco';
+      const model = deviceData.model || 'SpeedFace V5L';
+      const serial = (deviceData.serialNumber || '').trim();
+
+      const entranceType = deviceData.entranceType || 'Main Entrance';
+      const physicalLocation = deviceData.physicalLocation || 'Reception';
+      const purpose = deviceData.devicePurpose || 'Door Access + Attendance';
+
+      const ip = deviceData.ipAddress || '192.168.1.100';
+      const port = parseInt(deviceData.port || '4370');
+      const protocol = deviceData.protocol || 'TCP/IP';
+      const mac = deviceData.macAddress || '00:1A:2B:3C:4D:' + Math.floor(10 + Math.random() * 89).toString(16).toUpperCase() + ':5E';
+      const firmware = deviceData.firmware || '';
+
+      const isActivated = deviceData.isEnabled !== false;
+      const status = isActivated ? 'Offline' : 'Disabled';
+
+      const capabilities = deviceData.capabilities || {
+        face: true,
+        fingerprint: true,
+        rfid: true,
+        qr: false,
+        pin: true,
+        palm: false
+      };
+
+      const newDevice = {
+        gymId,
+        device: {
+          serial,
+          brand,
+          model,
+          name
+        },
+        configuration: {
+          entranceType,
+          physicalLocation,
+          purpose,
+          deviceNumber,
+          doorNumber,
+          readerNumber
+        },
+        network: {
+          ip,
+          port,
+          protocol,
+          mac,
+          firmware
+        },
+        capabilities,
+        health: {
+          status,
+          lastHeartbeat: null,
+          latency: null,
+          heartbeatInterval: 30,
+          doorStatus: 'locked',
+          lastSync: null
+        },
+        registeredAt: new Date().toISOString(),
+        installedAt: new Date().toISOString(),
+        activatedAt: isActivated ? new Date().toISOString() : null
+      };
+
+      const docRef = await addDoc(collection(db, COLLECTIONS.DEVICES), newDevice);
+      
+      // Log structured audits
+      await logAudit('device.create', 'device', docRef.id, `Registered security device: ${name} (${serial})`);
+      if (isActivated) {
+        await logAudit('device.activate', 'device', docRef.id, `Activated device ${name}. Eligible for communication.`);
+      }
+
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addDevice error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [devices, logAudit]);
+
+  const updateDevice = useCallback(async (id, updatedFields) => {
+    try {
+      const device = devices.find(d => d.id === id);
+      const name = device ? device.name : 'Unknown Device';
+      
+      const deviceRef = doc(db, COLLECTIONS.DEVICES, id);
+      
+      // Map flat updatedFields to nested format
+      const mapped = {};
+      
+      if (updatedFields.name !== undefined) mapped["device.name"] = updatedFields.name;
+      if (updatedFields.brand !== undefined) mapped["device.brand"] = updatedFields.brand;
+      if (updatedFields.model !== undefined) mapped["device.model"] = updatedFields.model;
+      if (updatedFields.serialNumber !== undefined) mapped["device.serial"] = updatedFields.serialNumber;
+
+      if (updatedFields.entranceType !== undefined) mapped["configuration.entranceType"] = updatedFields.entranceType;
+      if (updatedFields.physicalLocation !== undefined) mapped["configuration.physicalLocation"] = updatedFields.physicalLocation;
+      if (updatedFields.devicePurpose !== undefined) mapped["configuration.purpose"] = updatedFields.devicePurpose;
+      if (updatedFields.deviceNumber !== undefined) mapped["configuration.deviceNumber"] = updatedFields.deviceNumber;
+      if (updatedFields.doorNumber !== undefined) mapped["configuration.doorNumber"] = updatedFields.doorNumber;
+      if (updatedFields.readerNumber !== undefined) mapped["configuration.readerNumber"] = updatedFields.readerNumber;
+
+      if (updatedFields.ipAddress !== undefined) mapped["network.ip"] = updatedFields.ipAddress;
+      if (updatedFields.port !== undefined) mapped["network.port"] = parseInt(updatedFields.port);
+      if (updatedFields.protocol !== undefined) mapped["network.protocol"] = updatedFields.protocol;
+      if (updatedFields.macAddress !== undefined) mapped["network.mac"] = updatedFields.macAddress;
+      if (updatedFields.firmware !== undefined) mapped["network.firmware"] = updatedFields.firmware;
+
+      if (updatedFields.capabilities !== undefined) mapped["capabilities"] = updatedFields.capabilities;
+
+      if (updatedFields.isEnabled !== undefined) {
+        mapped["health.status"] = updatedFields.isEnabled ? "Offline" : "Disabled";
+        mapped["activatedAt"] = updatedFields.isEnabled ? new Date().toISOString() : null;
+      }
+      if (updatedFields.status !== undefined) {
+        const formattedStatus = updatedFields.status.charAt(0).toUpperCase() + updatedFields.status.slice(1);
+        mapped["health.status"] = formattedStatus;
+      }
+      if (updatedFields.lastHeartbeat !== undefined) mapped["health.lastHeartbeat"] = updatedFields.lastHeartbeat;
+      if (updatedFields.lastSync !== undefined) mapped["health.lastSync"] = updatedFields.lastSync;
+      if (updatedFields.latency !== undefined) mapped["health.latency"] = updatedFields.latency;
+      if (updatedFields.doorStatus !== undefined) mapped["health.doorStatus"] = updatedFields.doorStatus;
+
+      // Pass through any other fields directly
+      for (const k in updatedFields) {
+        if (![
+          'name', 'brand', 'model', 'serialNumber', 'entranceType', 'physicalLocation',
+          'devicePurpose', 'deviceNumber', 'doorNumber', 'readerNumber', 'ipAddress', 'port',
+          'protocol', 'macAddress', 'firmware', 'isEnabled', 'status', 'lastHeartbeat',
+          'lastSync', 'latency', 'doorStatus', 'capabilities'
+        ].includes(k)) {
+          mapped[k] = updatedFields[k];
+        }
+      }
+
+      await updateDoc(deviceRef, mapped);
+
+      // Perform structured audit logging based on changes
+      if (updatedFields.isEnabled !== undefined) {
+        if (updatedFields.isEnabled) {
+          await logAudit('device.activate', 'device', id, `Activated device ${name}. Eligible for communication.`);
+        } else {
+          await logAudit('device.disable', 'device', id, `Disabled device ${name}. Communication blocked.`);
+        }
+      }
+      if (updatedFields.ipAddress !== undefined || updatedFields.port !== undefined || updatedFields.protocol !== undefined) {
+        const ip = updatedFields.ipAddress || (device ? device.network?.ip : '');
+        const port = updatedFields.port || (device ? device.network?.port : '');
+        const protocol = updatedFields.protocol || (device ? device.network?.protocol : '');
+        await logAudit('device.network_change', 'device', id, `Updated network settings for device ${name}: IP ${ip}, Port ${port}, Protocol ${protocol}`);
+      }
+      if (updatedFields.capabilities !== undefined) {
+        await logAudit('device.capabilities_update', 'device', id, `Updated authentication capabilities for device ${name}`);
+      }
+      if (updatedFields.firmware !== undefined) {
+        await logAudit('device.firmware_update', 'device', id, `Updated firmware for device ${name} to ${updatedFields.firmware}`);
+      }
+      
+      await logAudit('device.update', 'device', id, `Updated device settings for ${name}`);
+      return { success: true };
+    } catch (err) {
+      console.error('updateDevice error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [devices, logAudit]);
+
+  const deleteDevice = useCallback(async (id) => {
+    try {
+      const device = devices.find(d => d.id === id);
+      const deviceRef = doc(db, COLLECTIONS.DEVICES, id);
+      await deleteDoc(deviceRef);
+      if (device) {
+        const name = device.device?.name || device.name;
+        const serial = device.device?.serial || device.serialNumber;
+        await logAudit('device.delete', 'device', id, `Deleted security device: ${name} (${serial})`);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('deleteDevice error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [devices, logAudit]);
+
+  const testDeviceConnection = useCallback(async (deviceIdOrData) => {
+    try {
+      let isSuccess = false;
+      let name = '';
+      let serialNumber = '';
+      let isEnabled = false;
+      let ip = '';
+      let port = 4370;
+      let protocol = 'TCP/IP';
+      let deviceId = 'unsaved';
+
+      if (typeof deviceIdOrData === 'string') {
+        deviceId = deviceIdOrData;
+        const device = devices.find(d => d.id === deviceId);
+        if (!device) return { success: false, message: 'Device not found' };
+        
+        name = device.device?.name || device.name;
+        serialNumber = device.device?.serial || device.serialNumber;
+        isEnabled = device.health?.status !== 'Disabled';
+        ip = device.network?.ip || device.ipAddress;
+        port = device.network?.port || device.port || 4370;
+        protocol = device.network?.protocol || device.protocol || 'TCP/IP';
+
+        const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+        await updateDoc(deviceRef, { "health.status": "Connecting" });
+        await logAudit('device.connecting', 'device', deviceId, `Initiated connection diagnostic test for ${name}`);
+      } else {
+        // Raw form data passed
+        name = deviceIdOrData.name;
+        serialNumber = deviceIdOrData.serialNumber || '';
+        isEnabled = deviceIdOrData.isEnabled !== false;
+        ip = deviceIdOrData.ipAddress || '';
+        port = parseInt(deviceIdOrData.port || '4370');
+        protocol = deviceIdOrData.protocol || 'TCP/IP';
+      }
+
+      // Simulate multi-stage connection loader
+      const steps = {
+        ping: 'OK',
+        tcp: 'OK',
+        auth: 'OK',
+        firmware: 'OK'
+      };
+      
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+      if (!ipRegex.test(ip)) {
+        steps.ping = 'FAIL';
+        steps.tcp = 'FAIL';
+        steps.auth = 'FAIL';
+        steps.firmware = 'FAIL';
+        const failMessage = 'Incorrect IP Address.';
+        await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} failed: ${failMessage}`);
+        
+        if (typeof deviceIdOrData === 'string') {
+          const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+          await updateDoc(deviceRef, { "health.status": "Error" });
+          await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${name} failed connection diagnostic: ${failMessage}`);
+        }
+        return { success: false, latency: 0, steps, message: failMessage };
+      }
+
+      if (serialNumber.toLowerCase().includes('timeout')) {
+        steps.tcp = 'FAIL';
+        steps.auth = 'FAIL';
+        steps.firmware = 'FAIL';
+        const failMessage = 'Communication Timeout.';
+        await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} failed: ${failMessage}`);
+        
+        if (typeof deviceIdOrData === 'string') {
+          const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+          await updateDoc(deviceRef, { "health.status": "Error" });
+          await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${name} failed connection diagnostic: ${failMessage}`);
+        }
+        return { success: false, latency: 0, steps, message: failMessage };
+      }
+
+      if (serialNumber.toLowerCase().includes('protocol')) {
+        steps.auth = 'FAIL';
+        steps.firmware = 'FAIL';
+        const failMessage = 'Protocol Mismatch.';
+        await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} failed: ${failMessage}`);
+        
+        if (typeof deviceIdOrData === 'string') {
+          const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+          await updateDoc(deviceRef, { "health.status": "Error" });
+          await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${name} failed connection diagnostic: ${failMessage}`);
+        }
+        return { success: false, latency: 0, steps, message: failMessage };
+      }
+
+      if (serialNumber.toLowerCase().includes('fail') || !isEnabled) {
+        steps.auth = 'FAIL';
+        steps.firmware = 'FAIL';
+        const failMessage = 'Unable to connect to the device.';
+        await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} failed: ${failMessage}`);
+        
+        if (typeof deviceIdOrData === 'string') {
+          const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+          await updateDoc(deviceRef, { "health.status": "Error" });
+          await logAudit('device.connect_error', 'device', deviceId, `Device Offline: ${name} failed connection diagnostic: ${failMessage}`);
+        }
+        return { success: false, latency: 0, steps, message: failMessage };
+      }
+
+      // Success
+      const latencyVal = Math.floor(Math.random() * 25) + 30; // 30ms - 55ms
+      const heartbeatTime = new Date().toISOString();
+
+      await logAudit('device.test_connection', 'device', deviceId, `Connection test for ${name} passed. Latency: ${latencyVal}ms`);
+
+      if (typeof deviceIdOrData === 'string') {
+        const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+        await updateDoc(deviceRef, { 
+          "health.status": "Online", 
+          "health.lastHeartbeat": heartbeatTime,
+          "health.latency": latencyVal
+        });
+        await logAudit('device.online', 'device', deviceId, `Device ${name} connected successfully. Latency: ${latencyVal}ms`);
+        await logAudit('device.reconnect', 'device', deviceId, `Device Reconnected: ${name} is now online`);
+      }
+
+      return { success: true, latency: latencyVal, steps, status: 'Online' };
+    } catch (err) {
+      console.error('testDeviceConnection error:', err);
+      return { success: false, message: err.message };
+    }
+  }, [devices, logAudit]);
+
+  const syncDeviceUsers = useCallback(async (deviceId) => {
+    try {
+      const device = devices.find(d => d.id === deviceId);
+      if (!device) return { success: false, message: 'Device not found' };
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const syncTime = new Date().toISOString();
+      const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+      await updateDoc(deviceRef, { 
+        lastSync: syncTime,
+        lastHeartbeat: syncTime
+      });
+      
+      await logAudit('device.sync', 'device', deviceId, `Synchronized members and staff credentials list on ${device.name}`);
+      return { success: true, lastSync: syncTime };
+    } catch (err) {
+      console.error('syncDeviceUsers error:', err);
+      return { success: false, message: err.message };
+    }
+  }, [devices, logAudit]);
+
+  const triggerDoorCommand = useCallback(async (deviceId, command) => {
+    try {
+      const device = devices.find(d => d.id === deviceId);
+      if (!device) return { success: false, message: 'Device not found' };
+
+      const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
+      let targetStatus = 'locked';
+      let auditAction = 'door.lock';
+      let auditDetails = '';
+
+      if (command === 'open') {
+        targetStatus = 'unlocked';
+        auditAction = 'door.open';
+        auditDetails = `Remote Door Open command sent to ${device.name}`;
+      } else if (command === 'lock') {
+        targetStatus = 'locked';
+        auditAction = 'door.lock';
+        auditDetails = `Remote Door Lock command sent to ${device.name}`;
+      } else if (command === 'unlock') {
+        targetStatus = 'unlocked';
+        auditAction = 'door.unlock';
+        auditDetails = `Remote Door Unlock command sent to ${device.name}`;
+      } else if (command === 'emergency_unlock') {
+        targetStatus = 'emergency_unlocked';
+        auditAction = 'door.emergency_unlock';
+        auditDetails = `EMERGENCY UNLOCK command broadcast to ${device.name}`;
+      }
+
+      await updateDoc(deviceRef, { doorStatus: targetStatus });
+      // Log audit
+      await logAudit(auditAction, 'device', deviceId, auditDetails);
+      // Section 13 Audit logs: Door Open, Door Lock, Door Unlock, Emergency Unlock
+      let section13Log = 'Door Lock';
+      if (command === 'open') section13Log = 'Door Open';
+      else if (command === 'unlock') section13Log = 'Door Unlock';
+      else if (command === 'emergency_unlock') section13Log = 'Emergency Unlock';
+      await logAudit('door.status_change', 'device', deviceId, `${section13Log}: Executed remote relay command for ${device.name}`);
+
+      if (command === 'open') {
+        setTimeout(async () => {
+          try {
+            await updateDoc(deviceRef, { doorStatus: 'locked' });
+            await logAudit('door.lock', 'device', deviceId, `Door relay on ${device.name} automatically relocked (Timeout)`);
+          } catch (relockErr) {
+            console.error('Auto-relock failed:', relockErr);
+          }
+        }, 5000);
+      }
+
+      return { success: true, doorStatus: targetStatus };
+    } catch (err) {
+      console.error('triggerDoorCommand error:', err);
+      return { success: false, message: err.message };
+    }
+  }, [devices, logAudit]);
+
   const sendSMS = useCallback(async (toPhone, memberName, amount, sourceName, receiptLink, memberId = null) => {
     try {
       const fromPhone = '0779688582';
-      const message = `Welcome to Ascend Fit! Hello ${memberName}, your payment of LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} for ${sourceName} has been received. View your receipt: ${receiptLink}`;
+      const gymName = gymSettings?.gymName || 'Ascend Fit';
+      const message = `Welcome to ${gymName}! Hello ${memberName}, your payment of LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} for ${sourceName} has been received. View your receipt: ${receiptLink}`;
       
       console.log("%c[SMS Gateway] Sending SMS...", "color: #10b981; font-weight: bold;", {
         from: fromPhone,
@@ -2267,7 +2978,7 @@ export const DashboardProvider = ({ children }) => {
       showToast('Failed to send SMS receipt simulation.', 'error');
       return { success: false, error: err.message };
     }
-  }, [currentUser, logAudit, showToast]);
+  }, [currentUser, logAudit, showToast, gymSettings]);
 
   // ═══════════════════════════════════════════════════════════════════
   // MEMBERSHIP RENEWAL
@@ -2283,8 +2994,8 @@ export const DashboardProvider = ({ children }) => {
 
       const isCustom = customPrice !== null && parseFloat(customPrice) !== plan.price * parseInt(periodMonths);
       const priceToCharge = isCustom ? parseFloat(customPrice) : plan.price * parseInt(periodMonths);
-      const tax = isCustom ? 0 : priceToCharge * (plan.tax_rate / 100);
-      const total = priceToCharge + tax;
+      const tax = 0.0;
+      const total = priceToCharge;
 
       const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end, periodMonths);
 
@@ -2298,7 +3009,7 @@ export const DashboardProvider = ({ children }) => {
 
       // Create paid renewal invoice
       const invoiceData = {
-        gymId: DEFAULT_ORG_ID,
+        gymId: member.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
         member_id: member.id,
         member_name: member.full_name,
         invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -2339,7 +3050,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [members, plans, sendSMS, logAudit]);
+  }, [members, plans, sendSMS, logAudit, currentUser]);
   // ═══════════════════════════════════════════════════════════════════
   // PLAN (MEMBERSHIP PACKAGE) CRUD ACTIONS
   // ═══════════════════════════════════════════════════════════════════
@@ -2471,6 +3182,7 @@ export const DashboardProvider = ({ children }) => {
       const newTrainer = {
         gymId: currentUser?.gymId || DEFAULT_ORG_ID,
         name: trainerData.name,
+        role: 'Personal Trainer',
         specialization: trainerData.specialization,
         bio: trainerData.bio || '',
         hourly_rate: parseFloat(trainerData.hourly_rate),
@@ -2730,6 +3442,7 @@ export const DashboardProvider = ({ children }) => {
       employeeRegistrations,
       expenses,
       income,
+      devices,
       currentUser,
       toasts,
 
@@ -2782,6 +3495,12 @@ export const DashboardProvider = ({ children }) => {
       // Access Actions
       checkInMember,
       checkOutMember,
+      addDevice,
+      updateDevice,
+      deleteDevice,
+      testDeviceConnection,
+      syncDeviceUsers,
+      triggerDoorCommand,
 
       // Utility
       logAudit,

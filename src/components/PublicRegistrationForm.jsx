@@ -120,48 +120,12 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
         </div>
         
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.85rem', fontWeight: 800, letterSpacing: '0.02em', color: '#ffffff', marginBottom: '0.75rem' }}>
-          REGISTRATION COMPLETE!
+          REGISTRATION SUCCESSFUL!
         </h2>
         
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6', marginBottom: '2rem' }}>
-          Your application has been successfully submitted to the Ascend Gym administration team. We will review your credentials and get back to you shortly.
+        <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', lineHeight: '1.6' }}>
+          Your application has been successfully submitted.
         </p>
-
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '12px',
-          padding: '1.25rem 1.5rem',
-          textAlign: 'left',
-          marginBottom: '2.5rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.75rem'
-        }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Next Steps
-          </span>
-          <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem' }}>
-            <span style={{ color: '#ffffff', fontWeight: 700 }}>1.</span>
-            <span style={{ color: 'var(--text-muted)' }}>Administrative approval of your registration details.</span>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem' }}>
-            <span style={{ color: '#ffffff', fontWeight: 700 }}>2.</span>
-            <span style={{ color: 'var(--text-muted)' }}>You will receive an email/SMS confirmation once approved.</span>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem' }}>
-            <span style={{ color: '#ffffff', fontWeight: 700 }}>3.</span>
-            <span style={{ color: 'var(--text-muted)' }}>Check in at the reception desk to pick up your keytag and start training!</span>
-          </div>
-        </div>
-
-        <button 
-          onClick={() => setIsSubmitted(false)} 
-          className="btn btn-primary" 
-          style={{ width: '100%', padding: '0.75rem', background: '#ffffff', color: '#000000', fontWeight: 700 }}
-        >
-          Submit Another Registration
-        </button>
       </div>
     );
 
@@ -372,14 +336,14 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
           </div>
         </div>
 
-        {/* Section 3: Membership & Installment Options */}
+        {/* Section 3: Membership Option */}
         <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <h4 style={{ color: '#ffffff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
-            3. Membership & Installment Options
+            3. Membership Option
           </h4>
 
-          <div className="pub-form-grid">
-            <div>
+          <div>
+            <div style={{ width: '100%' }}>
               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Subscription Plan *</label>
               <select 
                 required
@@ -394,20 +358,6 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
                 ))}
               </select>
               {formErrors.plan_id && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.plan_id}</span>}
-            </div>
-
-            <div>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Payment Installment Plan *</label>
-              <select 
-                required
-                value={publicForm.installment_plan}
-                onChange={(e) => setPublicForm({...publicForm, installment_plan: e.target.value})}
-                className="glass-select"
-                style={{ marginTop: '0.25rem', width: '100%', padding: '0.625rem' }}
-              >
-                <option value="1 time">1 Time (Pay in full)</option>
-                <option value="3 month installment plan">3 Month Installment Plan</option>
-              </select>
             </div>
           </div>
         </div>

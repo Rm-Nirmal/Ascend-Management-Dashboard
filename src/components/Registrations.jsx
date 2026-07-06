@@ -388,9 +388,8 @@ const Registrations = () => {
                 </div>
               </div>
 
-              <div className="grid-2" style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                <div>IP Address: {selectedReq.ip_address}</div>
-                <div>Submitted: {new Date(selectedReq.created_at).toLocaleString()}</div>
+              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Submitted: {new Date(selectedReq.created_at).toLocaleString()}
               </div>
             </div>
 

@@ -514,7 +514,7 @@ const Overview = () => {
       .filter(t => t.date_of_birth)
       .map(t => ({
         id: t.id,
-        name: t.name,
+        name: t.name || t.full_name || 'Staff',
         type: 'Staff/Trainer',
         dob: t.date_of_birth,
         daysLeft: getDaysUntilBirthday(t.date_of_birth),
@@ -658,13 +658,6 @@ const Overview = () => {
               </button>
             ))}
           </div>
-
-          <button className="btn btn-secondary" onClick={() => handleExport('csv')} style={{ gap: '0.35rem' }}>
-            <Download size={14} /> Export CSV
-          </button>
-          <button className="btn btn-secondary" onClick={() => handleExport('pdf')} style={{ gap: '0.35rem' }}>
-            <Download size={14} /> Print Report
-          </button>
         </div>
       </div>
 

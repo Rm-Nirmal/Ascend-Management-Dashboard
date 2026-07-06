@@ -25,7 +25,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'members', name: 'Members Directory', icon: Users },
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
-    { id: 'access', name: 'Access Console', icon: QrCode },
+    { id: 'access', name: 'Access Control', icon: QrCode },
     { id: 'console', name: 'Console', icon: CreditCard },
     { id: 'finance', name: 'Finance', icon: DollarSign },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
@@ -56,9 +56,12 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     <aside className="sidebar">
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* Brand Logo */}
-        <div className="sidebar-logo" style={{ marginBottom: '2.5rem', flexShrink: 0 }}>
-          <Dumbbell className="icon" style={{ color: 'var(--color-primary)' }} />
-          <span className="logo-text">ASCEND FITNESS</span>
+        <div className="sidebar-logo" style={{ marginBottom: '2.5rem', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Dumbbell className="icon" style={{ color: 'var(--color-primary)' }} />
+            <span className="logo-text" style={{ textTransform: 'uppercase' }}>fitgencore</span>
+          </div>
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', paddingLeft: '2.25rem', marginTop: '-0.3rem' }}>powered by wickgen</span>
         </div>
 
         {/* Navigation links */}
