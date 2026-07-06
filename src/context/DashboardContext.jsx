@@ -2388,10 +2388,18 @@ export const DashboardProvider = ({ children }) => {
           
           // Momentarily unlock the door relay if linked to a device
           if (device) {
-            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'unlocked' });
+            const unlockData = { doorStatus: 'unlocked' };
+            if (device.device && device.device.serial !== undefined) {
+              unlockData["health.doorStatus"] = 'unlocked';
+            }
+            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), unlockData);
             setTimeout(async () => {
               try {
-                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'locked' });
+                const lockData = { doorStatus: 'locked' };
+                if (device.device && device.device.serial !== undefined) {
+                  lockData["health.doorStatus"] = 'locked';
+                }
+                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), lockData);
               } catch (e) {}
             }, 5000);
           }
@@ -2420,10 +2428,18 @@ export const DashboardProvider = ({ children }) => {
           
           // Momentarily unlock the door relay if linked to a device
           if (device) {
-            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'unlocked' });
+            const unlockData = { doorStatus: 'unlocked' };
+            if (device.device && device.device.serial !== undefined) {
+              unlockData["health.doorStatus"] = 'unlocked';
+            }
+            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), unlockData);
             setTimeout(async () => {
               try {
-                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'locked' });
+                const lockData = { doorStatus: 'locked' };
+                if (device.device && device.device.serial !== undefined) {
+                  lockData["health.doorStatus"] = 'locked';
+                }
+                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), lockData);
               } catch (e) {}
             }, 5000);
           }
@@ -2465,10 +2481,18 @@ export const DashboardProvider = ({ children }) => {
           
           // Momentarily unlock the door relay if linked to a device
           if (device) {
-            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'unlocked' });
+            const unlockData = { doorStatus: 'unlocked' };
+            if (device.device && device.device.serial !== undefined) {
+              unlockData["health.doorStatus"] = 'unlocked';
+            }
+            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), unlockData);
             setTimeout(async () => {
               try {
-                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'locked' });
+                const lockData = { doorStatus: 'locked' };
+                if (device.device && device.device.serial !== undefined) {
+                  lockData["health.doorStatus"] = 'locked';
+                }
+                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), lockData);
               } catch (e) {}
             }, 5000);
           }
@@ -2497,10 +2521,18 @@ export const DashboardProvider = ({ children }) => {
           
           // Momentarily unlock the door relay if linked to a device
           if (device) {
-            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'unlocked' });
+            const unlockData = { doorStatus: 'unlocked' };
+            if (device.device && device.device.serial !== undefined) {
+              unlockData["health.doorStatus"] = 'unlocked';
+            }
+            await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), unlockData);
             setTimeout(async () => {
               try {
-                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), { doorStatus: 'locked' });
+                const lockData = { doorStatus: 'locked' };
+                if (device.device && device.device.serial !== undefined) {
+                  lockData["health.doorStatus"] = 'locked';
+                }
+                await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), lockData);
               } catch (e) {}
             }, 5000);
           }
@@ -2909,7 +2941,11 @@ export const DashboardProvider = ({ children }) => {
         auditDetails = `EMERGENCY UNLOCK command broadcast to ${device.name}`;
       }
 
-      await updateDoc(deviceRef, { doorStatus: targetStatus });
+      const updateData = { doorStatus: targetStatus };
+      if (device.device && device.device.serial !== undefined) {
+        updateData["health.doorStatus"] = targetStatus;
+      }
+      await updateDoc(deviceRef, updateData);
       // Log audit
       await logAudit(auditAction, 'device', deviceId, auditDetails);
       // Section 13 Audit logs: Door Open, Door Lock, Door Unlock, Emergency Unlock
@@ -2922,7 +2958,11 @@ export const DashboardProvider = ({ children }) => {
       if (command === 'open') {
         setTimeout(async () => {
           try {
-            await updateDoc(deviceRef, { doorStatus: 'locked' });
+            const relockData = { doorStatus: 'locked' };
+            if (device.device && device.device.serial !== undefined) {
+              relockData["health.doorStatus"] = 'locked';
+            }
+            await updateDoc(deviceRef, relockData);
             await logAudit('door.lock', 'device', deviceId, `Door relay on ${device.name} automatically relocked (Timeout)`);
           } catch (relockErr) {
             console.error('Auto-relock failed:', relockErr);
