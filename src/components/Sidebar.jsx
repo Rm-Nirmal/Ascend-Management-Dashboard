@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   LayoutDashboard, 
@@ -13,11 +14,39 @@ import {
   Dumbbell,
   DollarSign,
   Settings,
-  LifeBuoy
+  LifeBuoy,
+  Package,
+  ChevronDown,
+  ChevronRight,
+  Grid,
+  Layers,
+  RefreshCw,
+  Truck,
+  TrendingUp
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   const { currentUser, logout } = useDashboard();
+  const [inventoryExpanded, setInventoryExpanded] = useState(() => {
+    return activeTab.startsWith('inventory_');
+  });
+
+  const allInventorySubItems = [
+    { id: 'inventory_dashboard', name: 'Dashboard', icon: LayoutDashboard },
+    { id: 'inventory_products', name: 'Products', icon: Layers },
+    { id: 'inventory_categories', name: 'Categories', icon: Grid },
+    { id: 'inventory_stock', name: 'Stock Management', icon: RefreshCw },
+    { id: 'inventory_suppliers', name: 'Suppliers', icon: Truck },
+    { id: 'inventory_reports', name: 'Reports', icon: TrendingUp },
+  ];
+
+  const inventorySubItems = allInventorySubItems.filter(item => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'gym_owner') return true;
+    return ['inventory_products', 'inventory_categories', 'inventory_stock', 'inventory_reports'].includes(item.id);
+  });
+
+  const showInventory = currentUser && currentUser.role !== 'super_admin';
 
   // All potential nav items
   const allNavItems = [
@@ -80,6 +109,51 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               </a>
             );
           })}
+
+          {showInventory && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '0.5rem' }}>
+              <a 
+                className={`nav-link ${activeTab.startsWith('inventory_') ? 'active' : ''}`}
+                onClick={() => setInventoryExpanded(!inventoryExpanded)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <Package size={18} />
+                  <span>Inventory</span>
+                </div>
+                {inventoryExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </a>
+              
+              {inventoryExpanded && (
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '0.15rem', 
+                  paddingLeft: '1rem', 
+                  borderLeft: '1px solid var(--border-color)', 
+                  marginLeft: '1.25rem', 
+                  marginTop: '0.15rem',
+                  animation: 'fadeIn 0.2s ease-out' 
+                }}>
+                  {inventorySubItems.map(subItem => {
+                    const SubIcon = subItem.icon;
+                    const isSubActive = activeTab === subItem.id;
+                    return (
+                      <a 
+                        key={subItem.id}
+                        className={`nav-link ${isSubActive ? 'active' : ''}`}
+                        onClick={() => setActiveTab(subItem.id)}
+                        style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem', gap: '0.6rem' }}
+                      >
+                        <SubIcon size={14} />
+                        <span>{subItem.name}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
       </div>
 
