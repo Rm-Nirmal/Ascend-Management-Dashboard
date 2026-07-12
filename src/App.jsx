@@ -25,6 +25,7 @@ import InventoryCategories from './components/Inventory/InventoryCategories';
 import InventoryStock from './components/Inventory/InventoryStock';
 import InventorySuppliers from './components/Inventory/InventorySuppliers';
 import InventoryReports from './components/Inventory/InventoryReports';
+import InventorySell from './components/Inventory/InventorySell';
 
 // FitGenCore SaaS Components
 import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard';
@@ -227,13 +228,13 @@ const DashboardContentShell = () => {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
-        'inventory_dashboard', 'inventory_products', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
+        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
       ].includes(tab);
     }
     if (currentUser.role === 'admin' || currentUser.role === 'gym_assistant') {
       return [
         'members', 'registrations', 'access',
-        'inventory_products', 'inventory_categories', 'inventory_stock', 'inventory_reports'
+        'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'
       ].includes(tab);
     }
     return ['members', 'registrations', 'access'].includes(tab);
@@ -280,6 +281,8 @@ const DashboardContentShell = () => {
         return <InventorySuppliers />;
       case 'inventory_reports':
         return <InventoryReports />;
+      case 'inventory_sell':
+        return <InventorySell />;
       default:
         return <Overview />;
     }

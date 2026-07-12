@@ -275,9 +275,11 @@ const PublicReceipt = () => {
             <tbody>
               <tr className="table-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <td style={{ padding: '1rem', color: '#fff' }} className="value-text">
-                  <strong>{planName}</strong>
+                  <strong>{!isInvoice && receiptData.source === 'Product Sales' && receiptData.productName ? receiptData.productName : planName}</strong>
                   <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.15rem' }} className="muted-text">
-                    Gym facility membership/service cleared log
+                    {!isInvoice && receiptData.source === 'Product Sales' 
+                      ? (receiptData.notes || `Quantity: ${receiptData.quantity || 1}`)
+                      : 'Gym facility membership/service cleared log'}
                   </div>
                 </td>
                 <td style={{ padding: '1rem', textAlign: 'right', color: '#fff', fontWeight: 600 }} className="value-text">

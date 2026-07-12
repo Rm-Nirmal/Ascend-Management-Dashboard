@@ -22,7 +22,8 @@ import {
   Layers,
   RefreshCw,
   Truck,
-  TrendingUp
+  TrendingUp,
+  ShoppingBag
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -34,6 +35,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const allInventorySubItems = [
     { id: 'inventory_dashboard', name: 'Dashboard', icon: LayoutDashboard },
     { id: 'inventory_products', name: 'Products', icon: Layers },
+    { id: 'inventory_sell', name: 'Sell Product', icon: ShoppingBag },
     { id: 'inventory_categories', name: 'Categories', icon: Grid },
     { id: 'inventory_stock', name: 'Stock Management', icon: RefreshCw },
     { id: 'inventory_suppliers', name: 'Suppliers', icon: Truck },
@@ -43,7 +45,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const inventorySubItems = allInventorySubItems.filter(item => {
     if (!currentUser) return false;
     if (currentUser.role === 'gym_owner') return true;
-    return ['inventory_products', 'inventory_categories', 'inventory_stock', 'inventory_reports'].includes(item.id);
+    return ['inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'].includes(item.id);
   });
 
   const showInventory = currentUser && currentUser.role !== 'super_admin';
