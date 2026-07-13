@@ -3076,6 +3076,312 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [currentUser, logAudit, showToast, gymSettings]);
 
+  const sendEmailReceipt = useCallback(async (toEmail, memberName, amount, sourceName, receiptLink, memberId = null) => {
+    try {
+      const gymName = gymSettings?.gymName || 'Ascend Fit';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      
+      console.log("%c[Email Gateway] Dispatching receipt...", "color: #8b5cf6; font-weight: bold;", {
+        to: toEmail,
+        memberName,
+        gymName,
+        amount,
+        sourceName,
+        receiptLink
+      });
+
+      let response;
+      try {
+        response = await fetch(`${backendUrl}/api/send-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to: toEmail,
+            gymName,
+            memberName,
+            amount,
+            sourceName,
+            receiptLink
+          })
+        });
+      } catch (netErr) {
+        console.warn('Backend proxy unreachable. Attempting client-side fallback via CORS proxy...', netErr);
+        
+        // Construct beautiful client-side fallback html (same layout as backend)
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Payment Receipt - ${gymName}</title>
+  <style>
+    body {
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #0b0c10;
+      color: #c5c6c7;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      background-color: #0b0c10;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #15181f;
+      border: 1px solid rgba(69, 243, 255, 0.15);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(69, 243, 255, 0.03);
+    }
+    .header {
+      background: linear-gradient(135deg, #15181f 0%, #0d0f13 100%);
+      padding: 35px;
+      text-align: center;
+      border-bottom: 1px solid rgba(69, 243, 255, 0.2);
+      position: relative;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 25%;
+      width: 50%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #45f3ff, transparent);
+    }
+    .header h1 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #ffffff, #45f3ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p {
+      margin: 8px 0 0 0;
+      color: #8b9bb4;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .content {
+      padding: 40px 35px;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #ffffff;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+    .intro {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #9ba9b4;
+      margin-bottom: 30px;
+    }
+    .details-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 35px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .details-table th, .details-table td {
+      padding: 12px 0;
+      text-align: left;
+    }
+    .details-table th {
+      color: #8b9bb4;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-weight: 600;
+    }
+    .details-table td {
+      color: #ffffff;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .details-table tr:last-child td {
+      border-bottom: none;
+    }
+    .details-table td.amount-cell {
+      text-align: right;
+      font-weight: 700;
+      font-family: monospace;
+    }
+    .details-table th.amount-cell {
+      text-align: right;
+    }
+    .total-row td {
+      font-size: 18px;
+      font-weight: 800;
+      color: #45f3ff !important;
+      border-top: 1px solid rgba(69, 243, 255, 0.3) !important;
+      padding-top: 18px;
+    }
+    .btn-container {
+      text-align: center;
+      margin-top: 25px;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #45f3ff 0%, #00cfdf 100%);
+      color: #0b0c10 !important;
+      text-decoration: none;
+      padding: 14px 35px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 15px rgba(69, 243, 255, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .footer {
+      background-color: #0d0f13;
+      padding: 25px;
+      text-align: center;
+      font-size: 11px;
+      color: #667488;
+      border-top: 1px solid rgba(255, 255, 255, 0.03);
+      letter-spacing: 0.5px;
+      line-height: 1.5;
+    }
+    .footer a {
+      color: #45f3ff;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>${gymName}</h1>
+        <p>Official Digital Receipt</p>
+      </div>
+      <div class="content">
+        <div class="greeting">Hello ${memberName},</div>
+        <div class="intro">
+          We have successfully processed your payment. Below are your transaction details. Thank you for your continued support!
+        </div>
+        
+        <div class="details-card">
+          <table class="details-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th class="amount-cell">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${sourceName}</td>
+                <td class="amount-cell">LKR ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+              <tr class="total-row">
+                <td>Total Paid</td>
+                <td class="amount-cell">LKR ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="btn-container">
+          <a href="${receiptLink}" class="btn" target="_blank">View Digital Receipt</a>
+        </div>
+      </div>
+      <div class="footer">
+        <p>This email was sent on behalf of <strong>${gymName}</strong>.</p>
+        <p>Should you have any inquiries regarding this payment, please contact us.</p>
+        <p>&copy; ${new Date().getFullYear()} ${gymName}. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+        response = await fetch('https://corsproxy.io/?url=https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer re_D1NBAZQQ_9hk6VSFEem3bbQNhCWHoqajC',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: `${gymName} <onboarding@resend.dev>`,
+            to: [toEmail],
+            subject: `Payment Receipt: ${sourceName} - ${gymName}`,
+            html: htmlContent
+          })
+        });
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: 'Unknown response format' }));
+        throw new Error(errData.error || `Server responded with ${response.status}`);
+      }
+
+      const resData = await response.json();
+
+      // Log sent email in Firestore
+      const emailLog = {
+        gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+        to: toEmail,
+        member_name: memberName,
+        member_id: memberId,
+        amount,
+        source: sourceName,
+        receipt_link: receiptLink,
+        sent_at: new Date().toISOString(),
+        status: 'sent',
+        resend_id: resData.data?.id || resData.id || 'N/A'
+      };
+
+      await addDoc(collection(db, COLLECTIONS.EMAIL_LOGS), emailLog);
+
+      // Log audit trail
+      await logAudit(
+        'member.email_receipt',
+        'member',
+        memberId || 'unknown_member',
+        `Sent email receipt to ${memberName} (${toEmail}) for LKR ${amount.toLocaleString()}`
+      );
+
+      showToast(`Email receipt sent successfully to ${toEmail}`, 'success');
+      return { success: true, resend_id: resData.data?.id || resData.id };
+    } catch (err) {
+      console.error('sendEmailReceipt error:', err);
+      showToast(`Failed to send email receipt: ${err.message}`, 'error');
+      
+      // Log the failure in audit log
+      await logAudit(
+        'member.email_receipt_fail',
+        'member',
+        memberId || 'unknown_member',
+        `Failed to send email receipt to ${memberName} (${toEmail}) for LKR ${amount.toLocaleString()}. Error: ${err.message}`
+      );
+      
+      return { success: false, error: err.message };
+    }
+  }, [currentUser, logAudit, showToast, gymSettings]);
+
+
   // ═══════════════════════════════════════════════════════════════════
   // MEMBERSHIP RENEWAL
   // ═══════════════════════════════════════════════════════════════════
@@ -3140,13 +3446,22 @@ export const DashboardProvider = ({ children }) => {
         }
       }
 
+      if (member.email) {
+        const receiptLink = `${getBaseUrl()}?view=receipt&type=invoice&id=${invRef.id}`;
+        try {
+          await sendEmailReceipt(member.email, member.full_name, total, `Membership Renewal - ${plan.name}`, receiptLink, member.id);
+        } catch (emailErr) {
+          console.error('Failed to send Email receipt during renewal:', emailErr);
+        }
+      }
+
       return { success: true, newCountdownEnd, invoice: { id: invRef.id, ...invoiceData } };
     } catch (err) {
       console.error('renewMemberMembership error:', err);
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [members, plans, sendSMS, logAudit, currentUser]);
+  }, [members, plans, sendSMS, sendEmailReceipt, logAudit, currentUser]);
   // ═══════════════════════════════════════════════════════════════════
   // PLAN (MEMBERSHIP PACKAGE) CRUD ACTIONS
   // ═══════════════════════════════════════════════════════════════════
@@ -3443,12 +3758,21 @@ export const DashboardProvider = ({ children }) => {
 
       if (newInc.member_name) {
         const member = members.find(m => m.full_name === newInc.member_name);
-        if (member && member.phone) {
+        if (member) {
           const receiptLink = `${getBaseUrl()}?view=receipt&type=income&id=${docRef.id}`;
-          try {
-            await sendSMS(member.phone, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
-          } catch (smsErr) {
-            console.error('Failed to send SMS receipt during addIncome:', smsErr);
+          if (member.phone) {
+            try {
+              await sendSMS(member.phone, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
+            } catch (smsErr) {
+              console.error('Failed to send SMS receipt during addIncome:', smsErr);
+            }
+          }
+          if (member.email) {
+            try {
+              await sendEmailReceipt(member.email, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
+            } catch (emailErr) {
+              console.error('Failed to send Email receipt during addIncome:', emailErr);
+            }
           }
         }
       }
@@ -3459,7 +3783,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [currentUser, logAudit, members, sendSMS]);
+  }, [currentUser, logAudit, members, sendSMS, sendEmailReceipt]);
 
   const updateIncome = useCallback(async (id, updatedFields) => {
     try {
