@@ -13,7 +13,7 @@ import Login from './components/Login';
 import AdminManagement from './components/AdminManagement';
 import Employees from './components/Employees';
 import Finance from './components/Finance';
-import { Bell, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Bell, ShieldCheck, HelpCircle, Menu, Search, Sun, Moon } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
 import PublicReceipt from './components/PublicReceipt';
 import ToastContainer from './components/Toast';
@@ -146,9 +146,11 @@ const DashboardContentShell = () => {
     removeToast, 
     showToast, 
     gymSettings, 
-    announcements 
+    announcements,
+    updateGymSettings
   } = useDashboard();
   const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Inject custom theme color & mode dynamically
   useEffect(() => {
