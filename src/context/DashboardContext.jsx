@@ -282,6 +282,12 @@ export const DashboardProvider = ({ children }) => {
   const [gymSettings, setGymSettings] = useState(null);
   const [saasPlans, setSaasPlans] = useState([]);
 
+  // Inventory Management Module States
+  const [inventoryCategories, setInventoryCategories] = useState([]);
+  const [inventoryProducts, setInventoryProducts] = useState([]);
+  const [inventorySuppliers, setInventorySuppliers] = useState([]);
+  const [inventoryTransactions, setInventoryTransactions] = useState([]);
+
   // ─── Core Utility callbacks (declared early to prevent temporal dead zone) ───
   const logAudit = useCallback(async (action, entityType, entityId, details, userOverride = null) => {
     try {
@@ -468,6 +474,10 @@ export const DashboardProvider = ({ children }) => {
         setSupportTickets([]);
         setAnnouncements([]);
         setGymSettings(null);
+        setInventoryCategories([]);
+        setInventoryProducts([]);
+        setInventorySuppliers([]);
+        setInventoryTransactions([]);
         setDataLoaded(false);
       });
       return;
@@ -578,7 +588,7 @@ export const DashboardProvider = ({ children }) => {
       // ─── GYM OWNER / STAFF REAL-TIME LISTENERS ───
       const orgId = currentUser.gymId || DEFAULT_ORG_ID;
       let loadedCount = 0;
-      const totalCollections = 14;
+      const totalCollections = 18;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -787,6 +797,52 @@ export const DashboardProvider = ({ children }) => {
           setDevices(snap.docs.map(normalizeDevice));
           markLoaded();
         }, (err) => { console.error('Devices error:', err); markLoaded(); })
+      );
+
+      // 15. Inventory Categories (scoped)
+      const categoriesQ = query(
+        collection(db, 'gyms', orgId, 'inventory', 'default', 'categories')
+      );
+      unsubscribers.push(
+        onSnapshot(categoriesQ, (snap) => {
+          setInventoryCategories(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          markLoaded();
+        }, (err) => { console.error('Inventory categories error:', err); markLoaded(); })
+      );
+
+      // 16. Inventory Products (scoped)
+      const productsQ = query(
+        collection(db, 'gyms', orgId, 'inventory', 'default', 'products')
+      );
+      unsubscribers.push(
+        onSnapshot(productsQ, (snap) => {
+          setInventoryProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          markLoaded();
+        }, (err) => { console.error('Inventory products error:', err); markLoaded(); })
+      );
+
+      // 17. Inventory Suppliers (scoped)
+      const suppliersQ = query(
+        collection(db, 'gyms', orgId, 'inventory', 'default', 'suppliers')
+      );
+      unsubscribers.push(
+        onSnapshot(suppliersQ, (snap) => {
+          setInventorySuppliers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          markLoaded();
+        }, (err) => { console.error('Inventory suppliers error:', err); markLoaded(); })
+      );
+
+      // 18. Inventory Stock Transactions (scoped)
+      const transactionsQ = query(
+        collection(db, 'gyms', orgId, 'inventory', 'default', 'stockTransactions')
+      );
+      unsubscribers.push(
+        onSnapshot(transactionsQ, (snap) => {
+          const txs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          txs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setInventoryTransactions(txs);
+          markLoaded();
+        }, (err) => { console.error('Inventory transactions error:', err); markLoaded(); })
       );
     }
 
@@ -3020,6 +3076,312 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [currentUser, logAudit, showToast, gymSettings]);
 
+  const sendEmailReceipt = useCallback(async (toEmail, memberName, amount, sourceName, receiptLink, memberId = null) => {
+    try {
+      const gymName = gymSettings?.gymName || 'Ascend Fit';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      
+      console.log("%c[Email Gateway] Dispatching receipt...", "color: #8b5cf6; font-weight: bold;", {
+        to: toEmail,
+        memberName,
+        gymName,
+        amount,
+        sourceName,
+        receiptLink
+      });
+
+      let response;
+      try {
+        response = await fetch(`${backendUrl}/api/send-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to: toEmail,
+            gymName,
+            memberName,
+            amount,
+            sourceName,
+            receiptLink
+          })
+        });
+      } catch (netErr) {
+        console.warn('Backend proxy unreachable. Attempting client-side fallback via CORS proxy...', netErr);
+        
+        // Construct beautiful client-side fallback html (same layout as backend)
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Payment Receipt - ${gymName}</title>
+  <style>
+    body {
+      font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #0b0c10;
+      color: #c5c6c7;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      background-color: #0b0c10;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #15181f;
+      border: 1px solid rgba(69, 243, 255, 0.15);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(69, 243, 255, 0.03);
+    }
+    .header {
+      background: linear-gradient(135deg, #15181f 0%, #0d0f13 100%);
+      padding: 35px;
+      text-align: center;
+      border-bottom: 1px solid rgba(69, 243, 255, 0.2);
+      position: relative;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 25%;
+      width: 50%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #45f3ff, transparent);
+    }
+    .header h1 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #ffffff, #45f3ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header p {
+      margin: 8px 0 0 0;
+      color: #8b9bb4;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .content {
+      padding: 40px 35px;
+    }
+    .greeting {
+      font-size: 18px;
+      color: #ffffff;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+    .intro {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #9ba9b4;
+      margin-bottom: 30px;
+    }
+    .details-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 35px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .details-table th, .details-table td {
+      padding: 12px 0;
+      text-align: left;
+    }
+    .details-table th {
+      color: #8b9bb4;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-weight: 600;
+    }
+    .details-table td {
+      color: #ffffff;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .details-table tr:last-child td {
+      border-bottom: none;
+    }
+    .details-table td.amount-cell {
+      text-align: right;
+      font-weight: 700;
+      font-family: monospace;
+    }
+    .details-table th.amount-cell {
+      text-align: right;
+    }
+    .total-row td {
+      font-size: 18px;
+      font-weight: 800;
+      color: #45f3ff !important;
+      border-top: 1px solid rgba(69, 243, 255, 0.3) !important;
+      padding-top: 18px;
+    }
+    .btn-container {
+      text-align: center;
+      margin-top: 25px;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #45f3ff 0%, #00cfdf 100%);
+      color: #0b0c10 !important;
+      text-decoration: none;
+      padding: 14px 35px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 15px rgba(69, 243, 255, 0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .footer {
+      background-color: #0d0f13;
+      padding: 25px;
+      text-align: center;
+      font-size: 11px;
+      color: #667488;
+      border-top: 1px solid rgba(255, 255, 255, 0.03);
+      letter-spacing: 0.5px;
+      line-height: 1.5;
+    }
+    .footer a {
+      color: #45f3ff;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <h1>${gymName}</h1>
+        <p>Official Digital Receipt</p>
+      </div>
+      <div class="content">
+        <div class="greeting">Hello ${memberName},</div>
+        <div class="intro">
+          We have successfully processed your payment. Below are your transaction details. Thank you for your continued support!
+        </div>
+        
+        <div class="details-card">
+          <table class="details-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th class="amount-cell">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${sourceName}</td>
+                <td class="amount-cell">LKR ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+              <tr class="total-row">
+                <td>Total Paid</td>
+                <td class="amount-cell">LKR ${parseFloat(amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="btn-container">
+          <a href="${receiptLink}" class="btn" target="_blank">View Digital Receipt</a>
+        </div>
+      </div>
+      <div class="footer">
+        <p>This email was sent on behalf of <strong>${gymName}</strong>.</p>
+        <p>Should you have any inquiries regarding this payment, please contact us.</p>
+        <p>&copy; ${new Date().getFullYear()} ${gymName}. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+        response = await fetch('https://corsproxy.io/?url=https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer re_D1NBAZQQ_9hk6VSFEem3bbQNhCWHoqajC',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: `${gymName} <onboarding@resend.dev>`,
+            to: [toEmail],
+            subject: `Payment Receipt: ${sourceName} - ${gymName}`,
+            html: htmlContent
+          })
+        });
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: 'Unknown response format' }));
+        throw new Error(errData.error || `Server responded with ${response.status}`);
+      }
+
+      const resData = await response.json();
+
+      // Log sent email in Firestore
+      const emailLog = {
+        gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+        to: toEmail,
+        member_name: memberName,
+        member_id: memberId,
+        amount,
+        source: sourceName,
+        receipt_link: receiptLink,
+        sent_at: new Date().toISOString(),
+        status: 'sent',
+        resend_id: resData.data?.id || resData.id || 'N/A'
+      };
+
+      await addDoc(collection(db, COLLECTIONS.EMAIL_LOGS), emailLog);
+
+      // Log audit trail
+      await logAudit(
+        'member.email_receipt',
+        'member',
+        memberId || 'unknown_member',
+        `Sent email receipt to ${memberName} (${toEmail}) for LKR ${amount.toLocaleString()}`
+      );
+
+      showToast(`Email receipt sent successfully to ${toEmail}`, 'success');
+      return { success: true, resend_id: resData.data?.id || resData.id };
+    } catch (err) {
+      console.error('sendEmailReceipt error:', err);
+      showToast(`Failed to send email receipt: ${err.message}`, 'error');
+      
+      // Log the failure in audit log
+      await logAudit(
+        'member.email_receipt_fail',
+        'member',
+        memberId || 'unknown_member',
+        `Failed to send email receipt to ${memberName} (${toEmail}) for LKR ${amount.toLocaleString()}. Error: ${err.message}`
+      );
+      
+      return { success: false, error: err.message };
+    }
+  }, [currentUser, logAudit, showToast, gymSettings]);
+
+
   // ═══════════════════════════════════════════════════════════════════
   // MEMBERSHIP RENEWAL
   // ═══════════════════════════════════════════════════════════════════
@@ -3084,13 +3446,22 @@ export const DashboardProvider = ({ children }) => {
         }
       }
 
+      if (member.email) {
+        const receiptLink = `${getBaseUrl()}?view=receipt&type=invoice&id=${invRef.id}`;
+        try {
+          await sendEmailReceipt(member.email, member.full_name, total, `Membership Renewal - ${plan.name}`, receiptLink, member.id);
+        } catch (emailErr) {
+          console.error('Failed to send Email receipt during renewal:', emailErr);
+        }
+      }
+
       return { success: true, newCountdownEnd, invoice: { id: invRef.id, ...invoiceData } };
     } catch (err) {
       console.error('renewMemberMembership error:', err);
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [members, plans, sendSMS, logAudit, currentUser]);
+  }, [members, plans, sendSMS, sendEmailReceipt, logAudit, currentUser]);
   // ═══════════════════════════════════════════════════════════════════
   // PLAN (MEMBERSHIP PACKAGE) CRUD ACTIONS
   // ═══════════════════════════════════════════════════════════════════
@@ -3387,12 +3758,21 @@ export const DashboardProvider = ({ children }) => {
 
       if (newInc.member_name) {
         const member = members.find(m => m.full_name === newInc.member_name);
-        if (member && member.phone) {
+        if (member) {
           const receiptLink = `${getBaseUrl()}?view=receipt&type=income&id=${docRef.id}`;
-          try {
-            await sendSMS(member.phone, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
-          } catch (smsErr) {
-            console.error('Failed to send SMS receipt during addIncome:', smsErr);
+          if (member.phone) {
+            try {
+              await sendSMS(member.phone, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
+            } catch (smsErr) {
+              console.error('Failed to send SMS receipt during addIncome:', smsErr);
+            }
+          }
+          if (member.email) {
+            try {
+              await sendEmailReceipt(member.email, member.full_name, newInc.amount, newInc.source, receiptLink, member.id);
+            } catch (emailErr) {
+              console.error('Failed to send Email receipt during addIncome:', emailErr);
+            }
           }
         }
       }
@@ -3403,7 +3783,7 @@ export const DashboardProvider = ({ children }) => {
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [currentUser, logAudit, members, sendSMS]);
+  }, [currentUser, logAudit, members, sendSMS, sendEmailReceipt]);
 
   const updateIncome = useCallback(async (id, updatedFields) => {
     try {
@@ -3463,6 +3843,433 @@ export const DashboardProvider = ({ children }) => {
       return { success: false, message: friendlyFirestoreError(err) };
     }
   }, [trainers, logAudit]);
+
+  // ─── Inventory CRUD Actions ─────────────────────────────────────────
+
+  // Categories
+  const addCategory = useCallback(async (categoryData) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const ref = collection(db, 'gyms', gymId, 'inventory', 'default', 'categories');
+      const now = new Date().toISOString();
+      const newCategory = {
+        gymId,
+        ...categoryData,
+        status: categoryData.status || 'active',
+        createdAt: now,
+        updatedAt: now
+      };
+      const docRef = await addDoc(ref, newCategory);
+      
+      await logAudit(
+        'category.create',
+        'inventory_category',
+        docRef.id,
+        `Created category "${categoryData.name}"`,
+        null
+      );
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addCategory error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updateCategory = useCallback(async (id, categoryData) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const categoryRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'categories', id);
+      const now = new Date().toISOString();
+      const updatedFields = {
+        ...categoryData,
+        updatedAt: now
+      };
+      await updateDoc(categoryRef, updatedFields);
+      
+      await logAudit(
+        'category.update',
+        'inventory_category',
+        id,
+        `Updated category "${categoryData.name || id}"`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('updateCategory error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const deleteCategory = useCallback(async (id) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const categoryRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'categories', id);
+      const now = new Date().toISOString();
+      
+      await updateDoc(categoryRef, {
+        status: 'deleted',
+        updatedAt: now
+      });
+
+      await logAudit(
+        'category.delete',
+        'inventory_category',
+        id,
+        `Soft-deleted category ${id}`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('deleteCategory error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const restoreCategory = useCallback(async (id) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const categoryRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'categories', id);
+      const now = new Date().toISOString();
+      
+      await updateDoc(categoryRef, {
+        status: 'active',
+        updatedAt: now
+      });
+
+      await logAudit(
+        'category.restore',
+        'inventory_category',
+        id,
+        `Restored category ${id}`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('restoreCategory error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const purgeCategory = useCallback(async (id) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const categoryRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'categories', id);
+      await deleteDoc(categoryRef);
+
+      await logAudit(
+        'category.purge',
+        'inventory_category',
+        id,
+        `Permanently deleted category ${id}`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('purgeCategory error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  // Products
+  const addProduct = useCallback(async (productData) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const ref = collection(db, 'gyms', gymId, 'inventory', 'default', 'products');
+      const now = new Date().toISOString();
+      const newProduct = {
+        gymId,
+        ...productData,
+        stock: productData.stock ? parseInt(productData.stock) : 0,
+        buyPrice: productData.buyPrice ? parseFloat(productData.buyPrice) : 0,
+        sellPrice: productData.sellPrice ? parseFloat(productData.sellPrice) : 0,
+        discountPrice: productData.discountPrice ? parseFloat(productData.discountPrice) : 0,
+        minimumStock: productData.minimumStock ? parseInt(productData.minimumStock) : 0,
+        maximumStock: productData.maximumStock ? parseInt(productData.maximumStock) : 0,
+        reorderLevel: productData.reorderLevel ? parseInt(productData.reorderLevel) : 0,
+        status: productData.status || 'active',
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      const docRef = await addDoc(ref, newProduct);
+      
+      await logAudit(
+        'product.create',
+        'inventory_product',
+        docRef.id,
+        `Created product "${productData.name}" (SKU: ${productData.sku || 'N/A'})`,
+        null
+      );
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addProduct error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updateProduct = useCallback(async (id, productData) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const productRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'products', id);
+      const now = new Date().toISOString();
+      const updatedFields = {
+        ...productData,
+        stock: productData.stock !== undefined ? parseInt(productData.stock) : 0,
+        buyPrice: productData.buyPrice !== undefined ? parseFloat(productData.buyPrice) : 0,
+        sellPrice: productData.sellPrice !== undefined ? parseFloat(productData.sellPrice) : 0,
+        discountPrice: productData.discountPrice !== undefined ? parseFloat(productData.discountPrice) : 0,
+        minimumStock: productData.minimumStock !== undefined ? parseInt(productData.minimumStock) : 0,
+        maximumStock: productData.maximumStock !== undefined ? parseInt(productData.maximumStock) : 0,
+        reorderLevel: productData.reorderLevel !== undefined ? parseInt(productData.reorderLevel) : 0,
+        updatedAt: now
+      };
+      await updateDoc(productRef, updatedFields);
+      
+      await logAudit(
+        'product.update',
+        'inventory_product',
+        id,
+        `Updated product "${productData.name || id}"`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('updateProduct error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const deleteProduct = useCallback(async (id) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const productRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'products', id);
+      const now = new Date().toISOString();
+      
+      await updateDoc(productRef, {
+        status: 'deleted',
+        updatedAt: now
+      });
+
+      await logAudit(
+        'product.delete',
+        'inventory_product',
+        id,
+        `Soft-deleted product ${id}`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('deleteProduct error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const restoreProduct = useCallback(async (id) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const productRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'products', id);
+      const now = new Date().toISOString();
+      
+      await updateDoc(productRef, {
+        status: 'active',
+        updatedAt: now
+      });
+
+      await logAudit(
+        'product.restore',
+        'inventory_product',
+        id,
+        `Restored product ${id}`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('restoreProduct error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const purgeProduct = useCallback(async (id) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const productRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'products', id);
+      await deleteDoc(productRef);
+
+      await logAudit(
+        'product.purge',
+        'inventory_product',
+        id,
+        `Permanently deleted product ${id}`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('purgeProduct error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  // Suppliers
+  const addSupplier = useCallback(async (supplierData) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const ref = collection(db, 'gyms', gymId, 'inventory', 'default', 'suppliers');
+      const now = new Date().toISOString();
+      const newSupplier = {
+        gymId,
+        ...supplierData,
+        createdAt: now,
+        updatedAt: now
+      };
+      const docRef = await addDoc(ref, newSupplier);
+      
+      await logAudit(
+        'supplier.create',
+        'inventory_supplier',
+        docRef.id,
+        `Added supplier "${supplierData.name}" (${supplierData.company || 'N/A'})`,
+        null
+      );
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('addSupplier error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const updateSupplier = useCallback(async (id, supplierData) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const supplierRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'suppliers', id);
+      const now = new Date().toISOString();
+      const updatedFields = {
+        ...supplierData,
+        updatedAt: now
+      };
+      await updateDoc(supplierRef, updatedFields);
+      
+      await logAudit(
+        'supplier.update',
+        'inventory_supplier',
+        id,
+        `Updated supplier "${supplierData.name || id}"`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('updateSupplier error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  const deleteSupplier = useCallback(async (id) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const supplierRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'suppliers', id);
+      await deleteDoc(supplierRef);
+
+      await logAudit(
+        'supplier.delete',
+        'inventory_supplier',
+        id,
+        `Deleted supplier ${id}`,
+        null
+      );
+      return { success: true };
+    } catch (err) {
+      console.error('deleteSupplier error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, logAudit]);
+
+  // Stock Transactions
+  const recordStockTransaction = useCallback(async (transactionData) => {
+    try {
+      const gymId = currentUser?.gymId || DEFAULT_ORG_ID;
+      const transactionsRef = collection(db, 'gyms', gymId, 'inventory', 'default', 'stockTransactions');
+      
+      const productId = transactionData.productId;
+      const product = inventoryProducts.find(p => p.id === productId);
+      if (!product) {
+        throw new Error('Product not found.');
+      }
+      
+      const previousStock = product.stock || 0;
+      const quantity = parseInt(transactionData.quantity);
+      let newStock = previousStock;
+      
+      switch (transactionData.type) {
+        case 'stock_in':
+        case 'returned':
+          newStock = previousStock + quantity;
+          break;
+        case 'stock_out':
+        case 'damaged':
+        case 'expired':
+          newStock = previousStock - quantity;
+          break;
+        case 'manual_adjustment':
+          newStock = quantity;
+          break;
+        default:
+          throw new Error('Invalid transaction type.');
+      }
+      
+      if (newStock < 0) {
+        newStock = 0;
+      }
+      
+      const now = new Date().toISOString();
+      const transactionDoc = {
+        gymId,
+        productId,
+        type: transactionData.type,
+        quantity: transactionData.type === 'manual_adjustment' ? Math.abs(newStock - previousStock) : quantity,
+        previousStock,
+        newStock,
+        reason: transactionData.reason || '',
+        remarks: transactionData.remarks || '',
+        performedBy: currentUser?.name || 'System',
+        createdAt: now
+      };
+      
+      const docRef = await addDoc(transactionsRef, transactionDoc);
+      
+      const productRef = doc(db, 'gyms', gymId, 'inventory', 'default', 'products', productId);
+      await updateDoc(productRef, {
+        stock: newStock,
+        updatedAt: now
+      });
+      
+      const actionName = transactionData.type.toUpperCase().replace('_', ' ');
+      await logAudit(
+        'stock.transaction',
+        'inventory_product',
+        productId,
+        `Recorded ${actionName} for "${product.name}": ${previousStock} -> ${newStock} (${transactionData.reason})`,
+        null
+      );
+      
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('recordStockTransaction error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, inventoryProducts, logAudit]);
 
   // ═══════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
@@ -3592,6 +4399,26 @@ export const DashboardProvider = ({ children }) => {
       addSaasPlan,
       updateSaasPlan,
       deleteSaasPlan,
+
+      // Inventory Management Module States & Actions
+      inventoryCategories,
+      inventoryProducts,
+      inventorySuppliers,
+      inventoryTransactions,
+      addCategory,
+      updateCategory,
+      deleteCategory,
+      restoreCategory,
+      purgeCategory,
+      addProduct,
+      updateProduct,
+      deleteProduct,
+      restoreProduct,
+      purgeProduct,
+      addSupplier,
+      updateSupplier,
+      deleteSupplier,
+      recordStockTransaction,
     }}>
       {children}
     </DashboardContext.Provider>

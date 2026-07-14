@@ -18,6 +18,15 @@ import PublicRegistrationForm from './components/PublicRegistrationForm';
 import PublicReceipt from './components/PublicReceipt';
 import ToastContainer from './components/Toast';
 
+// Inventory Management components
+import InventoryDashboard from './components/Inventory/InventoryDashboard';
+import InventoryProducts from './components/Inventory/InventoryProducts';
+import InventoryCategories from './components/Inventory/InventoryCategories';
+import InventoryStock from './components/Inventory/InventoryStock';
+import InventorySuppliers from './components/Inventory/InventorySuppliers';
+import InventoryReports from './components/Inventory/InventoryReports';
+import InventorySell from './components/Inventory/InventorySell';
+
 // FitGenCore SaaS Components
 import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard';
 import ClientSettings from './components/ClientSettings';
@@ -215,13 +224,19 @@ const DashboardContentShell = () => {
     );
   }
 
-  // Security Gate: Redirect standard admin to members if they try to access disallowed tabs
   const isAllowedTab = (tab) => {
     if (currentUser.role === 'super_admin') return true;
     if (currentUser.role === 'gym_owner') {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',
-        'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets'
+        'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
+        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
+      ].includes(tab);
+    }
+    if (currentUser.role === 'admin' || currentUser.role === 'gym_assistant') {
+      return [
+        'members', 'registrations', 'access',
+        'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'
       ].includes(tab);
     }
     return ['members', 'registrations', 'access'].includes(tab);
@@ -256,6 +271,20 @@ const DashboardContentShell = () => {
         return <ClientSettings key={gymSettings?.id || 'settings'} />;
       case 'support_tickets':
         return <ClientSupport />;
+      case 'inventory_dashboard':
+        return <InventoryDashboard />;
+      case 'inventory_products':
+        return <InventoryProducts />;
+      case 'inventory_categories':
+        return <InventoryCategories />;
+      case 'inventory_stock':
+        return <InventoryStock />;
+      case 'inventory_suppliers':
+        return <InventorySuppliers />;
+      case 'inventory_reports':
+        return <InventoryReports />;
+      case 'inventory_sell':
+        return <InventorySell />;
       default:
         return <Overview />;
     }

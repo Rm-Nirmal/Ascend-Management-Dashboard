@@ -46,6 +46,7 @@ export const COLLECTIONS = {
   EXPENSES: 'expenses',
   INCOME: 'payments',
   SMS_LOGS: 'smsLogs',
+  EMAIL_LOGS: 'emailLogs',
   GYM_SETTINGS: 'gymSettings',
   SUBSCRIPTIONS: 'subscriptions',
   SUPPORT_TICKETS: 'supportTickets',
