@@ -290,7 +290,7 @@ const Announcements = () => {
                   <div 
                     key={ann.id} 
                     style={{
-                      background: 'rgba(255, 255, 255, 0.01)',
+                      background: 'var(--bg-secondary)',
                       border: '1px solid var(--border-color)',
                       borderRadius: '8px',
                       padding: '1.25rem',
@@ -301,12 +301,12 @@ const Announcements = () => {
                       transition: 'all 0.2s ease-in-out'
                     }}
                     onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                      e.currentTarget.style.borderColor = 'var(--color-primary)';
+                      e.currentTarget.style.background = 'var(--bg-card-hover)';
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.borderColor = 'var(--border-color)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)';
+                      e.currentTarget.style.background = 'var(--bg-secondary)';
                     }}
                   >
                     {/* Delete button */}
@@ -358,7 +358,7 @@ const Announcements = () => {
                       gap: '1rem', 
                       fontSize: '0.7rem', 
                       color: 'var(--text-dark)', 
-                      borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+                      borderTop: '1px solid var(--border-color)',
                       paddingTop: '0.75rem',
                       flexWrap: 'wrap'
                     }}>

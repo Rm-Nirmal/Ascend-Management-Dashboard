@@ -273,8 +273,8 @@ const ClientsList = ({ setActiveTab }) => {
   return (
     <div style={{ padding: '2rem', position: 'relative' }}>
       <div style={{
-        background: 'rgba(255, 255, 255, 0.01)',
-        border: '1px solid rgba(255, 255, 255, 0.04)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
         borderRadius: '12px',
         padding: '2rem'
       }}>
@@ -327,7 +327,7 @@ const ClientsList = ({ setActiveTab }) => {
         <div style={{
           display: 'flex',
           gap: '1rem',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          borderBottom: '1px solid var(--border-color)',
           marginBottom: '1.5rem',
           paddingBottom: '0.25rem'
         }}>
@@ -337,7 +337,7 @@ const ClientsList = ({ setActiveTab }) => {
               background: 'none',
               border: 'none',
               borderBottom: currentDirTab === 'all' ? '2px solid #a855f7' : '2px solid transparent',
-              color: currentDirTab === 'all' ? '#fff' : 'var(--text-muted)',
+              color: currentDirTab === 'all' ? 'var(--text-main)' : 'var(--text-muted)',
               fontSize: '0.85rem',
               fontWeight: 600,
               padding: '0.5rem 1rem',
@@ -354,7 +354,7 @@ const ClientsList = ({ setActiveTab }) => {
               background: 'none',
               border: 'none',
               borderBottom: currentDirTab === 'installments' ? '2px solid #a855f7' : '2px solid transparent',
-              color: currentDirTab === 'installments' ? '#fff' : 'var(--text-muted)',
+              color: currentDirTab === 'installments' ? 'var(--text-main)' : 'var(--text-muted)',
               fontSize: '0.85rem',
               fontWeight: 600,
               padding: '0.5rem 1rem',
@@ -537,8 +537,8 @@ const ClientsList = ({ setActiveTab }) => {
                                 padding: '0.35rem 1.5rem 0.35rem 0.5rem',
                                 borderRadius: '6px',
                                 border: '1px solid var(--border-color)',
-                                background: 'rgba(255,255,255,0.02)',
-                                color: '#fff',
+                                background: 'var(--bg-secondary)',
+                                color: 'var(--text-main)',
                                 fontSize: '0.75rem',
                                 fontWeight: 600,
                                 cursor: 'pointer',
@@ -830,15 +830,15 @@ const ClientsList = ({ setActiveTab }) => {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: 'rgba(255, 255, 255, 0.01)'
+              background: 'var(--bg-secondary)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -926,8 +926,8 @@ const ClientsList = ({ setActiveTab }) => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {/* Workspace status controls */}
                     <div style={{
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
                       borderRadius: '10px',
                       padding: '1.25rem',
                       display: 'flex',
@@ -1120,7 +1120,7 @@ const ClientsList = ({ setActiveTab }) => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {/* Health Card */}
                     <div style={{
-                      background: 'rgba(255, 255, 255, 0.01)',
+                      background: 'var(--bg-secondary)',
                       border: '1px solid var(--border-color)',
                       borderRadius: '8px',
                       padding: '1.25rem',
@@ -1222,7 +1222,7 @@ const ClientsList = ({ setActiveTab }) => {
                           <div 
                             key={rec.id}
                             style={{
-                              background: 'rgba(255, 255, 255, 0.01)',
+                              background: 'var(--bg-secondary)',
                               border: '1px solid var(--border-color)',
                               borderRadius: '8px',
                               padding: '0.85rem 1rem',
@@ -1512,7 +1512,7 @@ const ClientsList = ({ setActiveTab }) => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 {/* Left Column: Interactive Form Parameters */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h5 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem', margin: 0 }}>
+                  <h5 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
                     Subscription Parameters
                   </h5>
                   
@@ -1576,12 +1576,12 @@ const ClientsList = ({ setActiveTab }) => {
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '1rem',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '10px',
                   padding: '1rem'
                 }}>
-                  <h5 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.5rem', margin: 0 }}>
+                  <h5 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a855f7', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
                     Live Status Preview
                   </h5>
                   
@@ -1613,7 +1613,7 @@ const ClientsList = ({ setActiveTab }) => {
                   </div>
 
                   {/* Proposed State */}
-                  <div style={{ borderTop: '1px dashed rgba(255, 255, 255, 0.05)', paddingTop: '0.75rem' }}>
+                  <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '0.75rem' }}>
                     <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#3b82f6', fontWeight: 700, display: 'block' }}>
                       Proposed State
                     </span>
@@ -1662,7 +1662,7 @@ const ClientsList = ({ setActiveTab }) => {
                     <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#c084fc', fontWeight: 700, display: 'block' }}>
                       Billing Summary
                     </span>
-                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', display: 'block', marginTop: '0.15rem' }}>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', display: 'block', marginTop: '0.15rem' }}>
                       {formatCurrency(renewForm.price, renewForm.currency)}
                     </span>
                   </div>

@@ -103,8 +103,8 @@ const ClientSettings = () => {
                   padding: '0.75rem 1.25rem',
                   background: isActive ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
                   border: 'none',
-                  borderBottom: isActive ? '2px solid #ffffff' : '2px solid transparent',
-                  color: isActive ? '#ffffff' : 'var(--text-muted)',
+                  borderBottom: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
+                  color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
                   fontSize: '0.85rem',
                   fontWeight: isActive ? 700 : 500,
                   cursor: 'pointer',
@@ -256,14 +256,14 @@ const ClientSettings = () => {
                       <Sun size={22} />
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.925rem', fontWeight: 700, color: '#ffffff' }}>Light Mode</div>
+                      <div style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--text-main)' }}>Light Mode</div>
                       <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: '1.3' }}>Clean white layout with dark text</div>
                     </div>
                     {!darkMode && (
                       <span style={{
                         fontSize: '0.6rem',
-                        background: '#ffffff',
-                        color: '#000000',
+                        background: 'var(--text-main)',
+                        color: 'var(--bg-primary)',
                         padding: '0.15rem 0.5rem',
                         borderRadius: '4px',
                         fontWeight: 800,
@@ -307,14 +307,14 @@ const ClientSettings = () => {
                       <Moon size={22} />
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.925rem', fontWeight: 700, color: '#ffffff' }}>Dark Mode</div>
+                      <div style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--text-main)' }}>Dark Mode</div>
                       <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: '1.3' }}>Premium dark slate layout with white text</div>
                     </div>
                     {darkMode && (
                       <span style={{
                         fontSize: '0.6rem',
-                        background: '#ffffff',
-                        color: '#000000',
+                        background: 'var(--text-main)',
+                        color: 'var(--bg-primary)',
                         padding: '0.15rem 0.5rem',
                         borderRadius: '4px',
                         fontWeight: 800,
@@ -376,8 +376,6 @@ const ClientSettings = () => {
             style={{ 
               marginTop: '1rem', 
               justifyContent: 'center', 
-              background: `#ffffff`,
-              color: '#000000',
               borderColor: 'transparent',
               padding: '0.8rem',
               gap: '0.5rem',

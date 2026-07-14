@@ -163,6 +163,8 @@ const DashboardContentShell = () => {
 
   // Inject custom theme color & mode dynamically
   useEffect(() => {
+    if (currentUser?.role === 'super_admin') return;
+
     const isDark = gymSettings?.darkMode !== false;
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
 
@@ -180,7 +182,7 @@ const DashboardContentShell = () => {
     } else {
       document.documentElement.style.setProperty('--color-primary-glow', `${accentColor}26`);
     }
-  }, [gymSettings]);
+  }, [gymSettings, currentUser]);
 
   // Check if we are simulating the standalone public registration form
   const isPublicRegister = window.location.hash === '#register' || window.location.search.includes('view=register');

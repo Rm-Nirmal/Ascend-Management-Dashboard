@@ -91,7 +91,7 @@ const SuperAdminOverview = ({ setActiveTab }) => {
         gap: '1.25rem'
       }}>
         {/* Total Gyms */}
-        <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyBetween: true, gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+        <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyBetween: true, gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total Gyms</span>
             <Building2 size={20} style={{ color: '#a855f7' }} />
@@ -103,7 +103,7 @@ const SuperAdminOverview = ({ setActiveTab }) => {
         </div>
 
         {/* Monthly Recurring Revenue */}
-        <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyBetween: true, gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+        <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyBetween: true, gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Monthly Revenue (MRR)</span>
             <DollarSign size={20} style={{ color: 'var(--color-success)' }} />
@@ -115,7 +115,7 @@ const SuperAdminOverview = ({ setActiveTab }) => {
         </div>
 
         {/* Total Members */}
-        <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyBetween: true, gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+        <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyBetween: true, gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Active SaaS Members</span>
             <Users size={20} style={{ color: '#3b82f6' }} />
@@ -127,7 +127,7 @@ const SuperAdminOverview = ({ setActiveTab }) => {
         </div>
 
         {/* Most Active Gym */}
-        <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyBetween: true, gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+        <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyBetween: true, gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Most Populated Gym</span>
             <Activity size={20} style={{ color: 'var(--color-warning)' }} />
@@ -150,8 +150,8 @@ const SuperAdminOverview = ({ setActiveTab }) => {
       }}>
         {/* Subscription Plan Distribution */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.01)',
-          border: '1px solid rgba(255, 255, 255, 0.04)',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
           borderRadius: '12px',
           padding: '1.5rem'
         }}>
@@ -173,7 +173,7 @@ const SuperAdminOverview = ({ setActiveTab }) => {
                     <span style={{ fontWeight: 600 }}>{plan} Plan</span>
                     <span style={{ color: 'var(--text-muted)' }}>{count} gyms ({percentage}%)</span>
                   </div>
-                  <div style={{ height: '8px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{ 
                       height: '100%', 
                       width: `${percentage}%`, 
@@ -189,8 +189,8 @@ const SuperAdminOverview = ({ setActiveTab }) => {
 
         {/* Directory Quick Health Score */}
         <div style={{
-          background: 'rgba(255, 255, 255, 0.01)',
-          border: '1px solid rgba(255, 255, 255, 0.04)',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
           borderRadius: '12px',
           padding: '1.5rem'
         }}>
@@ -211,8 +211,8 @@ const SuperAdminOverview = ({ setActiveTab }) => {
                   justifyContent: 'space-between', 
                   alignItems: 'center', 
                   padding: '0.6rem 0.8rem', 
-                  background: 'rgba(255, 255, 255, 0.02)', 
-                  border: '1px solid rgba(255, 255, 255, 0.03)',
+                  background: 'var(--bg-secondary)', 
+                  border: '1px solid var(--border-color)',
                   borderRadius: '8px'
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>

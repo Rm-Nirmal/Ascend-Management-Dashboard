@@ -102,19 +102,22 @@
 }
 
 :root[data-theme='light'] .glass-input,
-:root[data-theme='light'] .glass-select {
+:root[data-theme='light'] .glass-select,
+:root[data-theme='light'] .form-control {
   background: #ffffff;
   border-color: rgba(15, 23, 42, 0.12);
   color: #0f172a;
   color-scheme: light;
 }
 
-:root[data-theme='light'] .glass-input::placeholder {
+:root[data-theme='light'] .glass-input::placeholder,
+:root[data-theme='light'] .form-control::placeholder {
   color: #64748b; /* Slate 500 placeholder - readable */
 }
 
 :root[data-theme='light'] .glass-input:focus,
-:root[data-theme='light'] .glass-select:focus {
+:root[data-theme='light'] .glass-select:focus,
+:root[data-theme='light'] .form-control:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-glow);
 }
@@ -139,7 +142,8 @@
   background: #f8fafc;
 }
 
-:root[data-theme='light'] .dashboard-table th {
+:root[data-theme='light'] .dashboard-table th,
+:root[data-theme='light'] .table th {
   background: #f1f5f9;
   color: #334155;
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
@@ -697,7 +701,8 @@ body {
   box-shadow: 0 0 0 2px var(--color-primary-glow);
 }
 
-.glass-input {
+.glass-input,
+.form-control {
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid var(--border-color);
   color: var(--text-main);
@@ -712,12 +717,20 @@ body {
   height: 40px;
 }
 
-.glass-input:focus {
+textarea.form-control {
+  height: auto;
+  min-height: 80px;
+  resize: vertical;
+}
+
+.glass-input:focus,
+.form-control:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-glow);
 }
 
-.glass-input::placeholder {
+.glass-input::placeholder,
+.form-control::placeholder {
   color: var(--text-dark);
 }
 

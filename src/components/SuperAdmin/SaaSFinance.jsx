@@ -424,7 +424,7 @@ const SaaSFinance = () => {
             gap: '1.25rem'
           }}>
             {/* Total Revenue */}
-            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>SaaS Revenue</span>
                 <DollarSign size={18} style={{ color: 'var(--color-success)' }} />
@@ -436,7 +436,7 @@ const SaaSFinance = () => {
             </div>
 
             {/* MRR */}
-            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Monthly Recurring (MRR)</span>
                 <TrendingUp size={18} style={{ color: '#a855f7' }} />
@@ -448,7 +448,7 @@ const SaaSFinance = () => {
             </div>
 
             {/* ARPU */}
-            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Contract Value (ARPU)</span>
                 <Users size={18} style={{ color: '#3b82f6' }} />
@@ -460,7 +460,7 @@ const SaaSFinance = () => {
             </div>
 
             {/* Operating Expenses */}
-            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px' }}>
+            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform Expenses</span>
                 <ArrowDownRight size={18} style={{ color: 'var(--color-danger)' }} />
@@ -472,7 +472,7 @@ const SaaSFinance = () => {
             </div>
 
             {/* Net Profit */}
-            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '10px', gridColumn: 'span 1' }}>
+            <div className="stats-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px', gridColumn: 'span 1' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>SaaS Net Profit</span>
                 <Briefcase size={18} style={{ color: '#22c55e' }} />
@@ -495,8 +495,8 @@ const SaaSFinance = () => {
           }}>
             {/* Revenue & Expenses Trend Chart */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.01)',
-              border: '1px solid rgba(255, 255, 255, 0.04)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
               borderRadius: '12px',
               padding: '1.5rem'
             }}>
@@ -506,12 +506,12 @@ const SaaSFinance = () => {
               <div style={{ width: '100%', height: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartDataMonthly} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                     <XAxis dataKey="name" stroke="var(--text-dark)" fontSize={11} tickLine={false} />
                     <YAxis stroke="var(--text-dark)" fontSize={11} tickLine={false} />
                     <Tooltip 
-                      contentStyle={{ background: 'rgba(10,11,15,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} 
-                      labelStyle={{ color: '#fff', fontWeight: 'bold' }}
+                      contentStyle={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)' }} 
+                      labelStyle={{ color: 'var(--text-main)', fontWeight: 'bold' }}
                     />
                     <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px' }} />
                     <Line type="monotone" dataKey="Income" stroke="#22c55e" strokeWidth={2.5} activeDot={{ r: 6 }} name="Gross Revenue" />
@@ -523,8 +523,8 @@ const SaaSFinance = () => {
 
             {/* Plan Distribution Chart */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.01)',
-              border: '1px solid rgba(255, 255, 255, 0.04)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
               borderRadius: '12px',
               padding: '1.5rem',
               display: 'flex',
@@ -581,8 +581,8 @@ const SaaSFinance = () => {
       ) : (
         /* Transaction Ledger View */
         <div style={{
-          background: 'rgba(255, 255, 255, 0.01)',
-          border: '1px solid rgba(255, 255, 255, 0.04)',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-color)',
           borderRadius: '12px',
           padding: '1.5rem'
         }}>
@@ -630,7 +630,7 @@ const SaaSFinance = () => {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'left' }}>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                   <th style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)', fontWeight: 600 }}>Date</th>
                   <th style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)', fontWeight: 600 }}>Type</th>
                   <th style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)', fontWeight: 600 }}>Description</th>
@@ -652,7 +652,7 @@ const SaaSFinance = () => {
                   filteredTransactions.map((tx) => {
                     const isInc = tx.type === 'Income';
                     return (
-                      <tr key={tx.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', verticalAlign: 'middle' }}>
+                      <tr key={tx.id} style={{ borderBottom: '1px solid var(--border-color)', verticalAlign: 'middle' }}>
                         <td style={{ padding: '1rem', whiteSpace: 'nowrap' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                             <Calendar size={12} /> {tx.date}
@@ -1037,15 +1037,15 @@ const SaaSFinance = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '550px', maxWidth: '95%' }}>
             
             {/* Modal Controls Banner (no-print) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-main)' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
                 Official PDF Document Viewer
               </span>
               <button 
                 onClick={() => setSelectedReceipt(null)}
-                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#fff', cursor: 'pointer', padding: '0.4rem', borderRadius: '50%', display: 'flex', alignItems: 'center' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-main)', cursor: 'pointer', padding: '0.4rem', borderRadius: '50%', display: 'flex', alignItems: 'center' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
               >
                 <X size={18} />
               </button>
