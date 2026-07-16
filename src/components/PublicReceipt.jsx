@@ -155,10 +155,16 @@ const PublicReceipt = () => {
         }
 
         @media print {
+          @page {
+            size: auto;
+            margin: 0mm;
+          }
           body {
             background: #ffffff !important;
             background-image: none !important;
             color: #000000 !important;
+            margin: 0px;
+            padding: 1.5cm;
           }
           .receipt-page-container {
             background: #ffffff !important;
@@ -172,7 +178,8 @@ const PublicReceipt = () => {
             box-shadow: none !important;
             padding: 0 !important;
             color: #000000 !important;
-            max-width: 100% !important;
+            max-width: 440px !important;
+            margin: 0 auto !important;
             backdrop-filter: none !important;
           }
           .no-print {

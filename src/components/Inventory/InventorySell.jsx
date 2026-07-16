@@ -42,7 +42,7 @@ const BarcodeSVG = ({ code }) => {
       >
         {lines.list}
       </svg>
-      <span style={{ fontFamily: 'monospace', fontSize: '0.65rem', letterSpacing: '0.2em', color: 'var(--text-muted)' }}>
+      <span style={{ fontFamily: 'monospace', fontSize: '0.65rem', letterSpacing: '0.2em', color: '#71717a' }}>
         {code}
       </span>
     </div>
@@ -136,6 +136,14 @@ const InventorySell = () => {
   const salesHistory = useMemo(() => {
     if (!income) return [];
     const list = income.filter(inc => inc.source === 'Product Sales');
+    
+    // Sort chronologically descending (latest first)
+    list.sort((a, b) => {
+      const dateA = a.created_at || a.date || '';
+      const dateB = b.created_at || b.date || '';
+      return dateB.localeCompare(dateA);
+    });
+
     if (!historySearch.trim()) return list;
     const query = historySearch.toLowerCase();
     return list.filter(item => 
@@ -1081,21 +1089,30 @@ const InventorySell = () => {
         </div>
       ) : (
         /* SUCCESS STATE - HIGH FIDELITY DIGITAL RECEIPT VIEW */
-        <div className="pos-receipt-print-area" style={{ display: 'flex', justifyContent: 'center', animation: 'fadeIn 0.4s ease-out', padding: '1rem 0 3rem 0' }}>
+        <div className="pos-receipt-print-area success-receipt-print" style={{ display: 'flex', justifyContent: 'center', animation: 'fadeIn 0.4s ease-out', padding: '1rem 0 3rem 0' }}>
           <style>{`
             @media print {
+              @page {
+                size: auto;
+                margin: 0mm;
+              }
+              body {
+                margin: 0px;
+                padding: 1.5cm;
+              }
               body * {
                 visibility: hidden !important;
               }
-              .pos-receipt-print-area, .pos-receipt-print-area * {
+              .success-receipt-print, .success-receipt-print * {
                 visibility: visible !important;
               }
-              .pos-receipt-print-area {
+              .success-receipt-print {
                 position: absolute !important;
-                left: 0 !important;
+                left: 50% !important;
                 top: 0 !important;
+                transform: translateX(-50%) !important;
                 width: 100% !important;
-                max-width: 100% !important;
+                max-width: 440px !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
@@ -1304,7 +1321,7 @@ const InventorySell = () => {
             boxSizing: 'border-box'
           }}>
             {/* The actual printable POS receipt area */}
-            <div className="pos-receipt-print-area" style={{ 
+            <div className="pos-receipt-print-area modal-receipt-print" style={{ 
               background: '#ffffff', 
               color: '#18181b', 
               borderRadius: '12px', 
@@ -1329,18 +1346,27 @@ const InventorySell = () => {
               {/* Print CSS specific to this modal viewer */}
               <style>{`
                 @media print {
+                  @page {
+                    size: auto;
+                    margin: 0mm;
+                  }
+                  body {
+                    margin: 0px;
+                    padding: 1.5cm;
+                  }
                   body * {
                     visibility: hidden !important;
                   }
-                  .pos-receipt-print-area, .pos-receipt-print-area * {
+                  .modal-receipt-print, .modal-receipt-print * {
                     visibility: visible !important;
                   }
-                  .pos-receipt-print-area {
+                  .modal-receipt-print {
                     position: absolute !important;
-                    left: 0 !important;
+                    left: 50% !important;
                     top: 0 !important;
+                    transform: translateX(-50%) !important;
                     width: 100% !important;
-                    max-width: 100% !important;
+                    max-width: 440px !important;
                     margin: 0 !important;
                     padding: 0 !important;
                     background: #ffffff !important;

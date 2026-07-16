@@ -159,7 +159,61 @@ const DashboardContentShell = () => {
     announcements,
     updateGymSettings
   } = useDashboard();
-  const [activeTab, setActiveTab] = useState('overview');
+  const isAllowedTab = (tab) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'super_admin') return true;
+    if (
+      currentUser.role === 'gym_owner' || 
+      currentUser.role === 'owner' || 
+      currentUser.role === 'admin'
+    ) {
+      return [
+        'overview', 'members', 'registrations', 'employees', 'access',
+        'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
+        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
+      ].includes(tab);
+    }
+    if (currentUser.role === 'standard_admin' || currentUser.role === 'gym_assistant') {
+      return [
+        'members', 'registrations', 'access',
+        'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports',
+        'break_timer'
+      ].includes(tab);
+    }
+    return ['members', 'registrations', 'access', 'break_timer'].includes(tab);
+  };
+
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view');
+    if (viewParam && isAllowedTab(viewParam)) return viewParam;
+    return 'overview';
+  });
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const viewParam = url.searchParams.get('view');
+    if (viewParam !== activeTab) {
+      url.searchParams.set('view', activeTab);
+      if (activeTab !== 'finance') {
+        url.searchParams.delete('tab');
+      }
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view') || 'overview';
+      if (isAllowedTab(viewParam)) {
+        setActiveTab(viewParam);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentUser]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Inject custom theme color & mode dynamically
@@ -227,28 +281,6 @@ const DashboardContentShell = () => {
     );
   }
 
-  const isAllowedTab = (tab) => {
-    if (currentUser.role === 'super_admin') return true;
-    if (
-      currentUser.role === 'gym_owner' || 
-      currentUser.role === 'owner' || 
-      currentUser.role === 'admin'
-    ) {
-      return [
-        'overview', 'members', 'registrations', 'employees', 'access',
-        'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
-        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
-      ].includes(tab);
-    }
-    if (currentUser.role === 'standard_admin' || currentUser.role === 'gym_assistant') {
-      return [
-        'members', 'registrations', 'access',
-        'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports',
-        'break_timer'
-      ].includes(tab);
-    }
-    return ['members', 'registrations', 'access', 'break_timer'].includes(tab);
-  };
 
   const resolvedTab = isAllowedTab(activeTab) 
     ? activeTab 

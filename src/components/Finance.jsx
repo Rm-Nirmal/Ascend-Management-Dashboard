@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -7,7 +7,7 @@ import {
 import { 
   PieChart as LucidePieChart, DollarSign, TrendingUp, Plus, Edit2, Trash2, Eye, X, 
   Calendar, Filter, Search, FileDown, CheckCircle, ArrowUpRight, ArrowDownRight, 
-  AlertCircle, UploadCloud, Users, Printer, FileText
+  AlertCircle, UploadCloud, Users, Printer, FileText, Link
 } from 'lucide-react';
 import { uploadToCloudinary } from '../lib/cloudinary';
 
@@ -84,7 +84,36 @@ const Finance = () => {
   }, [rawExpenses]);
 
   // Navigation states
-  const [activeFinanceTab, setActiveFinanceTab] = useState('overview');
+  const [activeFinanceTab, setActiveFinanceTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const subTab = params.get('tab');
+    if (subTab && ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports'].includes(subTab)) {
+      return subTab;
+    }
+    return 'overview';
+  });
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const viewParam = url.searchParams.get('view');
+    const tabParam = url.searchParams.get('tab');
+    if (viewParam === 'finance' && tabParam !== activeFinanceTab) {
+      url.searchParams.set('tab', activeFinanceTab);
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+  }, [activeFinanceTab]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const subTab = params.get('tab');
+      if (subTab && ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports'].includes(subTab)) {
+        setActiveFinanceTab(subTab);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Payroll Tab States
   const [payrollSubTab, setPayrollSubTab] = useState('directory'); // 'directory', 'history', 'analytics'
@@ -1626,9 +1655,22 @@ const Finance = () => {
               </div>
             </div>
 
-            <button className="btn btn-primary" onClick={() => setIsAddIncomeModalOpen(true)}>
-              <Plus size={16} /> Log Income
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  const url = `${window.location.origin}${window.location.pathname}?view=finance&tab=income`;
+                  navigator.clipboard.writeText(url);
+                  showToast('Income log link copied to clipboard!', 'success');
+                }}
+                style={{ gap: '0.45rem', display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)' }}
+              >
+                <Link size={14} /> Share Log Link
+              </button>
+              <button className="btn btn-primary" onClick={() => setIsAddIncomeModalOpen(true)}>
+                <Plus size={16} /> Log Income
+              </button>
+            </div>
           </div>
 
           {/* Income Directory Table */}
@@ -1750,9 +1792,22 @@ const Finance = () => {
 
             </div>
 
-            <button className="btn btn-primary" onClick={openAddExpenseModal}>
-              <Plus size={16} /> Record Expense
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  const url = `${window.location.origin}${window.location.pathname}?view=finance&tab=expenses`;
+                  navigator.clipboard.writeText(url);
+                  showToast('Expenses log link copied to clipboard!', 'success');
+                }}
+                style={{ gap: '0.45rem', display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)' }}
+              >
+                <Link size={14} /> Share Log Link
+              </button>
+              <button className="btn btn-primary" onClick={openAddExpenseModal}>
+                <Plus size={16} /> Record Expense
+              </button>
+            </div>
           </div>
 
           {/* Expenses Directory Table */}
