@@ -478,6 +478,27 @@ const InventorySell = () => {
                             >
                               <Eye size={12} /> Watch Receipt
                             </button>
+                            <a
+                              href={`${window.location.origin}${window.location.pathname}?view=receipt&type=income&id=${item.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn btn-secondary"
+                              style={{ 
+                                padding: '0.35rem 0.65rem', 
+                                fontSize: '0.75rem', 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '0.25rem', 
+                                background: 'rgba(255,255,255,0.03)', 
+                                border: '1px solid var(--border-color)',
+                                cursor: 'pointer',
+                                textDecoration: 'none',
+                                color: 'var(--text-primary)'
+                              }}
+                              title="Print PDF Receipt"
+                            >
+                              <FileText size={12} /> Print PDF Receipt
+                            </a>
                           </div>
                         </td>
                       </tr>
@@ -1491,6 +1512,30 @@ const InventorySell = () => {
                 >
                   <Printer size={14} /> Print Slip
                 </button>
+                <a
+                  href={`${window.location.origin}${window.location.pathname}?view=receipt&type=income&id=${selectedReceipt.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn"
+                  style={{
+                    flex: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.35rem',
+                    background: 'var(--color-primary-glow)',
+                    border: '1px solid var(--color-primary)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <FileText size={14} /> PDF Receipt Page
+                </a>
                 <button
                   onClick={() => setSelectedReceipt(null)}
                   className="btn"

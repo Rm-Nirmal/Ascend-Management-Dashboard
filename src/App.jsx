@@ -178,10 +178,10 @@ const DashboardContentShell = () => {
       return [
         'members', 'registrations', 'access',
         'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports',
-        'break_timer'
+        'break_timer', 'finance'
       ].includes(tab);
     }
-    return ['members', 'registrations', 'access', 'break_timer'].includes(tab);
+    return ['members', 'registrations', 'access', 'break_timer', 'finance'].includes(tab);
   };
 
   const [activeTab, setActiveTab] = useState(() => {

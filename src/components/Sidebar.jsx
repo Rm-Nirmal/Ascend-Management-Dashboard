@@ -85,8 +85,8 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       return item.id !== 'console' && item.id !== 'break_timer';
     }
     
-    // Regular gym staff (including standard_admin) can only access members, registrations, access, break_timer
-    return ['members', 'registrations', 'access', 'break_timer'].includes(item.id);
+    // Regular gym staff (including standard_admin) can only access members, registrations, access, break_timer, finance
+    return ['members', 'registrations', 'access', 'break_timer', 'finance'].includes(item.id);
   });
 
   return (

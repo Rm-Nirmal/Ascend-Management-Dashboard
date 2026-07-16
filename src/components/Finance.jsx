@@ -83,10 +83,18 @@ const Finance = () => {
     return (rawExpenses || []).filter(exp => !exp.isSaaS);
   }, [rawExpenses]);
 
+  const isStandardStaff = currentUser && !['super_admin', 'gym_owner', 'owner', 'admin'].includes(currentUser.role);
+
   // Navigation states
   const [activeFinanceTab, setActiveFinanceTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const subTab = params.get('tab');
+    if (isStandardStaff) {
+      if (subTab && ['income', 'expenses'].includes(subTab)) {
+        return subTab;
+      }
+      return 'income';
+    }
     if (subTab && ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports'].includes(subTab)) {
       return subTab;
     }
@@ -107,13 +115,14 @@ const Finance = () => {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const subTab = params.get('tab');
-      if (subTab && ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports'].includes(subTab)) {
+      const allowed = isStandardStaff ? ['income', 'expenses'] : ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports'];
+      if (subTab && allowed.includes(subTab)) {
         setActiveFinanceTab(subTab);
       }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [currentUser, isStandardStaff]);
 
   // Payroll Tab States
   const [payrollSubTab, setPayrollSubTab] = useState('directory'); // 'directory', 'history', 'analytics'
@@ -1313,7 +1322,7 @@ const Finance = () => {
 
       {/* ─── SUB-MENU / NAVIGATION TABS ───────────────────────────────── */}
       <div className="tab-menu" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-        {['overview', 'income', 'expenses', 'payroll', 'reports', 'exports'].map((tab) => (
+        {(isStandardStaff ? ['income', 'expenses'] : ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports']).map((tab) => (
           <button
             key={tab}
             className={`btn ${activeFinanceTab === tab ? 'btn-primary' : 'btn-secondary'}`}
@@ -1331,7 +1340,7 @@ const Finance = () => {
       </div>
 
       {/* ─── TAB CONTENT: OVERVIEW ──────────────────────────────────── */}
-      {activeFinanceTab === 'overview' && (
+      {activeFinanceTab === 'overview' && !isStandardStaff && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
           {/* Grouped summary cards (Daily, Weekly, Monthly, Yearly) */}
@@ -1659,7 +1668,7 @@ const Finance = () => {
               <button 
                 className="btn btn-secondary"
                 onClick={() => {
-                  const url = `${window.location.origin}${window.location.pathname}?view=finance&tab=income`;
+                  const url = `${window.location.origin}${window.location.pathname}?view=income_log&gymId=${gymSettings?.gymId || 'gym_ascend_hq'}`;
                   navigator.clipboard.writeText(url);
                   showToast('Income log link copied to clipboard!', 'success');
                 }}
@@ -1796,7 +1805,7 @@ const Finance = () => {
               <button 
                 className="btn btn-secondary"
                 onClick={() => {
-                  const url = `${window.location.origin}${window.location.pathname}?view=finance&tab=expenses`;
+                  const url = `${window.location.origin}${window.location.pathname}?view=expenses_log&gymId=${gymSettings?.gymId || 'gym_ascend_hq'}`;
                   navigator.clipboard.writeText(url);
                   showToast('Expenses log link copied to clipboard!', 'success');
                 }}
@@ -1901,7 +1910,7 @@ const Finance = () => {
       )}
 
       {/* ─── TAB CONTENT: REPORTS ───────────────────────────────────── */}
-      {activeFinanceTab === 'reports' && (
+      {activeFinanceTab === 'reports' && !isStandardStaff && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
           {/* Filters Bar */}
@@ -2117,7 +2126,7 @@ const Finance = () => {
       )}
 
       {/* ─── TAB CONTENT: EXPORTS ───────────────────────────────────── */}
-      {activeFinanceTab === 'exports' && (
+      {activeFinanceTab === 'exports' && !isStandardStaff && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
           <div className="glass-card">
@@ -2198,7 +2207,7 @@ const Finance = () => {
       )}
 
       {/* ─── TAB CONTENT: PAYROLL ────────────────────────────────────── */}
-      {activeFinanceTab === 'payroll' && (
+      {activeFinanceTab === 'payroll' && !isStandardStaff && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
           {/* Payroll Dashboard Metrics */}
