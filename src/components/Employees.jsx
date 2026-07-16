@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Search, Plus, Edit2, Trash2, Mail, Phone, Briefcase, 
-  DollarSign, Calendar, X
+  DollarSign, Calendar, X, Eye, Clock, Coffee
 } from 'lucide-react';
 
 const Employees = () => {
@@ -11,6 +11,7 @@ const Employees = () => {
     addEmployee,
     updateEmployee,
     deleteEmployee,
+    breakLogs,
     showToast
   } = useDashboard();
 
@@ -21,6 +22,8 @@ const Employees = () => {
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [selectedProfileEmployee, setSelectedProfileEmployee] = useState(null);
+  const [breakFilter, setBreakFilter] = useState('daily'); // 'daily', 'weekly', 'monthly'
 
   // Form states (Add/Edit employee)
   const [empForm, setEmpForm] = useState({
@@ -30,7 +33,8 @@ const Employees = () => {
     role: 'Front Desk',
     salary: '',
     next_salary_date: '',
-    status: 'active'
+    status: 'active',
+    total_leaves: '0'
   });
 
   // Filter lists
@@ -60,6 +64,47 @@ const Employees = () => {
     return Array.from(roles);
   }, [activeEmployees]);
 
+  // Format seconds to friendly duration
+  const formatFriendlyDuration = (totalSeconds) => {
+    if (totalSeconds === 0) return '0 seconds';
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    
+    const parts = [];
+    if (hrs > 0) parts.push(`${hrs} hr${hrs > 1 ? 's' : ''}`);
+    if (mins > 0) parts.push(`${mins} min${mins > 1 ? 's' : ''}`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs} sec${secs > 1 ? 's' : ''}`);
+    return parts.join(' ');
+  };
+
+  // Compute profile break logs & statistics
+  const profileBreakStats = useMemo(() => {
+    if (!selectedProfileEmployee) return { totalSeconds: 0, logs: [] };
+    const empId = selectedProfileEmployee.id;
+    const now = new Date();
+    
+    const empBreaks = (breakLogs || []).filter(
+      b => b.employeeId === empId && b.status === 'completed'
+    );
+    
+    let filteredBreaks = [];
+    const todayStr = now.toISOString().split('T')[0];
+    
+    if (breakFilter === 'daily') {
+      filteredBreaks = empBreaks.filter(b => b.startTime.startsWith(todayStr));
+    } else if (breakFilter === 'weekly') {
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      filteredBreaks = empBreaks.filter(b => new Date(b.startTime) >= oneWeekAgo);
+    } else if (breakFilter === 'monthly') {
+      const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      filteredBreaks = empBreaks.filter(b => new Date(b.startTime) >= oneMonthAgo);
+    }
+    
+    const totalSeconds = filteredBreaks.reduce((sum, b) => sum + (b.duration || 0), 0);
+    return { totalSeconds, logs: filteredBreaks };
+  }, [selectedProfileEmployee, breakLogs, breakFilter]);
+
   // Add employee directly
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -78,7 +123,8 @@ const Employees = () => {
         role: 'Front Desk',
         salary: '',
         next_salary_date: '',
-        status: 'active'
+        status: 'active',
+        total_leaves: '0'
       });
     } else {
       showToast(res.message || 'Hiring failed.', 'error');
@@ -129,7 +175,8 @@ const Employees = () => {
             role: 'Front Desk',
             salary: '',
             next_salary_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            status: 'active'
+            status: 'active',
+            total_leaves: '0'
           });
           setShowAddModal(true);
         }}>
@@ -275,6 +322,16 @@ const Employees = () => {
                           <div style={{ display: 'inline-flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                             <button 
                               className="btn btn-secondary" 
+                              style={{ padding: '0.4rem', borderColor: 'var(--color-primary-glow)' }}
+                              onClick={() => {
+                                setSelectedProfileEmployee(emp);
+                              }}
+                              title="View Employee Profile"
+                            >
+                              <Eye size={12} style={{ color: 'var(--color-primary)' }} />
+                            </button>
+                            <button 
+                              className="btn btn-secondary" 
                               style={{ padding: '0.4rem' }}
                               onClick={() => {
                                 setEmpForm({
@@ -284,7 +341,8 @@ const Employees = () => {
                                   role: emp.role,
                                   salary: emp.salary.toString(),
                                   next_salary_date: emp.next_salary_date,
-                                  status: emp.status
+                                  status: emp.status,
+                                  total_leaves: (emp.total_leaves || 0).toString()
                                 });
                                 setEditingEmployee(emp);
                               }}
@@ -405,17 +463,14 @@ const Employees = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Status</label>
-                  <select 
-                    value={empForm.status} 
-                    onChange={(e) => setEmpForm({...empForm, status: e.target.value})} 
-                    className="glass-select" 
-                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.625rem' }}
-                  >
-                    <option value="active">Active</option>
-                    <option value="on_leave">On Leave</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Annual Leaves</label>
+                  <input 
+                    type="number" 
+                    value={empForm.total_leaves} 
+                    onChange={(e) => setEmpForm({...empForm, total_leaves: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                  />
                 </div>
               </div>
 
@@ -526,17 +581,14 @@ const Employees = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Status</label>
-                  <select 
-                    value={empForm.status} 
-                    onChange={(e) => setEmpForm({...empForm, status: e.target.value})} 
-                    className="glass-select" 
-                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.625rem' }}
-                  >
-                    <option value="active">Active</option>
-                    <option value="on_leave">On Leave</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Annual Leaves</label>
+                  <input 
+                    type="number" 
+                    value={empForm.total_leaves} 
+                    onChange={(e) => setEmpForm({...empForm, total_leaves: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                  />
                 </div>
               </div>
 
@@ -549,6 +601,229 @@ const Employees = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: Employee Profile Details */}
+      {selectedProfileEmployee && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '800px', width: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Eye size={20} style={{ color: 'var(--color-primary)' }} />
+                Staff Member Profile: {selectedProfileEmployee.full_name}
+              </h2>
+              <button onClick={() => { setSelectedProfileEmployee(null); setBreakFilter('daily'); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '2rem', alignItems: 'start' }}>
+              {/* Left Column: Details & Leaves */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Profile Header Card */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  padding: '1.25rem',
+                  background: 'rgba(255,255,255,0.01)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px'
+                }}>
+                  <div style={{
+                    width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: '1.5rem', color: 'var(--color-primary)'
+                  }}>
+                    {selectedProfileEmployee.full_name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{selectedProfileEmployee.full_name}</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Briefcase size={12} /> {selectedProfileEmployee.role}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Info List */}
+                <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Employment Details</h4>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Email Address:</span>
+                      <span style={{ fontWeight: 600, color: '#fff' }}>{selectedProfileEmployee.email}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Phone Number:</span>
+                      <span style={{ fontWeight: 600 }}>{selectedProfileEmployee.phone}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Monthly Salary:</span>
+                      <span style={{ fontWeight: 700, color: 'var(--color-success)' }}>LKR {parseFloat(selectedProfileEmployee.salary).toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Next Salary Release:</span>
+                      <span style={{ fontWeight: 600 }}>{selectedProfileEmployee.next_salary_date}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Joined Date:</span>
+                      <span style={{ fontWeight: 600 }}>{selectedProfileEmployee.joined_at}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Status:</span>
+                      <span className={`badge badge-${selectedProfileEmployee.status === 'active' ? 'active' : 'frozen'}`} style={{ fontSize: '0.65rem' }}>
+                        {selectedProfileEmployee.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Leaves Balance Card */}
+                <div style={{
+                  padding: '1.25rem',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>ANNUAL LEAVES ALLOWED</h4>
+                    <span style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '0.25rem', display: 'block' }}>
+                      {selectedProfileEmployee.total_leaves || 0} Days
+                    </span>
+                  </div>
+                  <div style={{
+                    width: '42px', height: '42px', borderRadius: '8px', background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <Calendar size={18} style={{ color: 'var(--color-primary)' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Breaks Tracker & Logs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Filter tabs */}
+                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.35rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  {['daily', 'weekly', 'monthly'].map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setBreakFilter(filter)}
+                      style={{
+                        flex: 1,
+                        padding: '0.45rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        textTransform: 'capitalize',
+                        background: breakFilter === filter ? '#fff' : 'transparent',
+                        color: breakFilter === filter ? '#000' : 'var(--text-muted)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'var(--transition-fast)'
+                      }}
+                    >
+                      {filter === 'daily' ? 'Today' : filter === 'weekly' ? 'This Week' : 'This Month'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Total break time display */}
+                <div style={{
+                  padding: '1.5rem',
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(255, 255, 255, 0.01))',
+                  border: '1px solid rgba(245, 158, 11, 0.15)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem'
+                }}>
+                  <div style={{
+                    width: '48px', height: '48px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <Coffee size={24} style={{ color: '#f59e0b' }} />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      TOTAL BREAK TIME ({breakFilter === 'daily' ? 'TODAY' : breakFilter === 'weekly' ? 'THIS WEEK' : 'THIS MONTH'})
+                    </h4>
+                    <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.25rem', display: 'block' }}>
+                      {formatFriendlyDuration(profileBreakStats.totalSeconds)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Break logs list */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Clock size={14} /> Break Interval Logs
+                  </h4>
+
+                  <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '4px' }}>
+                    {profileBreakStats.logs.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                        No break logs logged in this period.
+                      </div>
+                    ) : (
+                      profileBreakStats.logs.map((log) => {
+                        const dateStr = new Date(log.startTime).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
+                        });
+                        const start = new Date(log.startTime).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        });
+                        const end = log.endTime ? new Date(log.endTime).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        }) : '--';
+
+                        return (
+                          <div
+                            key={log.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '0.6rem 0.85rem',
+                              background: 'rgba(255,255,255,0.01)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            <div>
+                              <span style={{ fontWeight: 600 }}>{dateStr}</span>
+                              <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                                ({start} - {end})
+                              </span>
+                            </div>
+                            <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>
+                              {formatFriendlyDuration(log.duration || 0)}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <button className="btn btn-secondary" onClick={() => { setSelectedProfileEmployee(null); setBreakFilter('daily'); }}>
+                Close Profile
+              </button>
+            </div>
           </div>
         </div>
       )}

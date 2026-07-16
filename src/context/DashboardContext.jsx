@@ -270,6 +270,7 @@ export const DashboardProvider = ({ children }) => {
   const [admins, setAdmins] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [employeeRegistrations, setEmployeeRegistrations] = useState([]);
+  const [breakLogs, setBreakLogs] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [income, setIncome] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -585,6 +586,7 @@ export const DashboardProvider = ({ children }) => {
         setAdmins([]);
         setEmployees([]);
         setEmployeeRegistrations([]);
+        setBreakLogs([]);
         setExpenses([]);
         setIncome([]);
         setDevices([]);
@@ -717,7 +719,7 @@ export const DashboardProvider = ({ children }) => {
       // ─── GYM OWNER / STAFF REAL-TIME LISTENERS ───
       const orgId = currentUser.gymId || DEFAULT_ORG_ID;
       let loadedCount = 0;
-      const totalCollections = 19;
+      const totalCollections = 20;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -986,6 +988,20 @@ export const DashboardProvider = ({ children }) => {
           setSmsLogs(logs);
           markLoaded();
         }, (err) => { console.error('SMS logs error:', err); markLoaded(); })
+      );
+
+      // 20. Break Logs (scoped)
+      const breakLogsQ = query(
+        collection(db, COLLECTIONS.BREAK_LOGS),
+        where('gymId', '==', orgId)
+      );
+      unsubscribers.push(
+        onSnapshot(breakLogsQ, (snap) => {
+          const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          logs.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+          setBreakLogs(logs);
+          markLoaded();
+        }, (err) => { console.error('Break logs error:', err); markLoaded(); })
       );
     }
 
@@ -2348,6 +2364,7 @@ export const DashboardProvider = ({ children }) => {
         ...employeeData,
         employee_code: employeeData.employee_code || 'EMP-' + Math.floor(10000 + Math.random() * 90000),
         salary: parseFloat(employeeData.salary),
+        total_leaves: parseInt(employeeData.total_leaves) || 0,
       };
       const docRef = await addDoc(collection(db, COLLECTIONS.EMPLOYEES), newEmp);
       await logAudit('employee.create', 'employee', docRef.id, `Hired employee: ${newEmp.full_name} (${newEmp.role})`);
@@ -2364,6 +2381,7 @@ export const DashboardProvider = ({ children }) => {
       const empRef = doc(db, COLLECTIONS.EMPLOYEES, id);
       const updated = { ...updatedFields };
       if (updated.salary !== undefined) updated.salary = parseFloat(updated.salary);
+      if (updated.total_leaves !== undefined) updated.total_leaves = parseInt(updated.total_leaves) || 0;
       await updateDoc(empRef, updated);
       await logAudit('employee.update', 'employee', id, `Updated employee fields: ${Object.keys(updated).join(', ')}`);
       return { success: true };
@@ -2464,6 +2482,63 @@ export const DashboardProvider = ({ children }) => {
       return { success: false, message: friendlyFirestoreError(err) };
     }
   }, [employeeRegistrations, logAudit]);
+
+  // ─── Break Log Actions ──────────────────────────────────────────────
+  const startBreak = useCallback(async (employeeId, employeeName) => {
+    try {
+      const activeBreak = breakLogs.find(
+        b => b.employeeId === employeeId && b.status === 'active'
+      );
+      if (activeBreak) {
+        return { success: false, message: 'You already have an active break timer running.' };
+      }
+
+      const newBreak = {
+        gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+        employeeId,
+        employeeName,
+        startTime: new Date().toISOString(),
+        endTime: null,
+        status: 'active',
+        duration: 0,
+      };
+
+      const docRef = await addDoc(collection(db, COLLECTIONS.BREAK_LOGS), newBreak);
+      await logAudit('employee.break_start', 'employee', employeeId, `Started break for ${employeeName}`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('startBreak error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [currentUser, breakLogs, logAudit]);
+
+  const stopBreak = useCallback(async (breakId) => {
+    try {
+      const breakRef = doc(db, COLLECTIONS.BREAK_LOGS, breakId);
+      const breakDoc = breakLogs.find(b => b.id === breakId);
+      if (!breakDoc) {
+        return { success: false, message: 'Break log not found.' };
+      }
+
+      const endTime = new Date().toISOString();
+      const startTime = new Date(breakDoc.startTime);
+      const duration = Math.max(0, Math.floor((new Date(endTime) - startTime) / 1000));
+
+      await updateDoc(breakRef, {
+        endTime,
+        status: 'completed',
+        duration,
+      });
+
+      await logAudit('employee.break_stop', 'employee', breakDoc.employeeId, `Stopped break for ${breakDoc.employeeName}. Duration: ${Math.floor(duration / 60)} minutes.`);
+      return { success: true };
+    } catch (err) {
+      console.error('stopBreak error:', err);
+      setError(friendlyFirestoreError(err));
+      return { success: false, message: friendlyFirestoreError(err) };
+    }
+  }, [breakLogs, logAudit]);
 
   // ═══════════════════════════════════════════════════════════════════
   // INVOICING & PAYMENTS
@@ -4501,6 +4576,7 @@ export const DashboardProvider = ({ children }) => {
       admins,
       employees,
       employeeRegistrations,
+      breakLogs,
       expenses,
       income,
       devices,
@@ -4551,6 +4627,8 @@ export const DashboardProvider = ({ children }) => {
       addEmployeeRegistrationRequest,
       approveEmployeeRegistration,
       rejectEmployeeRegistration,
+      startBreak,
+      stopBreak,
 
       // Payment Actions
       recordPayment,

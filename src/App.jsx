@@ -13,6 +13,7 @@ import Login from './components/Login';
 import AdminManagement from './components/AdminManagement';
 import Employees from './components/Employees';
 import Finance from './components/Finance';
+import BreakTimer from './components/BreakTimer';
 import { Bell, ShieldCheck, HelpCircle, Menu, Search, Sun, Moon } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
 import PublicReceipt from './components/PublicReceipt';
@@ -232,16 +233,18 @@ const DashboardContentShell = () => {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
-        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
+        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports',
+        'break_timer'
       ].includes(tab);
     }
     if (currentUser.role === 'admin' || currentUser.role === 'gym_assistant') {
       return [
         'members', 'registrations', 'access',
-        'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'
+        'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports',
+        'break_timer'
       ].includes(tab);
     }
-    return ['members', 'registrations', 'access'].includes(tab);
+    return ['members', 'registrations', 'access', 'break_timer'].includes(tab);
   };
 
   const resolvedTab = isAllowedTab(activeTab) ? activeTab : 'members';
@@ -256,6 +259,8 @@ const DashboardContentShell = () => {
         return <Registrations />;
       case 'employees':
         return <Employees />;
+      case 'break_timer':
+        return <BreakTimer />;
       case 'access':
         return <AccessConsole />;
       case 'console':

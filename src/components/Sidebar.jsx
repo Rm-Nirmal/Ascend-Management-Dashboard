@@ -23,7 +23,8 @@ import {
   RefreshCw,
   Truck,
   TrendingUp,
-  ShoppingBag
+  ShoppingBag,
+  Clock
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -57,6 +58,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
     { id: 'access', name: 'Access Control', icon: QrCode },
+    { id: 'break_timer', name: 'Break Timer', icon: Clock },
     { id: 'console', name: 'Console', icon: CreditCard },
     { id: 'finance', name: 'Finance', icon: DollarSign },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
@@ -70,9 +72,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
 
-    // Regular gym staff can only access members, registrations, access
+    // Regular gym staff can only access members, registrations, access, break_timer
     if (currentUser.role !== 'gym_owner' && currentUser.role !== 'super_admin') {
-      return ['members', 'registrations', 'access'].includes(item.id);
+      return ['members', 'registrations', 'access', 'break_timer'].includes(item.id);
     }
     
     // Gym owners can access everything except Console
