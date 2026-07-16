@@ -2057,15 +2057,6 @@ const Members = () => {
               <span style={{ color: 'var(--text-muted)' }}>Amount in Words:</span> <span style={{ fontWeight: 600 }}>{numberToWords(viewingReceipt.total_amount || 0)}</span>
             </div>
 
-            {/* Bottom Signature area */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginTop: '2rem', fontSize: '0.75rem' }}>
-              <div style={{ borderTop: '1px solid var(--border-color)', textAlign: 'center', paddingTop: '0.5rem' }}>
-                <span>Authorized Representative</span>
-              </div>
-              <div style={{ borderTop: '1px solid var(--border-color)', textAlign: 'center', paddingTop: '0.5rem' }}>
-                <span>Member Signature</span>
-              </div>
-            </div>
 
             {/* Actions for Modal */}
             <div className="no-print" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>

@@ -1,7 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { uploadToCloudinary } from '../lib/cloudinary';
 import { Smartphone, Send, Camera, Loader2, Check } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const PublicRegistrationForm = ({ isStandalone = true }) => {
   const { plans, addRegistrationRequest, showToast } = useDashboard();
@@ -12,12 +14,13 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const fileInputRef = useRef(null);
+  const [gymName, setGymName] = useState('ASCEND FITNESS PORTAL');
 
   const [publicForm, setPublicForm] = useState({
     full_name: '',
     email: '',
     phone: '',
-    gender: 'female',
+    gender: 'male',
     date_of_birth: '',
     branch_id: 'org_ascend_hq',
     plan_id: '',
@@ -31,6 +34,38 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
     height_cm: '',
     body_fat_pct: '',
   });
+
+  useEffect(() => {
+    const fetchGymName = async () => {
+      try {
+        const queryParams = new URLSearchParams(window.location.search);
+        const gymId = queryParams.get('gymId') || 'gym_ascend_hq';
+
+        const gymSettingsQuery = query(collection(db, 'gymSettings'), where('gymId', '==', gymId));
+        const gymSettingsSnap = await getDocs(gymSettingsQuery);
+        if (!gymSettingsSnap.empty) {
+          const name = gymSettingsSnap.docs[0].data().gymName;
+          if (name) {
+            setGymName(name.toUpperCase());
+            return;
+          }
+        }
+        
+        // Fallback to gyms collection
+        const gymsQuery = query(collection(db, 'gyms'), where('gymId', '==', gymId));
+        const gymsSnap = await getDocs(gymsQuery);
+        if (!gymsSnap.empty) {
+          const name = gymsSnap.docs[0].data().gymName;
+          if (name) {
+            setGymName(name.toUpperCase());
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching gym name:', err);
+      }
+    };
+    fetchGymName();
+  }, []);
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
@@ -79,7 +114,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
         full_name: '',
         email: '',
         phone: '',
-        gender: 'female',
+        gender: 'male',
         date_of_birth: '',
         branch_id: 'org_ascend_hq',
         plan_id: '',
@@ -144,7 +179,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <Smartphone size={36} style={{ color: '#ffffff', marginBottom: '0.75rem' }} />
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.65rem', fontWeight: 800, letterSpacing: '0.02em', color: '#ffffff' }}>
-          ASCEND FITNESS PORTAL
+          {gymName}
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
           Public Registration Portal
