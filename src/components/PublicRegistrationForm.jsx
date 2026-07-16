@@ -14,7 +14,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const fileInputRef = useRef(null);
-  const [gymName, setGymName] = useState('ASCEND FITNESS PORTAL');
+  const [gymName, setGymName] = useState('FITGENCORE PORTAL');
 
   const [publicForm, setPublicForm] = useState({
     full_name: '',
@@ -22,7 +22,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
     phone: '',
     gender: 'male',
     date_of_birth: '',
-    branch_id: 'org_ascend_hq',
+    branch_id: 'org_fitgencore_hq',
     plan_id: '',
     installment_plan: '1 time',
     medical_conditions: '',
@@ -116,7 +116,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
         phone: '',
         gender: 'male',
         date_of_birth: '',
-        branch_id: 'org_ascend_hq',
+        branch_id: 'org_fitgencore_hq',
         plan_id: '',
         installment_plan: '1 time',
         medical_conditions: '',

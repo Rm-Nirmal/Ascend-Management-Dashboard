@@ -127,10 +127,10 @@ const Login = () => {
             WebkitTextFillColor: 'transparent',
             marginBottom: '0.35rem'
           }}>
-            ASCEND PORTAL
+            FITGENCORE PORTAL
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>
-            Ascend Fitness Management Console
+            Fitgencore Management Console
           </p>
           {/* Firebase connected indicator */}
           <div style={{
@@ -320,7 +320,7 @@ const Login = () => {
                 borderColor: 'rgba(255, 255, 255, 0.05)'
               }}
             >
-              <span style={{ fontWeight: 600 }}>James (Ascend Gym Owner)</span>
+              <span style={{ fontWeight: 600 }}>James (Fitgencore Gym Owner)</span>
               <span style={{ color: 'var(--text-dark)', fontSize: '0.7rem' }}>1-Click Login</span>
             </button>
 

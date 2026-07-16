@@ -71,25 +71,7 @@ const AuditSettings = () => {
     return <History size={14} />;
   };
 
-  // Mock template states (FR-NOT-01)
-  const [templates, setTemplates] = useState([
-    { id: 't_exp', name: 'Membership Expiry Alert', channel: 'email', subject: 'Your Membership is Expiring Soon!', body: 'Hello {{name}}, your membership plan {{plan}} expires on {{date}}. Renew today to retain access.' },
-    { id: 't_pay', name: 'Payment Reminder Alert', channel: 'email', subject: 'Invoice Payment Due Notice', body: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} is due on {{date}}.' },
-    { id: 't_welcome', name: 'New Registration Welcome', channel: 'sms', subject: null, body: 'Welcome to Ascend Fit {{name}}! Your membership code is {{code}}. Scan your QR code at the entrance gate to check in.' }
-  ]);
 
-  const [activeTemplate, setActiveTemplate] = useState(templates[0]);
-
-  const handleUpdateTemplate = (e) => {
-    e.preventDefault();
-    setTemplates(prev => prev.map(t => {
-      if (t.id === activeTemplate.id) {
-        return activeTemplate;
-      }
-      return t;
-    }));
-    showToast('Notification template updated successfully.', 'success');
-  };
 
   return (
     <div className="page-container">
@@ -97,14 +79,14 @@ const AuditSettings = () => {
       <div className="page-header">
         <div className="page-info">
           <h1>System Audit & Settings</h1>
-          <p>Review organization security logs, configure notification templates, and manage credentials.</p>
+          <p>Review organization security logs and manage credentials.</p>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '2rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
         {/* Security Audit Logs (NFR-05) */}
-        <div className="glass-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '620px' }}>
+        <div className="glass-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '720px' }}>
           <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <History size={18} style={{ color: 'var(--color-primary)' }} />
@@ -238,94 +220,6 @@ const AuditSettings = () => {
             )}
           </div>
         </div>
-
-        {/* Right side: Notification Templates Builder (FR-NOT-01) & Security config */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {/* Notification Templates Builder */}
-          <div className="glass-card">
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Mail size={18} style={{ color: 'var(--color-ai)' }} />
-              Notification Templates
-            </h3>
-
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-              {templates.map(t => (
-                <button 
-                  key={t.id}
-                  className="btn btn-secondary" 
-                  style={{ 
-                    fontSize: '0.7rem', 
-                    padding: '0.35rem 0.65rem',
-                    background: activeTemplate.id === t.id ? 'rgba(139, 92, 246, 0.15)' : 'rgba(255,255,255,0.02)',
-                    borderColor: activeTemplate.id === t.id ? 'var(--color-ai)' : 'var(--border-color)',
-                    color: activeTemplate.id === t.id ? '#fff' : 'var(--text-muted)'
-                  }}
-                  onClick={() => setActiveTemplate(t)}
-                >
-                  {t.name}
-                </button>
-              ))}
-            </div>
-
-            <form onSubmit={handleUpdateTemplate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div className="grid-2">
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Channel Type</label>
-                  <select 
-                    value={activeTemplate.channel}
-                    onChange={(e) => setActiveTemplate({...activeTemplate, channel: e.target.value})}
-                    className="glass-select"
-                    style={{ width: '100%', marginTop: '0.25rem' }}
-                  >
-                    <option value="email">Email Gateway</option>
-                    <option value="sms">SMS Gateway</option>
-                    <option value="whatsapp">WhatsApp Business API</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Variables Helper</label>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border-color)', marginTop: '0.25rem' }}>
-                    <code>{"{{name}}, {{plan}}, {{date}}, {{code}}"}</code>
-                  </div>
-                </div>
-              </div>
-
-              {activeTemplate.channel === 'email' && (
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Subject Line</label>
-                  <input 
-                    type="text" 
-                    value={activeTemplate.subject || ''}
-                    onChange={(e) => setActiveTemplate({...activeTemplate, subject: e.target.value})}
-                    className="glass-input"
-                    style={{ marginTop: '0.25rem', padding: '0.5rem' }}
-                    required
-                  />
-                </div>
-              )}
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Template Message Body</label>
-                <textarea 
-                  value={activeTemplate.body}
-                  onChange={(e) => setActiveTemplate({...activeTemplate, body: e.target.value})}
-                  className="glass-input"
-                  style={{ marginTop: '0.25rem', resize: 'none', height: '110px', padding: '0.5rem', fontSize: '0.8rem', lineHeight: '1.4' }}
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn btn-ai" style={{ width: '100%' }}>
-                Save Template Configurations
-              </button>
-            </form>
-          </div>
-
-          
-
-        </div>
-
       </div>
     </div>
   );

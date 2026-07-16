@@ -15,7 +15,8 @@ import {
   DollarSign,
   Cpu,
   Sun,
-  Moon
+  Moon,
+  Mail
 } from 'lucide-react';
 
 import SuperAdminOverview from './SuperAdminOverview';
@@ -28,6 +29,7 @@ import SaaSSubscriptionConsole from './SaaSSubscriptionConsole';
 import ClientAuditLogs from './ClientAuditLogs';
 import SaaSFinance from './SaaSFinance';
 import SecurityDevices from './SecurityDevices';
+import NotificationTemplates from './NotificationTemplates';
 
 const SuperAdminDashboard = () => {
   const { currentUser, logout, showToast } = useDashboard();
@@ -56,7 +58,8 @@ const SuperAdminDashboard = () => {
     { id: 'subscriptions', name: 'Subscriptions', icon: CreditCard },
     { id: 'console', name: 'Plan Console', icon: Sliders },
     { id: 'support', name: 'Support Center', icon: LifeBuoy },
-    { id: 'announcements', name: 'Announcements', icon: Megaphone }
+    { id: 'announcements', name: 'Announcements', icon: Megaphone },
+    { id: 'notifications', name: 'Notification Templates', icon: Mail }
   ];
 
   const renderView = () => {
@@ -81,6 +84,8 @@ const SuperAdminDashboard = () => {
         return <SupportCenter />;
       case 'announcements':
         return <Announcements />;
+      case 'notifications':
+        return <NotificationTemplates />;
       default:
         return <SuperAdminOverview setActiveTab={setActiveTab} />;
     }

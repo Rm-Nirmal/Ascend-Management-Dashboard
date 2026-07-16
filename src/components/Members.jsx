@@ -1553,7 +1553,6 @@ const Members = () => {
       {selectedRenewMember && (() => {
         const plan = plans.find(p => p.id === selectedRenewMember.plan_id) || plans[0];
         const subtotal = parseFloat(renewPrice || 0);
-        const tax = 0.0;
         const total = subtotal;
 
         // Calculate dynamic new expiry date
@@ -1972,13 +1971,13 @@ const Members = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
               <div>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>
-                  {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}
+                  {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'FITGENCORE'}
                 </h2>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
                   {gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}
                 </span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
-                  Email: {gymSettings?.email || 'billing@ascend.lk'} | Tel: {gymSettings?.phone || '+94 11 234 5678'}
+                  Email: {gymSettings?.email || 'billing@fitgencore.com'} | Tel: {gymSettings?.phone || '+94 11 234 5678'}
                 </span>
               </div>
               <div style={{ textAlign: 'right' }}>

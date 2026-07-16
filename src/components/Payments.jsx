@@ -316,7 +316,7 @@ const Payments = () => {
                 {/* Elite (p2) */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                    <span style={{ fontWeight: 600 }}>Ascend Elite (LKR 8,500)</span>
+                    <span style={{ fontWeight: 600 }}>Fitgencore Elite (LKR 8,500)</span>
                     <span style={{ color: 'var(--text-muted)' }}>
                       LKR {planRevenue.stats.p2.toLocaleString('en-US', { minimumFractionDigits: 2 })} ({planRevenue.total > 0 ? ((planRevenue.stats.p2 / planRevenue.total) * 100).toFixed(1) : 0}%)
                     </span>
@@ -772,10 +772,10 @@ const Payments = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)', fontWeight: 800, fontSize: '1.25rem', letterSpacing: '0.05em' }}>
-                  <Sparkles size={20} /> {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS HQ'}
+                  <Sparkles size={20} /> {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'FITGENCORE'}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                  {gymSettings?.address || 'Ascend HQ Single Gym franchise console'}
+                  {gymSettings?.address || 'Fitgencore franchise console'}
                 </div>
               </div>
               <button 
@@ -816,7 +816,7 @@ const Payments = () => {
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <td style={{ padding: '1rem' }}>
                       <strong style={{ color: '#fff' }}>
-                        {viewingInvoice.plan_id === 'p1' ? 'Basic Starter Plan' : viewingInvoice.plan_id === 'p3' ? 'VIP Platinum Plan' : 'Ascend Elite Plan'}
+                        {viewingInvoice.plan_id === 'p1' ? 'Basic Starter Plan' : viewingInvoice.plan_id === 'p3' ? 'VIP Platinum Plan' : 'Fitgencore Elite Plan'}
                       </strong>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
                         30 Days recurring gym facility access & training desk integration

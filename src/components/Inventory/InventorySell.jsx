@@ -980,7 +980,7 @@ const InventorySell = () => {
                 <CheckCircle2 size={16} style={{ fill: '#10b981', color: '#fff' }} /> Transaction Approved
               </div>
               <h2 style={{ fontFamily: '"Oswald", sans-serif', fontSize: '1.45rem', fontWeight: 700, margin: '0.25rem 0 0 0', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#000' }}>
-                {gymSettings?.gymName ? gymSettings.gymName : 'ASCEND FITNESS HQ'}
+                {gymSettings?.gymName ? gymSettings.gymName : 'FITGENCORE'}
               </h2>
               <span style={{ fontSize: '0.7rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {gymSettings?.address || '123 Main Street, Colombo'}

@@ -331,11 +331,6 @@ export const DashboardProvider = ({ children }) => {
           id: 't_welcome',
           name: 'New Registration Welcome',
           body: 'Welcome to {{gym_name}}, {{name}}! Your membership code is {{code}}. Scan your QR code at the entrance gate to check in.'
-        },
-        t_exp: {
-          id: 't_exp',
-          name: 'Membership Expiry Alert',
-          body: 'Hello {{name}}, your membership plan {{plan}} at {{gym_name}} expires on {{date}}. Renew today to retain access.'
         }
       };
 
@@ -345,9 +340,9 @@ export const DashboardProvider = ({ children }) => {
       }
 
       const resolvedGymId = member.gymId || currentUser?.gymId || DEFAULT_ORG_ID;
-      let gymName = 'Ascend Fit';
+      let gymName = 'Fitgencore';
       if (resolvedGymId === 'gym_ascend_hq') {
-        gymName = gymSettings?.gymName || 'Ascend Gym';
+        gymName = gymSettings?.gymName || 'Fitgencore';
       } else {
         const gym = gyms.find(g => g.gymId === resolvedGymId);
         if (gym) {
@@ -557,12 +552,6 @@ export const DashboardProvider = ({ children }) => {
             name: 'Payment Reminder Alert',
             channel: 'sms',
             body: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} was due on {{date}} at {{gym_name}}.'
-          },
-          {
-            id: 't_exp',
-            name: 'Membership Expiry Alert',
-            channel: 'sms',
-            body: 'Hello {{name}}, your membership plan {{plan}} at {{gym_name}} expires on {{date}}. Renew today to retain access.'
           }
         ];
         for (const t of defaultTemplates) {
@@ -1185,7 +1174,7 @@ export const DashboardProvider = ({ children }) => {
       const gymsRef = collection(db, COLLECTIONS.GYMS);
       const defaultGym = {
         gymId: 'gym_ascend_hq',
-        gymName: 'Ascend Fitness HQ',
+        gymName: 'Fitgencore HQ',
         ownerName: 'James Mercer',
         ownerEmail: 'admin@ascend.com',
         phone: '+94 77 111 2222',
@@ -1251,7 +1240,7 @@ export const DashboardProvider = ({ children }) => {
       const settingsRef = collection(db, COLLECTIONS.GYM_SETTINGS);
       const settings1 = {
         gymId: 'gym_ascend_hq',
-        gymName: 'Ascend Fitness HQ',
+        gymName: 'Fitgencore HQ',
         themeColor: '#3b82f6',
         darkMode: true,
         logo: '',
@@ -1409,7 +1398,7 @@ export const DashboardProvider = ({ children }) => {
       const ticketsRef = collection(db, COLLECTIONS.SUPPORT_TICKETS);
       const ticket1 = {
         gymId: 'gym_ascend_hq',
-        gymName: 'Ascend Fitness HQ',
+        gymName: 'Fitgencore HQ',
         subject: 'Billing Inquiry',
         message: 'We noticed a discrepancy in our monthly subscription invoice. Could you please check it?',
         priority: 'medium',
@@ -2128,7 +2117,7 @@ export const DashboardProvider = ({ children }) => {
         }
       }
       if (!gymName) {
-        gymName = resolvedGymId === 'gym_ascend_hq' ? 'Ascend Gym' : 'Client Gym';
+        gymName = resolvedGymId === 'gym_ascend_hq' ? 'Fitgencore' : 'Client Gym';
       }
 
       const cleanName = gymName.trim().replace(/[^a-zA-Z]/g, '');
@@ -3303,7 +3292,7 @@ export const DashboardProvider = ({ children }) => {
 
   const sendEmailReceipt = useCallback(async (toEmail, memberName, amount, sourceName, receiptLink, memberId = null) => {
     try {
-      const gymName = gymSettings?.gymName || 'Ascend Fit';
+      const gymName = gymSettings?.gymName || 'Fitgencore';
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
       
       console.log("%c[Email Gateway] Dispatching receipt...", "color: #8b5cf6; font-weight: bold;", {

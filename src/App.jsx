@@ -309,7 +309,7 @@ const DashboardContentShell = () => {
         <header className="topbar">
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.15rem' }}>
-              <span className="topbar-title">{gymSettings?.gymName || 'Ascend Fitness Headquarters'}</span>
+              <span className="topbar-title">{gymSettings?.gymName || 'Fitgencore Headquarters'}</span>
             </div>
           </div>
 
