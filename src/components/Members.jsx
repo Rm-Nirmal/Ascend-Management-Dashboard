@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Plus, Search, Trash2, Eye, X, ToggleLeft, ToggleRight, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign
+  Plus, Search, Trash2, Eye, X, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign
 } from 'lucide-react';
 
 const Members = () => {
@@ -472,11 +472,6 @@ const Members = () => {
     alert('QR Code token rotated successfully.');
   };
 
-  const handleToggleAutoRenew = (member) => {
-    const updatedVal = !member.auto_renew;
-    updateMember(member.id, { auto_renew: updatedVal });
-    setSelectedMember(prev => ({ ...prev, auto_renew: updatedVal }));
-  };
 
   const handleFreezeSubmit = (e) => {
     e.preventDefault();
