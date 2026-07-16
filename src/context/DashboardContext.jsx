@@ -273,6 +273,8 @@ export const DashboardProvider = ({ children }) => {
   const [expenses, setExpenses] = useState([]);
   const [income, setIncome] = useState([]);
   const [devices, setDevices] = useState([]);
+  const [smsLogs, setSmsLogs] = useState([]);
+  const [notificationTemplates, setNotificationTemplates] = useState([]);
   
   // FitGenCore SaaS States
   const [gyms, setGyms] = useState([]);
@@ -447,7 +449,44 @@ export const DashboardProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-
+  // ─── Real-time Notification Templates Seeder ────────────────────────
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, COLLECTIONS.NOTIFICATION_TEMPLATES), async (snap) => {
+      if (snap.empty) {
+        // Seed default templates
+        const defaultTemplates = [
+          {
+            id: 't_welcome',
+            name: 'New Registration Welcome',
+            channel: 'sms',
+            body: 'Welcome to {{gym_name}}, {{name}}! Your membership code is {{code}}. Scan your QR code at the entrance gate to check in.'
+          },
+          {
+            id: 't_pay',
+            name: 'Payment Reminder Alert',
+            channel: 'sms',
+            body: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} was due on {{date}} at {{gym_name}}.'
+          },
+          {
+            id: 't_exp',
+            name: 'Membership Expiry Alert',
+            channel: 'sms',
+            body: 'Hello {{name}}, your membership plan {{plan}} at {{gym_name}} expires on {{date}}. Renew today to retain access.'
+          }
+        ];
+        for (const t of defaultTemplates) {
+          try {
+            await addDoc(collection(db, COLLECTIONS.NOTIFICATION_TEMPLATES), t);
+          } catch (err) {
+            console.error('Seeding notification template error:', err);
+          }
+        }
+      }
+    }, (err) => {
+      console.error('Notification templates seeder error:', err);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // ═══════════════════════════════════════════════════════════════════
   // PHASE D: Real-time Firestore Listeners (only when authenticated)
@@ -488,7 +527,7 @@ export const DashboardProvider = ({ children }) => {
     if (currentUser.role === 'super_admin') {
       // ─── SUPER ADMIN REAL-TIME LISTENERS ───
       let loadedCount = 0;
-      const totalCollections = 10;
+      const totalCollections = 11;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -583,12 +622,22 @@ export const DashboardProvider = ({ children }) => {
           markLoaded();
         }, (err) => { console.error('Superadmin devices error:', err); markLoaded(); })
       );
+      
+      // 11. SMS Logs (all)
+      unsubscribers.push(
+        onSnapshot(collection(db, COLLECTIONS.SMS_LOGS), (snap) => {
+          const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          logs.sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at));
+          setSmsLogs(logs);
+          markLoaded();
+        }, (err) => { console.error('Superadmin SMS logs error:', err); markLoaded(); })
+      );
 
     } else {
       // ─── GYM OWNER / STAFF REAL-TIME LISTENERS ───
       const orgId = currentUser.gymId || DEFAULT_ORG_ID;
       let loadedCount = 0;
-      const totalCollections = 18;
+      const totalCollections = 19;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -844,7 +893,28 @@ export const DashboardProvider = ({ children }) => {
           markLoaded();
         }, (err) => { console.error('Inventory transactions error:', err); markLoaded(); })
       );
+
+      // 19. SMS Logs (scoped)
+      const smsLogsQ = query(
+        collection(db, COLLECTIONS.SMS_LOGS),
+        where('gymId', '==', orgId)
+      );
+      unsubscribers.push(
+        onSnapshot(smsLogsQ, (snap) => {
+          const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          logs.sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at));
+          setSmsLogs(logs);
+          markLoaded();
+        }, (err) => { console.error('SMS logs error:', err); markLoaded(); })
+      );
     }
+
+    // Global Notification Templates Listener
+    unsubscribers.push(
+      onSnapshot(collection(db, COLLECTIONS.NOTIFICATION_TEMPLATES), (snap) => {
+        setNotificationTemplates(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, (err) => { console.error('Global notification templates error:', err); })
+    );
 
     return () => {
       unsubscribers.forEach(unsub => unsub());
@@ -2003,13 +2073,17 @@ export const DashboardProvider = ({ children }) => {
         await createInvoiceForMember(docRef.id, newMember.full_name, plan, resolvedGymId);
       }
 
+      if (newMember.phone) {
+        await sendTemplatedSMS('t_welcome', newMember);
+      }
+
       return newMember;
     } catch (err) {
       console.error('addMember error:', err);
       setError(friendlyFirestoreError(err));
       return null;
     }
-  }, [plans, members, createInvoiceForMember, logAudit, currentUser, gymSettings, gyms]);
+  }, [plans, members, createInvoiceForMember, logAudit, currentUser, gymSettings, gyms, sendTemplatedSMS]);
 
   const updateMember = useCallback(async (id, updatedFields) => {
     try {
@@ -3075,6 +3149,154 @@ export const DashboardProvider = ({ children }) => {
       return { success: false, error: err.message };
     }
   }, [currentUser, logAudit, showToast, gymSettings]);
+
+  const updateNotificationTemplate = useCallback(async (templateId, updatedFields) => {
+    try {
+      const q = query(collection(db, COLLECTIONS.NOTIFICATION_TEMPLATES), where('id', '==', templateId));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const docRef = doc(db, COLLECTIONS.NOTIFICATION_TEMPLATES, snap.docs[0].id);
+        await updateDoc(docRef, updatedFields);
+      } else {
+        await addDoc(collection(db, COLLECTIONS.NOTIFICATION_TEMPLATES), {
+          id: templateId,
+          ...updatedFields,
+          created_at: new Date().toISOString()
+        });
+      }
+      showToast('Notification template updated successfully.', 'success');
+      await logAudit('template.update', 'template', templateId, `Updated notification template: ${templateId}`);
+      return true;
+    } catch (err) {
+      console.error('updateNotificationTemplate error:', err);
+      showToast('Failed to update notification template.', 'error');
+      return false;
+    }
+  }, [logAudit, showToast]);
+
+  const sendTemplatedSMS = useCallback(async (templateId, member, variables = {}) => {
+    try {
+      let template = notificationTemplates.find(t => t.id === templateId);
+      
+      const defaultTemplates = {
+        t_pay: {
+          id: 't_pay',
+          name: 'Payment Reminder Alert',
+          body: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} was due on {{date}} at {{gym_name}}.'
+        },
+        t_welcome: {
+          id: 't_welcome',
+          name: 'New Registration Welcome',
+          body: 'Welcome to {{gym_name}}, {{name}}! Your membership code is {{code}}. Scan your QR code at the entrance gate to check in.'
+        },
+        t_exp: {
+          id: 't_exp',
+          name: 'Membership Expiry Alert',
+          body: 'Hello {{name}}, your membership plan {{plan}} at {{gym_name}} expires on {{date}}. Renew today to retain access.'
+        }
+      };
+
+      const activeTemplate = template || defaultTemplates[templateId];
+      if (!activeTemplate) {
+        throw new Error(`Template ${templateId} not found.`);
+      }
+
+      const resolvedGymId = member.gymId || currentUser?.gymId || DEFAULT_ORG_ID;
+      let gymName = 'Ascend Fit';
+      if (resolvedGymId === 'gym_ascend_hq') {
+        gymName = gymSettings?.gymName || 'Ascend Gym';
+      } else {
+        const gym = gyms.find(g => g.gymId === resolvedGymId);
+        if (gym) {
+          gymName = gym.gymName;
+        }
+      }
+
+      let message = activeTemplate.body;
+      const allVars = {
+        name: member.full_name || '',
+        code: member.member_code || '',
+        gym_name: gymName,
+        ...variables
+      };
+
+      Object.keys(allVars).forEach(key => {
+        const val = allVars[key];
+        const displayVal = typeof val === 'number' ? val.toLocaleString('en-US') : val;
+        const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
+        message = message.replace(regex, displayVal || '');
+      });
+
+      const fromPhone = '0779688582';
+      const toPhone = member.phone || '';
+
+      console.log("%c[SMS Gateway] Sending Templated SMS...", "color: #10b981; font-weight: bold;", {
+        templateId,
+        from: fromPhone,
+        to: toPhone,
+        message,
+      });
+
+      const smsLog = {
+        gymId: resolvedGymId,
+        from: fromPhone,
+        to: toPhone,
+        member_name: member.full_name,
+        member_id: member.id,
+        message,
+        sent_at: new Date().toISOString(),
+        template_id: templateId
+      };
+
+      await addDoc(collection(db, COLLECTIONS.SMS_LOGS), smsLog);
+
+      await logAudit(
+        'member.sms_reminder', 
+        'member', 
+        member.id, 
+        `Sent SMS reminder (${activeTemplate.name}) from ${fromPhone} to ${member.full_name} (+${toPhone})`
+      );
+
+      return true;
+    } catch (err) {
+      console.error('sendTemplatedSMS error:', err);
+      return false;
+    }
+  }, [currentUser, gymSettings, gyms, notificationTemplates, logAudit]);
+
+  const scanAndSendPaymentReminders = useCallback(async () => {
+    try {
+      const overdueInvoices = invoices.filter(inv => 
+        (inv.status === 'overdue' || (inv.status === 'open' && inv.due_date && new Date(inv.due_date).getTime() < Date.now())) &&
+        !inv.reminder_sent
+      );
+
+      if (overdueInvoices.length === 0) {
+        return { success: true, count: 0 };
+      }
+
+      let sentCount = 0;
+      for (const inv of overdueInvoices) {
+        const member = members.find(m => m.id === inv.member_id);
+        if (member && member.phone) {
+          const success = await sendTemplatedSMS('t_pay', member, {
+            invoice: inv.invoice_number,
+            amount: inv.total_amount,
+            date: inv.due_date
+          });
+          if (success) {
+            const invRef = doc(db, COLLECTIONS.INVOICES, inv.id);
+            await updateDoc(invRef, { reminder_sent: true });
+            sentCount++;
+          }
+        }
+      }
+      return { success: true, count: sentCount };
+    } catch (err) {
+      console.error('scanAndSendPaymentReminders error:', err);
+      return { success: false, error: err.message };
+    }
+  }, [invoices, members, sendTemplatedSMS]);
 
   const sendEmailReceipt = useCallback(async (toEmail, memberName, amount, sourceName, receiptLink, memberId = null) => {
     try {
@@ -4292,6 +4514,8 @@ export const DashboardProvider = ({ children }) => {
       devices,
       currentUser,
       toasts,
+      smsLogs,
+      notificationTemplates,
 
       // FitGenCore SaaS States
       gyms,
