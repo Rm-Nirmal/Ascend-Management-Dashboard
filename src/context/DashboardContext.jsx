@@ -1042,7 +1042,7 @@ export const DashboardProvider = ({ children }) => {
   const login = useCallback(async (email, password) => {
     try {
       setError(null);
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
       // onAuthStateChanged will handle setting currentUser
       return { success: true };
     } catch (err) {
