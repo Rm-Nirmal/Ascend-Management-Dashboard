@@ -192,6 +192,14 @@ const DashboardContentShell = () => {
   });
 
   useEffect(() => {
+    const isPublicView = 
+      window.location.search.includes('view=register') || window.location.hash === '#register' ||
+      window.location.search.includes('view=receipt') || window.location.hash.startsWith('#receipt') ||
+      window.location.search.includes('view=income_log') || window.location.search.includes('view=expenses_log') ||
+      window.location.hash.startsWith('#income_log') || window.location.hash.startsWith('#expenses_log');
+
+    if (isPublicView) return;
+
     const url = new URL(window.location.href);
     const viewParam = url.searchParams.get('view');
     if (viewParam !== activeTab) {
