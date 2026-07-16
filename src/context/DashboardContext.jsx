@@ -1141,8 +1141,43 @@ export const DashboardProvider = ({ children }) => {
       return { success: true, message: 'Admin registered. Note: You may need to re-login.' };
     } catch (err) {
       const code = err?.code || '';
+      if (code === 'auth/email-already-in-use') {
+        try {
+          const adminData = {
+            uid: 'existing_auth_user',
+            name,
+            email: email.trim().toLowerCase(),
+            role,
+            password,
+            gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+            employeeId,
+            photo_url: role === 'super_admin'
+              ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
+              : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+            created_at: new Date().toISOString(),
+          };
+
+          await addDoc(collection(db, COLLECTIONS.ADMINS), adminData);
+
+          if (employeeId) {
+            const empRef = doc(db, COLLECTIONS.EMPLOYEES, employeeId);
+            await updateDoc(empRef, { role: 'Standard Admin' });
+          }
+
+          await logAudit(
+            'admin.register', 'auth', 'existing_auth_user',
+            `Registered new admin (linked to existing Auth user): ${name} (${role === 'super_admin' ? 'Super Admin' : 'Admin'})`,
+            currentUser?.name
+          );
+
+          return { success: true, message: 'Admin registered. Email already exists in Firebase Auth, they can log in immediately.' };
+        } catch (innerErr) {
+          console.error('Failed to create Firestore document for existing auth user:', innerErr);
+          return { success: false, message: 'Failed to write administrator document: ' + innerErr.message };
+        }
+      }
+
       const messages = {
-        'auth/email-already-in-use': 'An account with this email already exists in Firebase Auth.',
         'auth/weak-password': 'Password must be at least 6 characters.',
         'auth/invalid-email': 'Please enter a valid email address.',
       };
