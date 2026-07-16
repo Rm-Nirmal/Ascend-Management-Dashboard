@@ -1966,13 +1966,13 @@ const Members = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
               <div>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>
-                  {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'FITGENCORE'}
+                  {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}
                 </h2>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
                   {gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}
                 </span>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
-                  Email: {gymSettings?.email || 'billing@fitgencore.com'} | Tel: {gymSettings?.phone || '+94 11 234 5678'}
+                  Email: {gymSettings?.email || 'billing@ascend.lk'} | Tel: {gymSettings?.phone || '+94 11 234 5678'}
                 </span>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -2049,6 +2049,10 @@ const Members = () => {
             {/* Net Amount in Words */}
             <div style={{ fontSize: '0.75rem', fontStyle: 'italic', background: 'rgba(255,255,255,0.01)', padding: '0.5rem', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.05)' }}>
               <span style={{ color: 'var(--text-muted)' }}>Amount in Words:</span> <span style={{ fontWeight: 600 }}>{numberToWords(viewingReceipt.total_amount || 0)}</span>
+            </div>
+            
+            <div style={{ textAlign: 'center', fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: '1.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Powered by Fitgencore
             </div>
 
 

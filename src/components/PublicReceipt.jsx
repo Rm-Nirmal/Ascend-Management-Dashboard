@@ -209,7 +209,7 @@ const PublicReceipt = () => {
         {/* Brand identity */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#ffffff', fontWeight: 800, fontSize: '1.45rem', fontFamily: 'var(--font-display)', letterSpacing: '0.04em' }} className="text-glow">
-            <Dumbbell size={22} /> {gymDetails?.gymName ? gymDetails.gymName.toUpperCase() : 'FITGENCORE'}
+            <Dumbbell size={22} /> {gymDetails?.gymName ? gymDetails.gymName.toUpperCase() : 'ASCEND FITNESS HQ'}
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: '0.25rem', fontFamily: 'var(--font-body)' }} className="muted-text">
             Official Payment Receipt
@@ -320,7 +320,11 @@ const PublicReceipt = () => {
         {/* Payment reference notes */}
         <div style={{ marginTop: '2rem', padding: '0.75rem 1rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid rgba(255, 255, 255, 0.04)', borderRadius: '8px', fontSize: '0.725rem', color: 'var(--text-muted)', fontFamily: 'var(--font-body)', display: 'flex', justifyContent: 'space-between' }} className="muted-text">
           <span>Payment method: <strong style={{ color: '#fff' }} className="value-text">{paymentMethod ? paymentMethod.toUpperCase() : 'N/A'}</strong></span>
-          <span>Gateway: <strong style={{ color: '#fff' }} className="value-text">Fitgencore</strong></span>
+          <span>Gateway: <strong style={{ color: '#fff' }} className="value-text">{gymDetails?.gymName || 'Ascend HQ'}</strong></span>
+        </div>
+        
+        <div style={{ textAlign: 'center', fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: '1.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }} className="muted-text">
+          Powered by Fitgencore
         </div>
 
         {/* Action controls */}

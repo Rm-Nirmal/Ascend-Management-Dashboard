@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  History, Key, Shield, User, Search, Mail,
+  History, Key, User, Search,
   DollarSign, ShieldAlert, ClipboardCheck
 } from 'lucide-react';
 
 const AuditSettings = () => {
-  const { auditLogs, showToast } = useDashboard();
+  const { auditLogs } = useDashboard();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   

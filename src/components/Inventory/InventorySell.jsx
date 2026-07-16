@@ -3,7 +3,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import { 
   ShoppingBag, User, CreditCard, DollarSign, 
   AlertTriangle, Check, Printer, Eye, ArrowRight, RefreshCw,
-  Search, X, Plus, Minus, FileText, CheckCircle2, ChevronDown, CheckSquare, Sparkles
+  Search, X, Plus, Minus, FileText, CheckCircle2, Sparkles
 } from 'lucide-react';
 
 // Pure SVG Barcode Generator to render an authentic checkout barcode
@@ -23,7 +23,7 @@ const BarcodeSVG = ({ code }) => {
           y={0} 
           width={width} 
           height={40} 
-          fill="var(--text-primary)" 
+          fill="currentColor" 
           opacity={0.85}
         />
       );
@@ -38,7 +38,7 @@ const BarcodeSVG = ({ code }) => {
         width={lines.width} 
         height={40} 
         viewBox={`0 0 ${lines.width} 40`} 
-        style={{ color: 'var(--text-primary)' }}
+        style={{ color: 'currentColor' }}
       >
         {lines.list}
       </svg>
@@ -947,7 +947,33 @@ const InventorySell = () => {
         </div>
       ) : (
         /* SUCCESS STATE - HIGH FIDELITY DIGITAL RECEIPT VIEW */
-        <div style={{ display: 'flex', justifyContent: 'center', animation: 'fadeIn 0.4s ease-out', padding: '1rem 0 3rem 0' }}>
+        <div className="pos-receipt-print-area" style={{ display: 'flex', justifyContent: 'center', animation: 'fadeIn 0.4s ease-out', padding: '1rem 0 3rem 0' }}>
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              .pos-receipt-print-area, .pos-receipt-print-area * {
+                visibility: visible !important;
+              }
+              .pos-receipt-print-area {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                box-shadow: none !important;
+                border: none !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
           
           {/* Physical POS Slip Styling */}
           <div style={{ 
@@ -980,7 +1006,7 @@ const InventorySell = () => {
                 <CheckCircle2 size={16} style={{ fill: '#10b981', color: '#fff' }} /> Transaction Approved
               </div>
               <h2 style={{ fontFamily: '"Oswald", sans-serif', fontSize: '1.45rem', fontWeight: 700, margin: '0.25rem 0 0 0', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#000' }}>
-                {gymSettings?.gymName ? gymSettings.gymName : 'FITGENCORE'}
+                {gymSettings?.gymName ? gymSettings.gymName : 'ASCEND FITNESS HQ'}
               </h2>
               <span style={{ fontSize: '0.7rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {gymSettings?.address || '123 Main Street, Colombo'}
@@ -1068,6 +1094,9 @@ const InventorySell = () => {
 
             <div style={{ textAlign: 'center', fontSize: '0.725rem', color: '#71717a', marginTop: '1.5rem', fontStyle: 'italic' }}>
               Thank you for shopping with us!
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '0.55rem', color: '#a1a1aa', marginTop: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Powered by Fitgencore
             </div>
 
             {/* ACTIONS PANEL (Stays on screen, not printed) */}
