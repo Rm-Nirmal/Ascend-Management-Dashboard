@@ -246,7 +246,7 @@ const AuditSettings = () => {
           <div className="glass-card">
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Mail size={18} style={{ color: 'var(--color-ai)' }} />
-              Notification Templates (FR-NOT-01)
+              Notification Templates
             </h3>
 
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -322,32 +322,7 @@ const AuditSettings = () => {
             </form>
           </div>
 
-          {/* SaaS Limits & Settings status */}
-          <div className="glass-card">
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Shield size={16} style={{ color: 'var(--color-warning)' }} />
-              SaaS Plan Limits & Scope
-            </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Current Plan Tier:</span>
-                <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>Growth Tier</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Franchise Type:</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>Single HQ Gym (Branches Off)</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Active Members Cap:</span>
-                <span>15 / 1,000 active capacity</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.25rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>API Credentials:</span>
-                <span style={{ fontFamily: 'monospace', color: 'var(--text-dark)' }}>••••••••••••••••hk59</span>
-              </div>
-            </div>
-          </div>
+          
 
         </div>
 
