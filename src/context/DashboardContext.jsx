@@ -1340,13 +1340,13 @@ export const DashboardProvider = ({ children }) => {
 
       // 5. Seed Users
       const usersRef = collection(db, COLLECTIONS.ADMINS);
-      const userList = [
+       const userList = [
         {
           name: 'Sarah Jenkins',
           email: 'superadmin@ascend.com',
           role: 'super_admin',
           gymId: null,
-          photo_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+          photo_url: '',
           created_at: new Date().toISOString()
         },
         {
@@ -1354,7 +1354,7 @@ export const DashboardProvider = ({ children }) => {
           email: 'admin@ascend.com',
           role: 'gym_owner',
           gymId: 'gym_ascend_hq',
-          photo_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+          photo_url: '',
           created_at: new Date().toISOString()
         },
         {
@@ -1362,7 +1362,7 @@ export const DashboardProvider = ({ children }) => {
           email: 'owner@powergym.com',
           role: 'gym_owner',
           gymId: 'gym_power_place',
-          photo_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+          photo_url: '',
           created_at: new Date().toISOString()
         }
       ];

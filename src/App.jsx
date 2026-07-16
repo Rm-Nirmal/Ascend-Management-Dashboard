@@ -237,8 +237,7 @@ const DashboardContentShell = () => {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
-        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports',
-        'break_timer'
+        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
       ].includes(tab);
     }
     if (currentUser.role === 'standard_admin' || currentUser.role === 'gym_assistant') {

@@ -82,7 +82,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       currentUser.role === 'owner' || 
       currentUser.role === 'admin'
     ) {
-      return item.id !== 'console';
+      return item.id !== 'console' && item.id !== 'break_timer';
     }
     
     // Regular gym staff (including standard_admin) can only access members, registrations, access, break_timer
