@@ -48,8 +48,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     if (
       currentUser.role === 'gym_owner' || 
       currentUser.role === 'owner' || 
-      currentUser.role === 'admin' ||
-      (currentUser.role === 'super_admin' && currentUser.gymId)
+      currentUser.role === 'admin'
     ) return true;
     return ['inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'].includes(item.id);
   });
@@ -77,12 +76,11 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
 
-    // Gym owners, Gym Admins, and Gym-specific Super Admins can access everything except Console
+    // Gym owners and Gym Admins can access everything except Console
     if (
       currentUser.role === 'gym_owner' || 
       currentUser.role === 'owner' || 
-      currentUser.role === 'admin' ||
-      (currentUser.role === 'super_admin' && currentUser.gymId)
+      currentUser.role === 'admin'
     ) {
       return item.id !== 'console';
     }
@@ -180,17 +178,15 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               {currentUser?.name || 'Administrator'}
             </span>
             <span className="user-role" style={{ fontSize: '0.7rem' }}>
-              {currentUser?.role === 'super_admin' && (!currentUser.gymId || currentUser.gymId === 'super_admin')
-                ? 'SaaS Super Admin' 
-                : (currentUser?.role === 'super_admin' && currentUser.gymId)
-                  ? 'Super Admin'
-                  : (currentUser?.role === 'gym_owner' || currentUser?.role === 'owner') 
-                    ? 'Gym Owner' 
-                    : currentUser?.role === 'admin' 
-                      ? 'Gym Admin' 
-                      : currentUser?.role === 'standard_admin' 
-                        ? 'Standard Admin' 
-                        : 'Gym Staff'}
+              {currentUser?.role === 'super_admin'
+                ? 'Super Admin' 
+                : (currentUser?.role === 'gym_owner' || currentUser?.role === 'owner') 
+                  ? 'Gym Owner' 
+                  : currentUser?.role === 'admin' 
+                    ? 'Gym Admin' 
+                    : currentUser?.role === 'standard_admin' 
+                      ? 'Standard Admin' 
+                      : 'Gym Staff'}
             </span>
           </div>
           

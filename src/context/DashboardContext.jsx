@@ -478,20 +478,23 @@ export const DashboardProvider = ({ children }) => {
   useEffect(() => {
     if (currentUser) {
       const params = new URLSearchParams(window.location.search);
-      const isGlobalSuperAdmin = currentUser.role === 'super_admin' && (!currentUser.gymId || currentUser.gymId === 'super_admin');
+      let targetGymId = currentUser.gymId;
+      if (currentUser.role === 'super_admin') {
+        if (!params.has('gymId')) {
+          targetGymId = 'super_admin';
+        } else {
+          targetGymId = params.get('gymId');
+        }
+      }
       
-      if (!isGlobalSuperAdmin) {
+      if (currentUser.role !== 'super_admin') {
         if (params.get('gymId') !== currentUser.gymId) {
           params.set('gymId', currentUser.gymId || DEFAULT_ORG_ID);
           const newUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
           window.history.replaceState(null, '', newUrl);
         }
       } else {
-        let targetGymId = 'super_admin';
-        if (params.has('gymId')) {
-          targetGymId = params.get('gymId');
-        }
-        if (params.get('gymId') !== targetGymId) {
+        if (targetGymId && params.get('gymId') !== targetGymId) {
           params.set('gymId', targetGymId);
           const newUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
           window.history.replaceState(null, '', newUrl);
@@ -504,7 +507,7 @@ export const DashboardProvider = ({ children }) => {
   // PHASE C: Public Plans Firestore Listener (runs for guest too)
   // ═══════════════════════════════════════════════════════════════════
   useEffect(() => {
-    const orgId = (currentUser && !(currentUser.role === 'super_admin' && (!currentUser.gymId || currentUser.gymId === 'super_admin'))) ? (currentUser.gymId || DEFAULT_ORG_ID) : (currentUser?.gymId || getUrlGymId());
+    const orgId = (currentUser && currentUser.role !== 'super_admin') ? (currentUser.gymId || DEFAULT_ORG_ID) : (currentUser?.gymId || getUrlGymId());
     const plansQ = query(
       collection(db, COLLECTIONS.PLANS),
       where('gymId', '==', orgId)
@@ -616,7 +619,7 @@ export const DashboardProvider = ({ children }) => {
 
     const unsubscribers = [];
 
-    if (currentUser.role === 'super_admin' && (!currentUser.gymId || currentUser.gymId === 'super_admin')) {
+    if (currentUser.role === 'super_admin') {
       // ─── SUPER ADMIN REAL-TIME LISTENERS ───
       let loadedCount = 0;
       const totalCollections = 11;
@@ -2032,8 +2035,8 @@ export const DashboardProvider = ({ children }) => {
     try {
       const orgId = currentUser?.gymId || DEFAULT_ORG_ID;
 
-      // 1. Sync settings changes to COLLECTIONS.GYMS if gym owner, owner, gym admin, or gym-specific super admin
-      if (currentUser?.role === 'gym_owner' || currentUser?.role === 'owner' || currentUser?.role === 'admin' || (currentUser?.role === 'super_admin' && currentUser.gymId)) {
+      // 1. Sync settings changes to COLLECTIONS.GYMS if gym owner, owner, or gym admin
+      if (currentUser?.role === 'gym_owner' || currentUser?.role === 'owner' || currentUser?.role === 'admin') {
         const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', '==', orgId)));
         if (!gymSnap.empty) {
           const gymDocRef = gymSnap.docs[0].ref;

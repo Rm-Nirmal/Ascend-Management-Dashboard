@@ -34,9 +34,7 @@ const AdminManagement = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState(() => {
-    return currentUser?.role === 'super_admin' ? 'super_admin' : 'admin';
-  });
+  const [role, setRole] = useState('admin');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,21 +49,11 @@ const AdminManagement = () => {
   }, [employees, admins]);
 
   const availableRoles = useMemo(() => {
-    if (currentUser?.role === 'super_admin' && (!currentUser.gymId || currentUser.gymId === 'super_admin')) {
-      return [
-        { value: 'super_admin', label: 'Super Admin (FitGenCore SaaS)' },
-        { value: 'gym_owner', label: 'Gym Owner (Tenant Owner)' },
-        { value: 'admin', label: 'Gym Admin (Full Dashboard Access)' },
-        { value: 'standard_admin', label: 'Standard Admin (Restricted Employee Dashboard)' }
-      ];
-    } else {
-      return [
-        { value: 'super_admin', label: 'Super Admin (All Capabilities + Admin registry)' },
-        { value: 'admin', label: 'Gym Admin (Full Dashboard Access)' },
-        { value: 'standard_admin', label: 'Standard Admin (Restricted Employee Dashboard)' }
-      ];
-    }
-  }, [currentUser]);
+    return [
+      { value: 'admin', label: 'Gym Admin (Full Dashboard Access)' },
+      { value: 'standard_admin', label: 'Standard Admin (Restricted Employee Dashboard)' }
+    ];
+  }, []);
 
   const handleEmployeeChange = (employeeId) => {
     setSelectedEmployeeId(employeeId);
@@ -124,7 +112,7 @@ const AdminManagement = () => {
         setName('');
         setEmail('');
         setPassword('');
-        setRole(currentUser?.role === 'super_admin' ? 'super_admin' : 'admin');
+        setRole('admin');
         setSelectedEmployeeId('');
         if (showToast) showToast('Administrator registered successfully!', 'success');
       } else {
