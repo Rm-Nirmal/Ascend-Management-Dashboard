@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Search, Plus, Edit2, Trash2, Mail, Phone, Briefcase, 
-  DollarSign, Calendar, X, Eye, Clock, Coffee
+  DollarSign, Calendar, X, Eye, Clock, Coffee, ClipboardList
 } from 'lucide-react';
 
 const Employees = () => {
@@ -12,7 +12,9 @@ const Employees = () => {
     updateEmployee,
     deleteEmployee,
     breakLogs,
-    showToast
+    showToast,
+    admins,
+    auditLogs
   } = useDashboard();
 
   // Search & Filter state
@@ -104,6 +106,24 @@ const Employees = () => {
     const totalSeconds = filteredBreaks.reduce((sum, b) => sum + (b.duration || 0), 0);
     return { totalSeconds, logs: filteredBreaks };
   }, [selectedProfileEmployee, breakLogs, breakFilter]);
+
+  const linkedAdminForProfile = useMemo(() => {
+    if (!selectedProfileEmployee || !admins) return null;
+    return admins.find(
+      a => a.employeeId === selectedProfileEmployee.id || 
+      a.email?.toLowerCase() === selectedProfileEmployee.email?.toLowerCase()
+    );
+  }, [selectedProfileEmployee, admins]);
+
+  const employeeActivities = useMemo(() => {
+    if (!selectedProfileEmployee || !auditLogs) return [];
+    
+    return auditLogs.filter(log => {
+      const matchesAdminId = linkedAdminForProfile && (log.user_id === linkedAdminForProfile.id || log.user_id === linkedAdminForProfile.uid);
+      const matchesName = log.user_name?.toLowerCase() === selectedProfileEmployee.full_name.toLowerCase();
+      return matchesAdminId || matchesName;
+    });
+  }, [selectedProfileEmployee, auditLogs, linkedAdminForProfile]);
 
   // Add employee directly
   const handleAddSubmit = async (e) => {
@@ -810,6 +830,58 @@ const Employees = () => {
                             <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>
                               {formatFriendlyDuration(log.duration || 0)}
                             </span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Audit Logs / Activity */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <ClipboardList size={14} style={{ color: 'var(--color-primary)' }} /> Recent Panel Activities (Audit)
+                  </h4>
+
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '4px' }}>
+                    {employeeActivities.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                        No panel activities recorded for this staff member.
+                      </div>
+                    ) : (
+                      employeeActivities.map((log) => {
+                        const dateStr = new Date(log.occurred_at).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+
+                        return (
+                          <div
+                            key={log.id}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.25rem',
+                              padding: '0.6rem 0.85rem',
+                              background: 'rgba(0, 0, 0, 0.15)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--color-primary)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
+                                {log.action?.replace('.', ' • ')}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {dateStr}
+                              </span>
+                            </div>
+                            <div style={{ color: '#fff', fontSize: '0.8rem' }}>
+                              {log.details}
+                            </div>
                           </div>
                         );
                       })

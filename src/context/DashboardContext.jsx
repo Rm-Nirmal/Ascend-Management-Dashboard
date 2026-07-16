@@ -1075,7 +1075,7 @@ export const DashboardProvider = ({ children }) => {
    * 1. Create Firebase Auth account
    * 2. Write admin document to Firestore
    */
-  const registerAdmin = useCallback(async (name, email, password, role) => {
+  const registerAdmin = useCallback(async (name, email, password, role, employeeId = null) => {
     try {
       // Check if admin doc already exists in local state
       const exists = admins.some(a => a.email.toLowerCase() === email.trim().toLowerCase());
@@ -1099,6 +1099,7 @@ export const DashboardProvider = ({ children }) => {
         role,
         password, // Save password in Firestore for advanced Super Admin actions
         gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+        employeeId, // Save linked employee ID
         photo_url: role === 'super_admin'
           ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
           : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
@@ -1106,6 +1107,12 @@ export const DashboardProvider = ({ children }) => {
       };
 
       await addDoc(collection(db, COLLECTIONS.ADMINS), adminData);
+
+      if (employeeId) {
+        // Update the employee's role in the employees collection to 'Standard Admin'
+        const empRef = doc(db, COLLECTIONS.EMPLOYEES, employeeId);
+        await updateDoc(empRef, { role: 'Standard Admin' });
+      }
 
       // Sign back in as the current admin (since createUser switches the auth session)
       // The current admin needs to provide their password again, OR we can skip this
@@ -2558,12 +2565,33 @@ export const DashboardProvider = ({ children }) => {
           'payment.receive', 'invoice', invoiceId,
           `Recorded payment of LKR ${inv.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} via ${paymentMethod.toUpperCase()}`
         );
+
+        // Auto-activate or renew the member if it is a membership invoice
+        if (inv.member_id && inv.plan_id) {
+          const member = members.find(m => m.id === inv.member_id);
+          if (member) {
+            const plan = plans.find(p => p.id === inv.plan_id) || plans[0];
+            const periodMonths = 1;
+            const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end, periodMonths);
+
+            const memberRef = doc(db, COLLECTIONS.MEMBERS, inv.member_id);
+            await updateDoc(memberRef, {
+              status: 'active',
+              countdown_end: newCountdownEnd,
+              next_payment_date: newCountdownEnd,
+            });
+
+            await logAudit('member.renew', 'member', inv.member_id,
+              `Renewed membership for ${member.full_name} via invoice payment (New Expiry: ${new Date(newCountdownEnd).toLocaleDateString()})`
+            );
+          }
+        }
       }
     } catch (err) {
       console.error('recordPayment error:', err);
       setError(friendlyFirestoreError(err));
     }
-  }, [invoices, logAudit]);
+  }, [invoices, members, plans, logAudit]);
 
   // ═══════════════════════════════════════════════════════════════════
   // ACCESS CONTROL (Check-in / Check-out & Device Operations)
@@ -3698,28 +3726,62 @@ export const DashboardProvider = ({ children }) => {
         next_payment_date: newCountdownEnd,
       });
 
-      // Create paid renewal invoice
-      const invoiceData = {
-        gymId: member.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
-        member_id: member.id,
-        member_name: member.full_name,
-        invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-        subtotal: priceToCharge,
-        tax_amount: tax,
-        discount_amount: 0.0,
-        total_amount: total,
-        status: 'paid',
-        due_date: new Date().toISOString().split('T')[0],
-        issued_at: new Date().toISOString(),
-        paid_at: new Date().toISOString(),
-        payment_method: paymentMethod,
-        plan_id: plan.id,
-        created_at: new Date().toISOString(),
-        billing_period: `${periodMonths} Month${parseInt(periodMonths) > 1 ? 's' : ''}`
-      };
-      const invRef = await addDoc(collection(db, COLLECTIONS.INVOICES), invoiceData);
+      // Find if there is an existing open/overdue invoice for this member
+      const openInvoice = invoices.find(inv => 
+        inv.member_id === member.id && 
+        (inv.status === 'open' || inv.status === 'overdue')
+      );
 
-      await logAudit('payment.receive', 'invoice', invRef.id,
+      let invoiceId = '';
+      let finalInvoiceData = {};
+
+      if (openInvoice) {
+        invoiceId = openInvoice.id;
+        finalInvoiceData = {
+          ...openInvoice,
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          payment_method: paymentMethod,
+          total_amount: total,
+          subtotal: priceToCharge,
+          plan_id: plan.id,
+          billing_period: `${periodMonths} Month${parseInt(periodMonths) > 1 ? 's' : ''}`
+        };
+        const invRef = doc(db, COLLECTIONS.INVOICES, openInvoice.id);
+        await updateDoc(invRef, {
+          status: 'paid',
+          paid_at: finalInvoiceData.paid_at,
+          payment_method: finalInvoiceData.payment_method,
+          total_amount: finalInvoiceData.total_amount,
+          subtotal: finalInvoiceData.subtotal,
+          plan_id: finalInvoiceData.plan_id,
+          billing_period: finalInvoiceData.billing_period
+        });
+      } else {
+        // Create paid renewal invoice
+        finalInvoiceData = {
+          gymId: member.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
+          member_id: member.id,
+          member_name: member.full_name,
+          invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          subtotal: priceToCharge,
+          tax_amount: tax,
+          discount_amount: 0.0,
+          total_amount: total,
+          status: 'paid',
+          due_date: new Date().toISOString().split('T')[0],
+          issued_at: new Date().toISOString(),
+          paid_at: new Date().toISOString(),
+          payment_method: paymentMethod,
+          plan_id: plan.id,
+          created_at: new Date().toISOString(),
+          billing_period: `${periodMonths} Month${parseInt(periodMonths) > 1 ? 's' : ''}`
+        };
+        const invRef = await addDoc(collection(db, COLLECTIONS.INVOICES), finalInvoiceData);
+        invoiceId = invRef.id;
+      }
+
+      await logAudit('payment.receive', 'invoice', invoiceId,
         `Collected LKR ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })} via ${paymentMethod.toUpperCase()} for membership renewal (${periodMonths}m) of ${member.full_name}`
       );
       await logAudit('member.renew', 'member', memberId,
@@ -3727,7 +3789,7 @@ export const DashboardProvider = ({ children }) => {
       );
 
       if (member.phone) {
-        const receiptLink = `${getBaseUrl()}?view=receipt&type=invoice&id=${invRef.id}`;
+        const receiptLink = `${getBaseUrl()}?view=receipt&type=invoice&id=${invoiceId}`;
         try {
           await sendSMS(member.phone, member.full_name, total, `Membership Renewal - ${plan.name}`, receiptLink, member.id);
         } catch (smsErr) {
@@ -3736,7 +3798,7 @@ export const DashboardProvider = ({ children }) => {
       }
 
       if (member.email) {
-        const receiptLink = `${getBaseUrl()}?view=receipt&type=invoice&id=${invRef.id}`;
+        const receiptLink = `${getBaseUrl()}?view=receipt&type=invoice&id=${invoiceId}`;
         try {
           await sendEmailReceipt(member.email, member.full_name, total, `Membership Renewal - ${plan.name}`, receiptLink, member.id);
         } catch (emailErr) {
@@ -3744,13 +3806,13 @@ export const DashboardProvider = ({ children }) => {
         }
       }
 
-      return { success: true, newCountdownEnd, invoice: { id: invRef.id, ...invoiceData } };
+      return { success: true, newCountdownEnd, invoice: { id: invoiceId, ...finalInvoiceData } };
     } catch (err) {
       console.error('renewMemberMembership error:', err);
       setError(friendlyFirestoreError(err));
       return { success: false, message: friendlyFirestoreError(err) };
     }
-  }, [members, plans, sendSMS, sendEmailReceipt, logAudit, currentUser]);
+  }, [members, plans, invoices, sendSMS, sendEmailReceipt, logAudit, currentUser]);
   // ═══════════════════════════════════════════════════════════════════
   // PLAN (MEMBERSHIP PACKAGE) CRUD ACTIONS
   // ═══════════════════════════════════════════════════════════════════
@@ -3969,6 +4031,12 @@ export const DashboardProvider = ({ children }) => {
       // Delete from Firestore
       const adminRef = doc(db, COLLECTIONS.ADMINS, adminId);
       await deleteDoc(adminRef);
+
+      // Revert employee's role back to default on admin deletion
+      if (admin.employeeId) {
+        const empRef = doc(db, COLLECTIONS.EMPLOYEES, admin.employeeId);
+        await updateDoc(empRef, { role: 'Front Desk' });
+      }
 
       await logAudit('admin.delete', 'admin', adminId, `Deleted administrator account: ${admin.name}`);
 

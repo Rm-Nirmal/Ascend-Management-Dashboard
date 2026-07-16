@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { uploadToCloudinary } from '../lib/cloudinary';
 import { useDashboard } from '../context/DashboardContext';
 import { 
@@ -21,7 +21,8 @@ const AdminManagement = () => {
     trainers,
     addTrainer,
     updateTrainer,
-    deleteTrainer
+    deleteTrainer,
+    employees
   } = useDashboard();
 
   // Navigation Subtab State
@@ -37,6 +38,36 @@ const AdminManagement = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+
+  const availableEmployees = useMemo(() => {
+    if (!employees || !admins) return [];
+    return employees.filter(emp => 
+      emp.status === 'active' && 
+      !admins.some(adm => adm.email?.toLowerCase() === emp.email?.toLowerCase())
+    );
+  }, [employees, admins]);
+
+  const handleEmployeeChange = (employeeId) => {
+    setSelectedEmployeeId(employeeId);
+    if (!employeeId) {
+      setName('');
+      setEmail('');
+      return;
+    }
+    const emp = employees.find(e => e.id === employeeId);
+    if (emp) {
+      setName(emp.full_name || '');
+      setEmail(emp.email || '');
+    }
+  };
+
+  const handleRoleChange = (selectedRole) => {
+    setRole(selectedRole);
+    setSelectedEmployeeId('');
+    setName('');
+    setEmail('');
+  };
 
   // Password Reveal Visibility State
   const [visiblePasswords, setVisiblePasswords] = useState({});
@@ -68,13 +99,14 @@ const AdminManagement = () => {
 
     setIsSubmitting(true);
     try {
-      const res = await registerAdmin(name, email, password, role);
+      const res = await registerAdmin(name, email, password, role, role === 'admin' ? selectedEmployeeId : null);
       if (res.success) {
         setSuccessMsg(res.message || `Admin Profile for "${name}" successfully registered!`);
         setName('');
         setEmail('');
         setPassword('');
         setRole('admin');
+        setSelectedEmployeeId('');
         if (showToast) showToast('Administrator registered successfully!', 'success');
       } else {
         setErrorMsg(res.message);
@@ -460,7 +492,7 @@ const AdminManagement = () => {
                           </span>
                         ) : (
                           <span className="badge badge-pending" style={{ fontSize: '0.65rem', gap: '0.25rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
-                            <Shield size={10} /> Admin
+                            <Shield size={10} /> Standard Admin
                           </span>
                         )}
                       </td>
@@ -560,6 +592,43 @@ const AdminManagement = () => {
 
             <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Permissions Role</label>
+                <select
+                  className="glass-select"
+                  value={role}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  style={{ width: '100%', fontSize: '0.825rem', height: '37px', padding: '0 10px' }}
+                >
+                  <option value="admin">Standard Admin (Restricted Directory Access)</option>
+                  <option value="super_admin">Super Admin (All Capabilities + Admin registry)</option>
+                </select>
+              </div>
+
+              {role === 'admin' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Select Employee *</label>
+                  <select
+                    className="glass-select"
+                    value={selectedEmployeeId}
+                    onChange={(e) => handleEmployeeChange(e.target.value)}
+                    style={{ width: '100%', fontSize: '0.825rem', height: '37px', padding: '0 10px' }}
+                    required
+                  >
+                    <option value="">Select Employee...</option>
+                    {availableEmployees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.full_name} ({emp.role})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {role === 'admin' && availableEmployees.length === 0 && (
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-danger)', fontWeight: 600 }}>
+                  ⚠️ No active employees available for standard admin accounts. Please add employees in the Employee Desk first.
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Full Name</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dark)', display: 'flex', alignItems: 'center' }}>
@@ -571,7 +640,9 @@ const AdminManagement = () => {
                     placeholder="Sarah Jenkins"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    style={{ paddingLeft: '2.5rem', fontSize: '0.825rem' }}
+                    readOnly={role === 'admin'}
+                    disabled={role === 'admin'}
+                    style={{ paddingLeft: '2.5rem', fontSize: '0.825rem', cursor: role === 'admin' ? 'not-allowed' : 'text', opacity: role === 'admin' ? 0.7 : 1 }}
                   />
                 </div>
               </div>
@@ -588,7 +659,9 @@ const AdminManagement = () => {
                     placeholder="sarah@ascend.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    style={{ paddingLeft: '2.5rem', fontSize: '0.825rem' }}
+                    readOnly={role === 'admin'}
+                    disabled={role === 'admin'}
+                    style={{ paddingLeft: '2.5rem', fontSize: '0.825rem', cursor: role === 'admin' ? 'not-allowed' : 'text', opacity: role === 'admin' ? 0.7 : 1 }}
                   />
                 </div>
               </div>
@@ -610,25 +683,12 @@ const AdminManagement = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Permissions Role</label>
-                <select
-                  className="glass-select"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  style={{ width: '100%', fontSize: '0.825rem', height: '37px', padding: '0 10px' }}
-                >
-                  <option value="admin">Admin (Restricted Directory Access)</option>
-                  <option value="super_admin">Super Admin (All Capabilities + Admin registry)</option>
-                </select>
-              </div>
-
               <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--border-color)', padding: '0.75rem', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '0.725rem', lineHeight: '1.3' }}>
                 <Info size={14} style={{ flexShrink: 0, color: 'var(--color-primary)', marginTop: '0.1rem' }} />
                 <span>Newly registered administrators will be able to log in immediately using their email and configured password.</span>
               </div>
 
-              <button type="submit" className="btn btn-primary margin-t-1" style={{ fontSize: '0.825rem', padding: '0.625rem' }} disabled={isSubmitting}>
+              <button type="submit" className="btn btn-primary margin-t-1" style={{ fontSize: '0.825rem', padding: '0.625rem' }} disabled={isSubmitting || (role === 'admin' && !selectedEmployeeId)}>
                 {isSubmitting ? 'Creating...' : 'Create Account'}
               </button>
             </form>

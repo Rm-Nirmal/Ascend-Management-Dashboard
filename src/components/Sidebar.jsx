@@ -174,7 +174,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               {currentUser?.name || 'Administrator'}
             </span>
             <span className="user-role" style={{ fontSize: '0.7rem' }}>
-              {currentUser?.role === 'super_admin' ? 'Super Admin' : currentUser?.role === 'gym_owner' ? 'Gym Owner' : 'Gym Staff'}
+              {currentUser?.role === 'super_admin' ? 'Super Admin' : currentUser?.role === 'gym_owner' ? 'Gym Owner' : currentUser?.role === 'admin' ? 'Standard Admin' : 'Gym Staff'}
             </span>
           </div>
           
