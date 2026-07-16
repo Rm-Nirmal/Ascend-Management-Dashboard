@@ -105,7 +105,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             <img 
               src={logoSrc} 
               alt="Fitgencore Logo" 
-              style={{ height: '32px', objectFit: 'contain', maxWidth: '85%' }} 
+              style={{ height: '22px', objectFit: 'contain', maxWidth: '85%' }} 
             />
           </div>
           <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', paddingLeft: '0.25rem', marginTop: '0.25rem' }}>powered by wickgen</span>

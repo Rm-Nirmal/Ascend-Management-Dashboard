@@ -11,7 +11,6 @@ import {
   DollarSign, 
   Clock,
   Lock,
-  Sun,
   Moon,
   Save,
   Loader2,
@@ -25,7 +24,7 @@ const ClientSettings = () => {
   // States
   const [gymName, setGymName] = useState(gymSettings?.gymName || '');
   const [ownerName, setOwnerName] = useState(currentUser?.name || gymSettings?.ownerName || '');
-  const [darkMode, setDarkMode] = useState(gymSettings?.darkMode !== false);
+  const [darkMode, setDarkMode] = useState(true);
   const [phone, setPhone] = useState(gymSettings?.phone || '');
   const [email, setEmail] = useState(gymSettings?.email || '');
   const [address, setAddress] = useState(gymSettings?.address || '');
@@ -220,111 +219,60 @@ const ClientSettings = () => {
                 padding: '1.5rem' 
               }}>
                 <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Sun size={16} /> Console Appearance Theme
+                  <Moon size={16} style={{ color: 'var(--color-primary)' }} /> Console Appearance Theme
                 </h4>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                  {/* Light Mode Option */}
-                  <button
-                    type="button"
-                    onClick={() => setDarkMode(false)}
-                    style={{
-                      background: !darkMode ? 'rgba(255,255,255,0.06)' : 'transparent',
-                      border: !darkMode ? '2px solid var(--color-primary)' : '1px solid var(--border-color)',
-                      borderRadius: '10px',
-                      padding: '1.75rem 1.25rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '0.85rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      outline: 'none'
-                    }}
-                  >
-                    <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '50%',
-                      background: !darkMode ? '#000000' : 'rgba(255,255,255,0.05)',
-                      color: !darkMode ? '#ffffff' : 'var(--text-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: !darkMode ? '0 0 15px rgba(255,255,255,0.1)' : 'none'
-                    }}>
-                      <Sun size={22} />
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--text-main)' }}>Light Mode</div>
-                      <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: '1.3' }}>Clean white layout with dark text</div>
-                    </div>
-                    {!darkMode && (
-                      <span style={{
-                        fontSize: '0.6rem',
-                        background: 'var(--text-main)',
-                        color: 'var(--bg-primary)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        Active
-                      </span>
-                    )}
-                  </button>
-
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
                   {/* Dark Mode Option */}
-                  <button
-                    type="button"
-                    onClick={() => setDarkMode(true)}
+                  <div
                     style={{
-                      background: darkMode ? 'rgba(255,255,255,0.06)' : 'transparent',
-                      border: darkMode ? '2px solid var(--color-primary)' : '1px solid var(--border-color)',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid var(--border-color)',
                       borderRadius: '10px',
-                      padding: '1.75rem 1.25rem',
+                      padding: '2rem 1.5rem',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '0.85rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      outline: 'none'
+                      gap: '1rem',
+                      maxWidth: '340px',
+                      width: '100%',
+                      textAlign: 'center'
                     }}
                   >
                     <div style={{
-                      width: '44px',
-                      height: '44px',
+                      width: '48px',
+                      height: '48px',
                       borderRadius: '50%',
-                      background: darkMode ? '#ffffff' : 'rgba(0,0,0,0.05)',
-                      color: darkMode ? '#000000' : 'var(--text-muted)',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: 'var(--color-primary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: darkMode ? '0 0 15px rgba(255,255,255,0.1)' : 'none'
+                      border: '1px solid var(--border-color)',
+                      boxShadow: '0 0 15px rgba(255,255,255,0.05)'
                     }}>
-                      <Moon size={22} />
+                      <Moon size={24} />
                     </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--text-main)' }}>Dark Mode</div>
-                      <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: '1.3' }}>Premium dark slate layout with white text</div>
+                    <div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Dark Mode Only</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.45rem', lineHeight: '1.4' }}>
+                        This workspace console is styled exclusively for premium dark slate presentation.
+                      </div>
                     </div>
-                    {darkMode && (
-                      <span style={{
-                        fontSize: '0.6rem',
-                        background: 'var(--text-main)',
-                        color: 'var(--bg-primary)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em'
-                      }}>
-                        Active
-                      </span>
-                    )}
-                  </button>
+                    <span style={{
+                      fontSize: '0.65rem',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      border: '1px solid var(--border-color)',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}>
+                      Locked
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

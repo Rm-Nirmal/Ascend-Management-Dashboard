@@ -99,7 +99,7 @@ const Finance = ({ activeTabOverride }) => {
       }
       return 'income';
     }
-    if (subTab && ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports', 'log_income', 'log_expense'].includes(subTab)) {
+    if (subTab && ['overview', 'income', 'expenses', 'payroll', 'reports', 'log_income', 'log_expense'].includes(subTab)) {
       return subTab;
     }
     return 'overview';
@@ -144,7 +144,7 @@ const Finance = ({ activeTabOverride }) => {
         setActiveFinanceTab(viewParam);
         return;
       }
-      const allowed = isStandardStaff ? ['income', 'expenses'] : ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports'];
+      const allowed = isStandardStaff ? ['income', 'expenses'] : ['overview', 'income', 'expenses', 'payroll', 'reports'];
       if (subTab && allowed.includes(subTab)) {
         setActiveFinanceTab(subTab);
       }
@@ -1366,7 +1366,7 @@ const Finance = ({ activeTabOverride }) => {
       {/* ─── SUB-MENU / NAVIGATION TABS ───────────────────────────────── */}
       {activeFinanceTab !== 'log_income' && activeFinanceTab !== 'log_expense' && (
         <div className="tab-menu" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-          {(isStandardStaff ? ['income', 'expenses'] : ['overview', 'income', 'expenses', 'payroll', 'reports', 'exports']).map((tab) => (
+          {(isStandardStaff ? ['income', 'expenses'] : ['overview', 'income', 'expenses', 'payroll', 'reports']).map((tab) => (
             <button
               key={tab}
               className={`btn ${activeFinanceTab === tab ? 'btn-primary' : 'btn-secondary'}`}
@@ -1710,17 +1710,6 @@ const Finance = ({ activeTabOverride }) => {
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button 
-                className="btn btn-secondary"
-                onClick={() => {
-                  const url = `${window.location.origin}${window.location.pathname}?view=income_log&gymId=${gymSettings?.gymId || 'gym_ascend_hq'}`;
-                  navigator.clipboard.writeText(url);
-                  showToast('Income log link copied to clipboard!', 'success');
-                }}
-                style={{ gap: '0.45rem', display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)' }}
-              >
-                <Link size={14} /> Share Log Link
-              </button>
               <button className="btn btn-primary" onClick={() => setIsAddIncomeModalOpen(true)}>
                 <Plus size={16} /> Log Income
               </button>

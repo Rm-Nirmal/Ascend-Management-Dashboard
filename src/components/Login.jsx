@@ -108,7 +108,7 @@ const Login = () => {
             <img 
               src={logoWhite} 
               alt="Fitgencore Logo" 
-              style={{ height: '48px', objectFit: 'contain', maxWidth: '240px', margin: '0 auto' }} 
+              style={{ height: '32px', objectFit: 'contain', maxWidth: '240px', margin: '0 auto' }} 
             />
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500, marginTop: '0.75rem' }}>
