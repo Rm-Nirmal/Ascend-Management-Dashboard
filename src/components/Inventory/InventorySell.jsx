@@ -3,7 +3,7 @@ import { useDashboard } from '../../context/DashboardContext';
 import { 
   ShoppingBag, User, CreditCard, DollarSign, 
   AlertTriangle, Check, Printer, Eye, ArrowRight, RefreshCw,
-  Search, X, Plus, Minus, FileText, CheckCircle2, Sparkles
+  Search, X, Plus, Minus, FileText, CheckCircle2, Sparkles, History
 } from 'lucide-react';
 
 // Pure SVG Barcode Generator to render an authentic checkout barcode
@@ -57,6 +57,7 @@ const InventorySell = () => {
     gymSettings,
     recordStockTransaction,
     addIncome,
+    income,
     showToast 
   } = useDashboard();
 
@@ -86,6 +87,9 @@ const InventorySell = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saleResult, setSaleResult] = useState(null); // stores receipt data when sale succeeds
+  const [activeTab, setActiveTab] = useState('terminal'); // 'terminal' or 'history'
+  const [selectedReceipt, setSelectedReceipt] = useState(null); // stores receipt details for modal viewing
+  const [historySearch, setHistorySearch] = useState('');
 
   const productSearchRef = useRef(null);
   const memberSearchRef = useRef(null);
@@ -127,6 +131,20 @@ const InventorySell = () => {
       m.email?.toLowerCase().includes(query)
     );
   }, [members, memberSearch]);
+
+  // Filtered Sales History list
+  const salesHistory = useMemo(() => {
+    if (!income) return [];
+    const list = income.filter(inc => inc.source === 'Product Sales');
+    if (!historySearch.trim()) return list;
+    const query = historySearch.toLowerCase();
+    return list.filter(item => 
+      item.payment_reference?.toLowerCase().includes(query) ||
+      item.member_name?.toLowerCase().includes(query) ||
+      item.productName?.toLowerCase().includes(query) ||
+      item.notes?.toLowerCase().includes(query)
+    );
+  }, [income, historySearch]);
 
   // Selected Product details
   const selectedProduct = useMemo(() => {
@@ -335,7 +353,7 @@ const InventorySell = () => {
   return (
     <div className="page-container" style={{ animation: 'fadeIn 0.3s ease-out' }}>
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header printable-hide">
         <div className="page-info">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={20} style={{ color: 'var(--color-primary)' }} />
@@ -346,7 +364,123 @@ const InventorySell = () => {
         </div>
       </div>
 
-      {!saleResult ? (
+      {/* Navigation Sub-Tabs */}
+      <div className="printable-hide" style={{ display: 'flex', gap: '0.75rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+        <button 
+          className={`btn ${activeTab === 'terminal' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('terminal')}
+          style={{ 
+            gap: '0.5rem', 
+            fontSize: '0.8rem', 
+            padding: '0.5rem 1rem', 
+            background: activeTab === 'terminal' ? '#fff' : 'rgba(255,255,255,0.03)', 
+            color: activeTab === 'terminal' ? '#000' : '#fff' 
+          }}
+        >
+          <ShoppingBag size={14} />
+          POS Terminal
+        </button>
+        <button 
+          className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('history')}
+          style={{ 
+            gap: '0.5rem', 
+            fontSize: '0.8rem', 
+            padding: '0.5rem 1rem', 
+            background: activeTab === 'history' ? '#fff' : 'rgba(255,255,255,0.03)', 
+            color: activeTab === 'history' ? '#000' : '#fff' 
+          }}
+        >
+          <History size={14} />
+          Sales History
+        </button>
+      </div>
+
+      {activeTab === 'history' ? (
+        /* SALES HISTORY TAB */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', animation: 'fadeIn 0.3s ease-out' }}>
+          {/* Filtering and search bar */}
+          <div className="printable-hide" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                className="glass-input"
+                style={{ paddingLeft: '2.5rem', width: '100%', fontSize: '0.85rem' }}
+                placeholder="Search by receipt reference, customer name, product..."
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+              />
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Total retail sales: <strong>{salesHistory.length}</strong> transactions
+            </div>
+          </div>
+
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <div className="table-container">
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Receipt Ref</th>
+                    <th>Customer</th>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Total Price</th>
+                    <th>Method</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {salesHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
+                        No retail transactions found.
+                      </td>
+                    </tr>
+                  ) : (
+                    salesHistory.map(item => (
+                      <tr key={item.id}>
+                        <td style={{ fontSize: '0.8rem' }}>{item.date}</td>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem' }}>{item.payment_reference}</td>
+                        <td style={{ fontWeight: 600 }}>{item.member_name}</td>
+                        <td>{item.productName || 'Unknown Product'}</td>
+                        <td style={{ fontWeight: 700 }}>{item.quantity || 1} units</td>
+                        <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>
+                          LKR {parseFloat(item.amount || 0).toLocaleString()}
+                        </td>
+                        <td style={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{item.payment_method}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => setSelectedReceipt(item)}
+                              className="btn btn-secondary"
+                              style={{ 
+                                padding: '0.35rem 0.65rem', 
+                                fontSize: '0.75rem', 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '0.25rem', 
+                                background: 'rgba(255,255,255,0.03)', 
+                                border: '1px solid var(--border-color)',
+                                cursor: 'pointer'
+                              }}
+                              title="Watch Receipt"
+                            >
+                              <Eye size={12} /> Watch Receipt
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : !saleResult ? (
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1.4fr 1fr',
@@ -1140,6 +1274,216 @@ const InventorySell = () => {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Selected Receipt Modal */}
+      {selectedReceipt && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          padding: '1.5rem',
+          boxSizing: 'border-box'
+        }} className="no-print-overlay">
+          
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: '460px',
+            animation: 'scaleIn 0.3s ease-out',
+            boxSizing: 'border-box'
+          }}>
+            {/* The actual printable POS receipt area */}
+            <div className="pos-receipt-print-area" style={{ 
+              background: '#ffffff', 
+              color: '#18181b', 
+              borderRadius: '12px', 
+              boxShadow: '0 20px 40px rgba(0,0,0,0.7)',
+              padding: '2.5rem 2rem',
+              fontFamily: '"Montserrat", "Inter", sans-serif',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              {/* Dotted top edge */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '4px',
+                backgroundImage: 'linear-gradient(-45deg, #12131a 2px, transparent 0), linear-gradient(45deg, #12131a 2px, transparent 0)',
+                backgroundSize: '4px 4px',
+                backgroundRepeat: 'repeat-x'
+              }} />
+
+              {/* Print CSS specific to this modal viewer */}
+              <style>{`
+                @media print {
+                  body * {
+                    visibility: hidden !important;
+                  }
+                  .pos-receipt-print-area, .pos-receipt-print-area * {
+                    visibility: visible !important;
+                  }
+                  .pos-receipt-print-area {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff !important;
+                    color: #000000 !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                  }
+                  .no-print-btn {
+                    display: none !important;
+                  }
+                }
+              `}</style>
+
+              {/* SUCCESS HEADER */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.35rem', marginBottom: '1.75rem' }}>
+                <div style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  <CheckCircle2 size={16} style={{ fill: '#10b981', color: '#fff' }} /> Transaction Billed
+                </div>
+                <h2 style={{ fontFamily: '"Oswald", sans-serif', fontSize: '1.45rem', fontWeight: 700, margin: '0.25rem 0 0 0', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#000' }}>
+                  {gymSettings?.gymName ? gymSettings.gymName : 'ASCEND FITNESS HQ'}
+                </h2>
+                <span style={{ fontSize: '0.7rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {gymSettings?.address || '123 Main Street, Colombo'}
+                </span>
+                <span style={{ fontSize: '0.7rem', color: '#71717a', marginTop: '-0.15rem' }}>
+                  {gymSettings?.phone ? `Tel: ${gymSettings.phone}` : 'Tel: +94 77 111 2222'}
+                </span>
+              </div>
+
+              {/* Dotted Separator */}
+              <div style={{ borderTop: '2px dashed #e4e4e7', margin: '1rem 0' }} />
+
+              {/* REFERENCE INFO */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.75rem', color: '#3f3f46' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>REFERENCE:</span>
+                  <strong style={{ color: '#000', fontFamily: 'monospace' }}>{selectedReceipt.payment_reference}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>CHECKOUT DATE:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedReceipt.date}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>CUSTOMER:</span>
+                  <strong style={{ color: '#000' }}>{selectedReceipt.member_name?.toUpperCase()}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>OPERATOR:</span>
+                  <span style={{ fontWeight: 600 }}>{currentUser?.name || 'System POS'}</span>
+                </div>
+              </div>
+
+              {/* Dotted Separator */}
+              <div style={{ borderTop: '2px dashed #e4e4e7', margin: '1.25rem 0' }} />
+
+              {/* ITEMS LIST */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <span style={{ fontSize: '0.675rem', fontWeight: 700, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billed Items</span>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', maxWidth: '75%' }}>
+                    <strong style={{ color: '#000' }}>{selectedReceipt.productName || 'Product Unit'}</strong>
+                    <span style={{ fontSize: '0.725rem', color: '#71717a' }}>
+                      Qty: {selectedReceipt.quantity || 1} × LKR {(parseFloat(selectedReceipt.amount || 0) / (selectedReceipt.quantity || 1)).toLocaleString()}
+                    </span>
+                  </div>
+                  <strong style={{ fontFamily: 'monospace', color: '#000' }}>LKR {parseFloat(selectedReceipt.amount || 0).toLocaleString()}</strong>
+                </div>
+              </div>
+
+              {/* Dotted Separator */}
+              <div style={{ borderTop: '2px dashed #e4e4e7', margin: '1.25rem 0' }} />
+
+              {/* FINANCIAL SUMMARY */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.8rem', color: '#3f3f46' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.15rem', color: '#000' }}>
+                  <span>NET TOTAL PAID:</span>
+                  <span style={{ fontFamily: 'monospace' }}>LKR {parseFloat(selectedReceipt.amount || 0).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Dotted Separator */}
+              <div style={{ borderTop: '2px dashed #e4e4e7', margin: '1.25rem 0' }} />
+
+              {/* PAYMENT METADATA */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: '#71717a' }}>
+                <span>Method: <strong style={{ color: '#000' }}>{selectedReceipt.payment_method?.toUpperCase()}</strong></span>
+                <span>Status: <strong style={{ color: '#10b981' }}>COMPLETED</strong></span>
+              </div>
+
+              {/* BARCODE */}
+              <div style={{ margin: '1.75rem 0 1rem 0' }}>
+                <BarcodeSVG code={selectedReceipt.payment_reference || 'REF-0000'} />
+              </div>
+
+              <div style={{ textAlign: 'center', fontSize: '0.725rem', color: '#71717a', marginTop: '1.5rem', fontStyle: 'italic' }}>
+                Thank you for shopping with us!
+              </div>
+              <div style={{ textAlign: 'center', fontSize: '0.55rem', color: '#a1a1aa', marginTop: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Powered by Fitgencore
+              </div>
+
+              {/* Modal footer controls (hidden when printing) */}
+              <div className="no-print-btn" style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem', borderTop: '1px solid #e4e4e7', paddingTop: '1rem' }}>
+                <button
+                  onClick={() => window.print()}
+                  className="btn"
+                  style={{
+                    flex: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.35rem',
+                    background: '#e4e4e7',
+                    color: '#000',
+                    fontWeight: 700,
+                    padding: '0.5rem 1rem',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Printer size={14} /> Print Slip
+                </button>
+                <button
+                  onClick={() => setSelectedReceipt(null)}
+                  className="btn"
+                  style={{
+                    flex: 1,
+                    background: '#ef4444',
+                    color: '#fff',
+                    fontWeight: 700,
+                    padding: '0.5rem 1rem',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+
+            </div>
           </div>
         </div>
       )}
