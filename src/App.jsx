@@ -178,10 +178,10 @@ const DashboardContentShell = () => {
       return [
         'members', 'registrations', 'access',
         'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports',
-        'break_timer', 'finance'
+        'break_timer', 'log_income', 'log_expense'
       ].includes(tab);
     }
-    return ['members', 'registrations', 'access', 'break_timer', 'finance'].includes(tab);
+    return ['members', 'registrations', 'access', 'break_timer', 'log_income', 'log_expense'].includes(tab);
   };
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -329,7 +329,9 @@ const DashboardContentShell = () => {
         return <SubscriptionConsole />;
 
       case 'finance':
-        return <Finance />;
+      case 'log_income':
+      case 'log_expense':
+        return <Finance activeTabOverride={activeTab} />;
       case 'ai':
         return <AIInsights />;
       case 'audit':

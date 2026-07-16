@@ -33,7 +33,7 @@ const PublicReceipt = () => {
         setPlans(plansList);
 
         // Fetch receipt document
-        const collectionName = type === 'income' ? 'income' : 'invoices';
+        const collectionName = 'payments';
         const docRef = doc(db, collectionName, receiptId);
         const docSnap = await getDoc(docRef);
 

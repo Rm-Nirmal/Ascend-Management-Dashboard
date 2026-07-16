@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, Dumbbell } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import logoWhite from '../assets/logo_white.webp';
 
 const Login = () => {
   const { login, seedDatabaseClientSide } = useDashboard();
@@ -103,33 +104,14 @@ const Login = () => {
       }}>
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '56px',
-            height: '56px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-            marginBottom: '1rem'
-          }}>
-            <Dumbbell size={28} style={{ color: 'var(--color-primary)' }} />
+          <div style={{ marginBottom: '1.25rem' }}>
+            <img 
+              src={logoWhite} 
+              alt="Fitgencore Logo" 
+              style={{ height: '48px', objectFit: 'contain', maxWidth: '240px', margin: '0 auto' }} 
+            />
           </div>
-          <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '1.85rem',
-            fontWeight: 800,
-            letterSpacing: '0.02em',
-            background: 'linear-gradient(to right, #fff, #a0a0a0)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            marginBottom: '0.35rem'
-          }}>
-            FITGENCORE PORTAL
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500, marginTop: '0.75rem' }}>
             Fitgencore Management Console
           </p>
           {/* Firebase connected indicator */}

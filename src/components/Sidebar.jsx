@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useDashboard } from '../context/DashboardContext';
+import logoWhite from '../assets/logo_white.webp';
+import logoBlack from '../assets/logo_black.webp';
 import { 
   LayoutDashboard, 
   Users, 
@@ -28,7 +30,7 @@ import {
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-  const { currentUser, logout } = useDashboard();
+  const { currentUser, logout, gymSettings } = useDashboard();
   const [inventoryExpanded, setInventoryExpanded] = useState(() => {
     return activeTab.startsWith('inventory_');
   });
@@ -65,6 +67,8 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'break_timer', name: 'Break Timer', icon: Clock },
     { id: 'console', name: 'Console', icon: CreditCard },
     { id: 'finance', name: 'Finance', icon: DollarSign },
+    { id: 'log_income', name: 'Log Income', icon: DollarSign },
+    { id: 'log_expense', name: 'Record Expense', icon: Briefcase },
     { id: 'ai', name: 'AI Insights', icon: Sparkles },
     { id: 'audit', name: 'System Audit Logs', icon: ClipboardList },
     { id: 'admin_management', name: 'Admin Console', icon: Shield },
@@ -82,23 +86,29 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
       currentUser.role === 'owner' || 
       currentUser.role === 'admin'
     ) {
-      return item.id !== 'console' && item.id !== 'break_timer';
+      return item.id !== 'console' && item.id !== 'break_timer' && item.id !== 'log_income' && item.id !== 'log_expense';
     }
     
-    // Regular gym staff (including standard_admin) can only access members, registrations, access, break_timer, finance
-    return ['members', 'registrations', 'access', 'break_timer', 'finance'].includes(item.id);
+    // Regular gym staff (including standard_admin) can only access:
+    return ['members', 'registrations', 'access', 'break_timer', 'log_income', 'log_expense'].includes(item.id);
   });
+
+  const isDark = gymSettings?.darkMode !== false;
+  const logoSrc = isDark ? logoWhite : logoBlack;
 
   return (
     <aside className="sidebar">
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* Brand Logo */}
-        <div className="sidebar-logo" style={{ marginBottom: '2.5rem', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Dumbbell className="icon" style={{ color: 'var(--color-primary)' }} />
-            <span className="logo-text" style={{ textTransform: 'uppercase' }}>fitgencore</span>
+        <div className="sidebar-logo" style={{ marginBottom: '2.5rem', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', padding: '0 0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+            <img 
+              src={logoSrc} 
+              alt="Fitgencore Logo" 
+              style={{ height: '32px', objectFit: 'contain', maxWidth: '85%' }} 
+            />
           </div>
-          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', paddingLeft: '2.25rem', marginTop: '-0.3rem' }}>powered by wickgen</span>
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', paddingLeft: '0.25rem', marginTop: '0.25rem' }}>powered by wickgen</span>
         </div>
 
         {/* Navigation links */}
