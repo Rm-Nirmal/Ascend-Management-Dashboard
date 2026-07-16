@@ -351,7 +351,7 @@ const Registrations = () => {
                   flexShrink: 0
                 }}>
                   <img 
-                    src={selectedReq.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                    src={selectedReq.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
                     alt="Applicant Avatar" 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   />

@@ -647,7 +647,7 @@ const Members = () => {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <img 
-                            src={member.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                            src={member.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
                             alt={member.full_name} 
                             style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                           />
@@ -873,7 +873,7 @@ const Members = () => {
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                               <img 
-                                src={member.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                                src={member.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
                                 alt={member.full_name} 
                                 style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                               />
@@ -1023,7 +1023,7 @@ const Members = () => {
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <img 
-                  src={selectedMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                  src={selectedMember.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
                   alt={selectedMember.full_name} 
                   style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--color-primary)', objectFit: 'cover' }}
                 />
@@ -1577,7 +1577,7 @@ const Members = () => {
               {/* Member Card */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
                 <img 
-                  src={selectedRenewMember.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                  src={selectedRenewMember.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
                   alt={selectedRenewMember.full_name} 
                   style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--color-primary)' }}
                 />

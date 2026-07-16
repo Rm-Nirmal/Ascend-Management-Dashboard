@@ -612,7 +612,7 @@ const Payments = () => {
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <img 
-                              src={t.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                              src={t.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
                               alt={t.name || t.full_name || 'Staff'} 
                               style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                             />
@@ -905,7 +905,7 @@ const Payments = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
-              <img src={selectedTrainer.photo_url} alt={selectedTrainer.name || selectedTrainer.full_name || 'Staff'} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src={selectedTrainer.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} alt={selectedTrainer.name || selectedTrainer.full_name || 'Staff'} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
               <div>
                 <div style={{ fontWeight: 700 }}>{selectedTrainer.name || selectedTrainer.full_name}</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Specialization: {selectedTrainer.specialization || 'General'}</div>

@@ -1113,9 +1113,7 @@ export const DashboardProvider = ({ children }) => {
         password, // Save password in Firestore for advanced Super Admin actions
         gymId: currentUser?.gymId || DEFAULT_ORG_ID,
         employeeId, // Save linked employee ID
-        photo_url: role === 'super_admin'
-          ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-          : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        photo_url: '',
         created_at: new Date().toISOString(),
       };
 
@@ -1151,9 +1149,7 @@ export const DashboardProvider = ({ children }) => {
             password,
             gymId: currentUser?.gymId || DEFAULT_ORG_ID,
             employeeId,
-            photo_url: role === 'super_admin'
-              ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-              : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+            photo_url: '',
             created_at: new Date().toISOString(),
           };
 
@@ -1544,7 +1540,7 @@ export const DashboardProvider = ({ children }) => {
         role: 'gym_owner',
         gymId: generatedGymId,
         password: tempPassword,
-        photo_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        photo_url: '',
         created_at: new Date().toISOString()
       };
       await addDoc(collection(db, COLLECTIONS.ADMINS), userProfile);
@@ -3996,7 +3992,7 @@ export const DashboardProvider = ({ children }) => {
         specialization: trainerData.specialization,
         bio: trainerData.bio || '',
         hourly_rate: parseFloat(trainerData.hourly_rate),
-        photo_url: trainerData.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+        photo_url: trainerData.photo_url || '',
         created_at: new Date().toISOString(),
       };
       const docRef = await addDoc(collection(db, COLLECTIONS.TRAINERS), newTrainer);

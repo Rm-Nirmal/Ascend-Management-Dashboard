@@ -477,7 +477,7 @@ const AdminManagement = () => {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <img 
-                            src={admin.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                            src={admin.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
                             alt={admin.name} 
                             className="user-avatar"
                             style={{ width: '32px', height: '32px' }}
@@ -817,7 +817,7 @@ const AdminManagement = () => {
             {trainers.map((trainer) => (
               <div key={trainer.id} className="glass-card" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 <img 
-                  src={trainer.photo_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'} 
+                  src={trainer.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
                   alt={trainer.name || trainer.full_name || 'Trainer'} 
                   style={{ width: '70px', height: '70px', borderRadius: '12px', border: '1.5px solid var(--border-color)', objectFit: 'cover' }}
                 />

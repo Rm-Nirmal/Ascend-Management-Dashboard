@@ -127,7 +127,7 @@ const SuperAdminDashboard = () => {
         {/* Footer Profile with Logout Capability */}
         <div className="sidebar-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
           <img 
-            src={currentUser?.photo_url || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} 
+            src={currentUser?.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
             alt="Super Admin Avatar" 
             className="user-avatar"
           />
