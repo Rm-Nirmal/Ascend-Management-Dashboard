@@ -978,7 +978,7 @@ textarea.form-control {
   background-color: #22c55e;
 }
 
-.badge-frozen::before, .badge-pending::before {
+.badge-frozen::before, .badge-pending::before, .badge-on_leave::before {
   background-color: #eab308;
 }
 
@@ -996,6 +996,12 @@ textarea.form-control {
   background: rgba(255, 255, 255, 0.03);
   color: #a3a3a3;
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.badge-on_leave {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.2);
 }
 
 .badge-expired {

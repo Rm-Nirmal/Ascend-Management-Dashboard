@@ -334,8 +334,8 @@ const Employees = () => {
                           </span>
                         </td>
                         <td>
-                          <span className={`badge badge-${emp.status === 'active' ? 'active' : 'frozen'}`} style={{ fontSize: '0.65rem' }}>
-                            {emp.status}
+                          <span className={`badge badge-${emp.status === 'active' ? 'active' : emp.status === 'on_leave' ? 'on_leave' : 'frozen'}`} style={{ fontSize: '0.65rem', textTransform: 'capitalize' }}>
+                            {emp.status === 'on_leave' ? 'on leave' : emp.status}
                           </span>
                         </td>
                         <td style={{ textAlign: 'right' }}>
@@ -588,7 +588,7 @@ const Employees = () => {
                 </div>
               </div>
 
-              <div className="grid-2">
+              <div className="grid-3">
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Next Salary Date *</label>
                   <input 
@@ -601,7 +601,7 @@ const Employees = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Annual Leaves</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Leaves</label>
                   <input 
                     type="number" 
                     value={empForm.total_leaves} 
@@ -609,6 +609,20 @@ const Employees = () => {
                     className="glass-input" 
                     style={{ marginTop: '0.25rem' }}
                   />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Status *</label>
+                  <select
+                    value={empForm.status}
+                    onChange={(e) => setEmpForm({...empForm, status: e.target.value})}
+                    className="glass-select"
+                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.625rem', height: '40px' }}
+                    required
+                  >
+                    <option value="active">Active</option>
+                    <option value="on_leave">On Leave</option>
+                    <option value="terminated">Terminated</option>
+                  </select>
                 </div>
               </div>
 
@@ -696,8 +710,8 @@ const Employees = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Status:</span>
-                      <span className={`badge badge-${selectedProfileEmployee.status === 'active' ? 'active' : 'frozen'}`} style={{ fontSize: '0.65rem' }}>
-                        {selectedProfileEmployee.status}
+                      <span className={`badge badge-${selectedProfileEmployee.status === 'active' ? 'active' : selectedProfileEmployee.status === 'on_leave' ? 'on_leave' : 'frozen'}`} style={{ fontSize: '0.65rem', textTransform: 'capitalize' }}>
+                        {selectedProfileEmployee.status === 'on_leave' ? 'on leave' : selectedProfileEmployee.status}
                       </span>
                     </div>
                   </div>
