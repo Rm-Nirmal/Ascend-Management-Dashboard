@@ -17,6 +17,7 @@ import BreakTimer from './components/BreakTimer';
 import { Bell, ShieldCheck, HelpCircle, Menu, Search, Sun, Moon } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
 import PublicReceipt from './components/PublicReceipt';
+import PublicFinanceLog from './components/PublicFinanceLog';
 import ToastContainer from './components/Toast';
 
 // Inventory Management components
@@ -242,6 +243,7 @@ const DashboardContentShell = () => {
   // Check if we are simulating the standalone public registration form
   const isPublicRegister = window.location.hash === '#register' || window.location.search.includes('view=register');
   const isPublicReceipt = window.location.search.includes('view=receipt') || window.location.hash.startsWith('#receipt');
+  const isPublicFinanceLog = window.location.search.includes('view=income_log') || window.location.search.includes('view=expenses_log') || window.location.hash.startsWith('#income_log') || window.location.hash.startsWith('#expenses_log');
 
   if (isPublicRegister) {
     return (
@@ -256,6 +258,15 @@ const DashboardContentShell = () => {
     return (
       <>
         <PublicReceipt />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+      </>
+    );
+  }
+
+  if (isPublicFinanceLog) {
+    return (
+      <>
+        <PublicFinanceLog />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </>
     );
