@@ -9,7 +9,7 @@ import {
 import { 
   DollarSign, TrendingUp, Plus, Eye, X, 
   Calendar, Filter, Search, CheckCircle, ArrowUpRight, ArrowDownRight, 
-  AlertCircle, Users, Printer, FileText, Building2, CreditCard, ShieldCheck, Briefcase, Activity
+  AlertCircle, Users, Printer, FileText, ShieldCheck, Briefcase
 } from 'lucide-react';
 
 const isWithinRange = (dateStr, start, end) => {

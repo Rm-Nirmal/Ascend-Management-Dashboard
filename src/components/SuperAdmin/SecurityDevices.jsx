@@ -2,9 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from '../../context/DashboardContext';
 import { 
   Cpu, Plus, Settings, Trash2, ShieldCheck, ShieldAlert,
-  Activity, RefreshCw, Server, Wifi, Play, CheckCircle2,
+  Activity, RefreshCw, Server, Wifi, CheckCircle2,
   AlertOctagon, X, Search, ToggleLeft, ToggleRight, Building,
-  Sliders, MapPin, Layers, Lock, ShieldAlert as AlertIcon, Info
+  Sliders, MapPin, Layers, Info
 } from 'lucide-react';
 
 const SecurityDevices = () => {
@@ -23,6 +23,7 @@ const SecurityDevices = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [gymFilter, setGymFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [currentTime] = useState(() => Date.now());
 
   // Modal States
   const [showAddModal, setShowAddModal] = useState(false);
@@ -94,7 +95,13 @@ const SecurityDevices = () => {
   // Initialize gym select on open
   useEffect(() => {
     if (gyms.length > 0 && !deviceForm.gymId) {
-      setDeviceForm(prev => ({ ...prev, gymId: gyms[0].gymId }));
+      const timer = setTimeout(() => {
+        setDeviceForm(prev => {
+          if (prev.gymId) return prev;
+          return { ...prev, gymId: gyms[0].gymId };
+        });
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [gyms, deviceForm.gymId]);
 
@@ -304,7 +311,7 @@ const SecurityDevices = () => {
   // Calculate dynamic last seen
   const getLastSeenText = (lastHeartbeat) => {
     if (!lastHeartbeat) return 'No heartbeats logged';
-    const diffMs = Date.now() - new Date(lastHeartbeat).getTime();
+    const diffMs = currentTime - new Date(lastHeartbeat).getTime();
     const diffSec = Math.floor(diffMs / 1000);
     if (diffSec < 5) return '3 sec ago';
     if (diffSec < 60) return `${diffSec} sec ago`;

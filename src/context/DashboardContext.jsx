@@ -317,6 +317,97 @@ export const DashboardProvider = ({ children }) => {
     }
   }, []);
 
+  const sendTemplatedSMS = useCallback(async (templateId, member, variables = {}) => {
+    try {
+      let template = notificationTemplates.find(t => t.id === templateId);
+      
+      const defaultTemplates = {
+        t_pay: {
+          id: 't_pay',
+          name: 'Payment Reminder Alert',
+          body: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} was due on {{date}} at {{gym_name}}.'
+        },
+        t_welcome: {
+          id: 't_welcome',
+          name: 'New Registration Welcome',
+          body: 'Welcome to {{gym_name}}, {{name}}! Your membership code is {{code}}. Scan your QR code at the entrance gate to check in.'
+        },
+        t_exp: {
+          id: 't_exp',
+          name: 'Membership Expiry Alert',
+          body: 'Hello {{name}}, your membership plan {{plan}} at {{gym_name}} expires on {{date}}. Renew today to retain access.'
+        }
+      };
+
+      const activeTemplate = template || defaultTemplates[templateId];
+      if (!activeTemplate) {
+        throw new Error(`Template ${templateId} not found.`);
+      }
+
+      const resolvedGymId = member.gymId || currentUser?.gymId || DEFAULT_ORG_ID;
+      let gymName = 'Ascend Fit';
+      if (resolvedGymId === 'gym_ascend_hq') {
+        gymName = gymSettings?.gymName || 'Ascend Gym';
+      } else {
+        const gym = gyms.find(g => g.gymId === resolvedGymId);
+        if (gym) {
+          gymName = gym.gymName;
+        }
+      }
+
+      let message = activeTemplate.body;
+      const allVars = {
+        name: member.full_name || '',
+        code: member.member_code || '',
+        gym_name: gymName,
+        ...variables
+      };
+
+      Object.keys(allVars).forEach(key => {
+        const val = allVars[key];
+        const displayVal = typeof val === 'number' ? val.toLocaleString('en-US') : val;
+        const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
+        message = message.replace(regex, displayVal || '');
+      });
+
+      const fromPhone = '0779688582';
+      const toPhone = member.phone || '';
+
+      console.log("%c[SMS Gateway] Sending Templated SMS...", "color: #10b981; font-weight: bold;", {
+        templateId,
+        from: fromPhone,
+        to: toPhone,
+        message,
+      });
+
+      const smsLog = {
+        gymId: resolvedGymId,
+        from: fromPhone,
+        to: toPhone,
+        member_name: member.full_name,
+        member_id: member.id,
+        message,
+        sent_at: new Date().toISOString(),
+        template_id: templateId
+      };
+
+      await addDoc(collection(db, COLLECTIONS.SMS_LOGS), smsLog);
+
+      await logAudit(
+        'member.sms_reminder', 
+        'member', 
+        member.id, 
+        `Sent SMS reminder (${activeTemplate.name}) from ${fromPhone} to ${member.full_name} (+${toPhone})`
+      );
+
+      return true;
+    } catch (err) {
+      console.error('sendTemplatedSMS error:', err);
+      return false;
+    }
+  }, [currentUser, gymSettings, gyms, notificationTemplates, logAudit]);
+
+
   // ═══════════════════════════════════════════════════════════════════
   // PHASE A: Firebase Auth Listener
   // ═══════════════════════════════════════════════════════════════════
@@ -2530,7 +2621,9 @@ export const DashboardProvider = ({ children }) => {
                   lockData["health.doorStatus"] = 'locked';
                 }
                 await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), lockData);
-              } catch (e) {}
+              } catch (err) {
+                console.error('Error auto-locking door:', err);
+              }
             }, 5000);
           }
 
@@ -2570,7 +2663,9 @@ export const DashboardProvider = ({ children }) => {
                   lockData["health.doorStatus"] = 'locked';
                 }
                 await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), lockData);
-              } catch (e) {}
+              } catch (err) {
+                console.error('Error auto-locking door:', err);
+              }
             }, 5000);
           }
 
@@ -2623,7 +2718,9 @@ export const DashboardProvider = ({ children }) => {
                   lockData["health.doorStatus"] = 'locked';
                 }
                 await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), lockData);
-              } catch (e) {}
+              } catch (err) {
+                console.error('Error auto-locking door:', err);
+              }
             }, 5000);
           }
 
@@ -2663,7 +2760,9 @@ export const DashboardProvider = ({ children }) => {
                   lockData["health.doorStatus"] = 'locked';
                 }
                 await updateDoc(doc(db, COLLECTIONS.DEVICES, device.id), lockData);
-              } catch (e) {}
+              } catch (err) {
+                console.error('Error auto-locking door:', err);
+              }
             }, 5000);
           }
 
@@ -2893,13 +2992,10 @@ export const DashboardProvider = ({ children }) => {
 
   const testDeviceConnection = useCallback(async (deviceIdOrData) => {
     try {
-      let isSuccess = false;
       let name = '';
       let serialNumber = '';
       let isEnabled = false;
       let ip = '';
-      let port = 4370;
-      let protocol = 'TCP/IP';
       let deviceId = 'unsaved';
 
       if (typeof deviceIdOrData === 'string') {
@@ -2911,8 +3007,6 @@ export const DashboardProvider = ({ children }) => {
         serialNumber = device.device?.serial || device.serialNumber;
         isEnabled = device.health?.status !== 'Disabled';
         ip = (device.network?.ip || device.ipAddress || '').trim();
-        port = device.network?.port || device.port || 4370;
-        protocol = device.network?.protocol || device.protocol || 'TCP/IP';
 
         const deviceRef = doc(db, COLLECTIONS.DEVICES, deviceId);
         await updateDoc(deviceRef, { "health.status": "Connecting" });
@@ -2923,8 +3017,6 @@ export const DashboardProvider = ({ children }) => {
         serialNumber = deviceIdOrData.serialNumber || '';
         isEnabled = deviceIdOrData.isEnabled !== false;
         ip = (deviceIdOrData.ipAddress || '').trim();
-        port = parseInt(deviceIdOrData.port || '4370');
-        protocol = deviceIdOrData.protocol || 'TCP/IP';
       }
 
       // Simulate multi-stage connection loader
@@ -3174,95 +3266,6 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [logAudit, showToast]);
 
-  const sendTemplatedSMS = useCallback(async (templateId, member, variables = {}) => {
-    try {
-      let template = notificationTemplates.find(t => t.id === templateId);
-      
-      const defaultTemplates = {
-        t_pay: {
-          id: 't_pay',
-          name: 'Payment Reminder Alert',
-          body: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} was due on {{date}} at {{gym_name}}.'
-        },
-        t_welcome: {
-          id: 't_welcome',
-          name: 'New Registration Welcome',
-          body: 'Welcome to {{gym_name}}, {{name}}! Your membership code is {{code}}. Scan your QR code at the entrance gate to check in.'
-        },
-        t_exp: {
-          id: 't_exp',
-          name: 'Membership Expiry Alert',
-          body: 'Hello {{name}}, your membership plan {{plan}} at {{gym_name}} expires on {{date}}. Renew today to retain access.'
-        }
-      };
-
-      const activeTemplate = template || defaultTemplates[templateId];
-      if (!activeTemplate) {
-        throw new Error(`Template ${templateId} not found.`);
-      }
-
-      const resolvedGymId = member.gymId || currentUser?.gymId || DEFAULT_ORG_ID;
-      let gymName = 'Ascend Fit';
-      if (resolvedGymId === 'gym_ascend_hq') {
-        gymName = gymSettings?.gymName || 'Ascend Gym';
-      } else {
-        const gym = gyms.find(g => g.gymId === resolvedGymId);
-        if (gym) {
-          gymName = gym.gymName;
-        }
-      }
-
-      let message = activeTemplate.body;
-      const allVars = {
-        name: member.full_name || '',
-        code: member.member_code || '',
-        gym_name: gymName,
-        ...variables
-      };
-
-      Object.keys(allVars).forEach(key => {
-        const val = allVars[key];
-        const displayVal = typeof val === 'number' ? val.toLocaleString('en-US') : val;
-        const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
-        message = message.replace(regex, displayVal || '');
-      });
-
-      const fromPhone = '0779688582';
-      const toPhone = member.phone || '';
-
-      console.log("%c[SMS Gateway] Sending Templated SMS...", "color: #10b981; font-weight: bold;", {
-        templateId,
-        from: fromPhone,
-        to: toPhone,
-        message,
-      });
-
-      const smsLog = {
-        gymId: resolvedGymId,
-        from: fromPhone,
-        to: toPhone,
-        member_name: member.full_name,
-        member_id: member.id,
-        message,
-        sent_at: new Date().toISOString(),
-        template_id: templateId
-      };
-
-      await addDoc(collection(db, COLLECTIONS.SMS_LOGS), smsLog);
-
-      await logAudit(
-        'member.sms_reminder', 
-        'member', 
-        member.id, 
-        `Sent SMS reminder (${activeTemplate.name}) from ${fromPhone} to ${member.full_name} (+${toPhone})`
-      );
-
-      return true;
-    } catch (err) {
-      console.error('sendTemplatedSMS error:', err);
-      return false;
-    }
-  }, [currentUser, gymSettings, gyms, notificationTemplates, logAudit]);
 
   const scanAndSendPaymentReminders = useCallback(async () => {
     try {
@@ -4578,6 +4581,9 @@ export const DashboardProvider = ({ children }) => {
       renewMemberMembership,
       processStaffPayroll,
       sendSMS,
+      sendTemplatedSMS,
+      updateNotificationTemplate,
+      scanAndSendPaymentReminders,
 
       // Plan CRUD
       addPlan,
