@@ -45,7 +45,11 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
   const inventorySubItems = allInventorySubItems.filter(item => {
     if (!currentUser) return false;
-    if (currentUser.role === 'gym_owner' || currentUser.role === 'admin') return true;
+    if (
+      currentUser.role === 'gym_owner' || 
+      currentUser.role === 'owner' || 
+      currentUser.role === 'admin'
+    ) return true;
     return ['inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'].includes(item.id);
   });
 
@@ -72,12 +76,16 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
 
-    // Gym owners and standard admins ('admin') can access everything except Console
-    if (currentUser.role === 'gym_owner' || currentUser.role === 'admin') {
+    // Gym owners and Gym Admins can access everything except Console
+    if (
+      currentUser.role === 'gym_owner' || 
+      currentUser.role === 'owner' || 
+      currentUser.role === 'admin'
+    ) {
       return item.id !== 'console';
     }
     
-    // Regular gym staff can only access members, registrations, access, break_timer
+    // Regular gym staff (including standard_admin) can only access members, registrations, access, break_timer
     return ['members', 'registrations', 'access', 'break_timer'].includes(item.id);
   });
 
@@ -170,7 +178,15 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
               {currentUser?.name || 'Administrator'}
             </span>
             <span className="user-role" style={{ fontSize: '0.7rem' }}>
-              {currentUser?.role === 'super_admin' ? 'Super Admin' : currentUser?.role === 'gym_owner' ? 'Gym Owner' : currentUser?.role === 'admin' ? 'Standard Admin' : 'Gym Staff'}
+              {currentUser?.role === 'super_admin' 
+                ? 'Super Admin' 
+                : (currentUser?.role === 'gym_owner' || currentUser?.role === 'owner') 
+                  ? 'Gym Owner' 
+                  : currentUser?.role === 'admin' 
+                    ? 'Gym Admin' 
+                    : currentUser?.role === 'standard_admin' 
+                      ? 'Standard Admin' 
+                      : 'Gym Staff'}
             </span>
           </div>
           

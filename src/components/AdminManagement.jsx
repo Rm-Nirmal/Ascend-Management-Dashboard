@@ -34,7 +34,9 @@ const AdminManagement = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('admin');
+  const [role, setRole] = useState(() => {
+    return currentUser?.role === 'super_admin' ? 'super_admin' : 'admin';
+  });
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +49,22 @@ const AdminManagement = () => {
       !admins.some(adm => adm.email?.toLowerCase() === emp.email?.toLowerCase())
     );
   }, [employees, admins]);
+
+  const availableRoles = useMemo(() => {
+    if (currentUser?.role === 'super_admin') {
+      return [
+        { value: 'super_admin', label: 'Super Admin (FitGenCore SaaS)' },
+        { value: 'gym_owner', label: 'Gym Owner (Tenant Owner)' },
+        { value: 'admin', label: 'Gym Admin (Full Dashboard Access)' },
+        { value: 'standard_admin', label: 'Standard Admin (Restricted Employee Dashboard)' }
+      ];
+    } else {
+      return [
+        { value: 'admin', label: 'Gym Admin (Full Dashboard Access)' },
+        { value: 'standard_admin', label: 'Standard Admin (Restricted Employee Dashboard)' }
+      ];
+    }
+  }, [currentUser]);
 
   const handleEmployeeChange = (employeeId) => {
     setSelectedEmployeeId(employeeId);
@@ -99,13 +117,13 @@ const AdminManagement = () => {
 
     setIsSubmitting(true);
     try {
-      const res = await registerAdmin(name, email, password, role, role === 'admin' ? selectedEmployeeId : null);
+      const res = await registerAdmin(name, email, password, role, role === 'standard_admin' ? selectedEmployeeId : null);
       if (res.success) {
         setSuccessMsg(res.message || `Admin Profile for "${name}" successfully registered!`);
         setName('');
         setEmail('');
         setPassword('');
-        setRole('admin');
+        setRole(currentUser?.role === 'super_admin' ? 'super_admin' : 'admin');
         setSelectedEmployeeId('');
         if (showToast) showToast('Administrator registered successfully!', 'success');
       } else {
@@ -490,6 +508,14 @@ const AdminManagement = () => {
                           <span className="badge badge-active" style={{ fontSize: '0.65rem', gap: '0.25rem' }}>
                             <ShieldCheck size={10} /> Super Admin
                           </span>
+                        ) : admin.role === 'gym_owner' || admin.role === 'owner' ? (
+                          <span className="badge badge-active" style={{ fontSize: '0.65rem', gap: '0.25rem', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                            <UserCheck size={10} /> Gym Owner
+                          </span>
+                        ) : admin.role === 'admin' ? (
+                          <span className="badge badge-pending" style={{ fontSize: '0.65rem', gap: '0.25rem', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--color-success)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                            <Shield size={10} /> Gym Admin
+                          </span>
                         ) : (
                           <span className="badge badge-pending" style={{ fontSize: '0.65rem', gap: '0.25rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
                             <Shield size={10} /> Standard Admin
@@ -599,12 +625,13 @@ const AdminManagement = () => {
                   onChange={(e) => handleRoleChange(e.target.value)}
                   style={{ width: '100%', fontSize: '0.825rem', height: '37px', padding: '0 10px' }}
                 >
-                  <option value="admin">Standard Admin (Restricted Directory Access)</option>
-                  <option value="super_admin">Super Admin (All Capabilities + Admin registry)</option>
+                  {availableRoles.map(r => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
                 </select>
               </div>
 
-              {role === 'admin' && (
+              {role === 'standard_admin' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Select Employee *</label>
                   <select
@@ -622,7 +649,7 @@ const AdminManagement = () => {
                 </div>
               )}
 
-              {role === 'admin' && availableEmployees.length === 0 && (
+              {role === 'standard_admin' && availableEmployees.length === 0 && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--color-danger)', fontWeight: 600 }}>
                   ⚠️ No active employees available for standard admin accounts. Please add employees in the Employee Desk first.
                 </div>
@@ -640,9 +667,9 @@ const AdminManagement = () => {
                     placeholder="Sarah Jenkins"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    readOnly={role === 'admin'}
-                    disabled={role === 'admin'}
-                    style={{ paddingLeft: '2.5rem', fontSize: '0.825rem', cursor: role === 'admin' ? 'not-allowed' : 'text', opacity: role === 'admin' ? 0.7 : 1 }}
+                    readOnly={role === 'standard_admin'}
+                    disabled={role === 'standard_admin'}
+                    style={{ paddingLeft: '2.5rem', fontSize: '0.825rem', cursor: role === 'standard_admin' ? 'not-allowed' : 'text', opacity: role === 'standard_admin' ? 0.7 : 1 }}
                   />
                 </div>
               </div>
@@ -659,9 +686,9 @@ const AdminManagement = () => {
                     placeholder="sarah@ascend.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    readOnly={role === 'admin'}
-                    disabled={role === 'admin'}
-                    style={{ paddingLeft: '2.5rem', fontSize: '0.825rem', cursor: role === 'admin' ? 'not-allowed' : 'text', opacity: role === 'admin' ? 0.7 : 1 }}
+                    readOnly={role === 'standard_admin'}
+                    disabled={role === 'standard_admin'}
+                    style={{ paddingLeft: '2.5rem', fontSize: '0.825rem', cursor: role === 'standard_admin' ? 'not-allowed' : 'text', opacity: role === 'standard_admin' ? 0.7 : 1 }}
                   />
                 </div>
               </div>
@@ -688,7 +715,7 @@ const AdminManagement = () => {
                 <span>Newly registered administrators will be able to log in immediately using their email and configured password.</span>
               </div>
 
-              <button type="submit" className="btn btn-primary margin-t-1" style={{ fontSize: '0.825rem', padding: '0.625rem' }} disabled={isSubmitting || (role === 'admin' && !selectedEmployeeId)}>
+              <button type="submit" className="btn btn-primary margin-t-1" style={{ fontSize: '0.825rem', padding: '0.625rem' }} disabled={isSubmitting || (role === 'standard_admin' && !selectedEmployeeId)}>
                 {isSubmitting ? 'Creating...' : 'Create Account'}
               </button>
             </form>
@@ -706,7 +733,7 @@ const AdminManagement = () => {
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700 }}>Gym Membership Packages</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Add, edit, or remove the packages that members subscribe to.</p>
             </div>
-            {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') && (
+            {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
               <button className="btn btn-primary" onClick={handleOpenAddPlan} style={{ gap: '0.35rem', padding: '0.5rem 1rem', fontSize: '0.825rem' }}>
                 <Plus size={14} /> Add Package
               </button>
@@ -721,7 +748,7 @@ const AdminManagement = () => {
                     <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                       {plan.name}
                     </h4>
-                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') && (
+                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
                       <div style={{ display: 'flex', gap: '0.25rem' }}>
                         <button 
                           className="btn btn-secondary" 
@@ -790,7 +817,7 @@ const AdminManagement = () => {
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700 }}>Personal Trainers</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Manage the fitness instructors and trainers assigned to gym members.</p>
             </div>
-            {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') && (
+            {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
               <button className="btn btn-primary" onClick={handleOpenAddTrainer} style={{ gap: '0.35rem', padding: '0.5rem 1rem', fontSize: '0.825rem' }}>
                 <Plus size={14} /> Add Trainer
               </button>
@@ -809,7 +836,7 @@ const AdminManagement = () => {
                 <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{trainer.name || trainer.full_name}</div>
-                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') && (
+                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'owner' || currentUser?.role === 'admin') && (
                       <div style={{ display: 'flex', gap: '0.15rem' }}>
                         <button 
                           className="btn btn-secondary" 

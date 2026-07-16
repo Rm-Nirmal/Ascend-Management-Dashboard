@@ -229,7 +229,7 @@ const DashboardContentShell = () => {
 
   const isAllowedTab = (tab) => {
     if (currentUser.role === 'super_admin') return true;
-    if (currentUser.role === 'gym_owner' || currentUser.role === 'admin') {
+    if (currentUser.role === 'gym_owner' || currentUser.role === 'owner' || currentUser.role === 'admin') {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
@@ -237,7 +237,7 @@ const DashboardContentShell = () => {
         'break_timer'
       ].includes(tab);
     }
-    if (currentUser.role === 'gym_assistant') {
+    if (currentUser.role === 'standard_admin' || currentUser.role === 'gym_assistant') {
       return [
         'members', 'registrations', 'access',
         'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports',
@@ -247,7 +247,9 @@ const DashboardContentShell = () => {
     return ['members', 'registrations', 'access', 'break_timer'].includes(tab);
   };
 
-  const resolvedTab = isAllowedTab(activeTab) ? activeTab : 'members';
+  const resolvedTab = isAllowedTab(activeTab) 
+    ? activeTab 
+    : (currentUser.role === 'gym_owner' || currentUser.role === 'owner' || currentUser.role === 'admin' ? 'overview' : 'members');
 
   const renderView = (tab) => {
     switch (tab) {

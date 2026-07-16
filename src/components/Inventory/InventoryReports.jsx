@@ -15,7 +15,7 @@ const InventoryReports = () => {
     gymSettings
   } = useDashboard();
 
-  const isOwner = currentUser?.role === 'gym_owner' || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  const isOwner = currentUser?.role === 'gym_owner' || currentUser?.role === 'owner' || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   // Report Tab State
   const [activeReportTab, setActiveReportTab] = useState('value'); 

@@ -15,7 +15,7 @@ const InventorySuppliers = () => {
     showToast 
   } = useDashboard();
 
-  const isOwner = currentUser?.role === 'gym_owner' || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
+  const isOwner = currentUser?.role === 'gym_owner' || currentUser?.role === 'owner' || currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
