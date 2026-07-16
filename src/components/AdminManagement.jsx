@@ -51,7 +51,7 @@ const AdminManagement = () => {
   }, [employees, admins]);
 
   const availableRoles = useMemo(() => {
-    if (currentUser?.role === 'super_admin') {
+    if (currentUser?.role === 'super_admin' && (!currentUser.gymId || currentUser.gymId === 'super_admin')) {
       return [
         { value: 'super_admin', label: 'Super Admin (FitGenCore SaaS)' },
         { value: 'gym_owner', label: 'Gym Owner (Tenant Owner)' },
@@ -60,6 +60,7 @@ const AdminManagement = () => {
       ];
     } else {
       return [
+        { value: 'super_admin', label: 'Super Admin (All Capabilities + Admin registry)' },
         { value: 'admin', label: 'Gym Admin (Full Dashboard Access)' },
         { value: 'standard_admin', label: 'Standard Admin (Restricted Employee Dashboard)' }
       ];

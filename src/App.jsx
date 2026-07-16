@@ -218,7 +218,7 @@ const DashboardContentShell = () => {
   }
 
   // Super Admin Shell Bypass
-  if (currentUser.role === 'super_admin') {
+  if (currentUser.role === 'super_admin' && (!currentUser.gymId || currentUser.gymId === 'super_admin')) {
     return (
       <>
         <SuperAdminDashboard />
@@ -228,8 +228,13 @@ const DashboardContentShell = () => {
   }
 
   const isAllowedTab = (tab) => {
-    if (currentUser.role === 'super_admin') return true;
-    if (currentUser.role === 'gym_owner' || currentUser.role === 'owner' || currentUser.role === 'admin') {
+    if (currentUser.role === 'super_admin' && (!currentUser.gymId || currentUser.gymId === 'super_admin')) return true;
+    if (
+      currentUser.role === 'gym_owner' || 
+      currentUser.role === 'owner' || 
+      currentUser.role === 'admin' ||
+      (currentUser.role === 'super_admin' && currentUser.gymId)
+    ) {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
@@ -249,7 +254,14 @@ const DashboardContentShell = () => {
 
   const resolvedTab = isAllowedTab(activeTab) 
     ? activeTab 
-    : (currentUser.role === 'gym_owner' || currentUser.role === 'owner' || currentUser.role === 'admin' ? 'overview' : 'members');
+    : (
+        currentUser.role === 'gym_owner' || 
+        currentUser.role === 'owner' || 
+        currentUser.role === 'admin' || 
+        (currentUser.role === 'super_admin' && currentUser.gymId)
+          ? 'overview' 
+          : 'members'
+      );
 
   const renderView = (tab) => {
     switch (tab) {
