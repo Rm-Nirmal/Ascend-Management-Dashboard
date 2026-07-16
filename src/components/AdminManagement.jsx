@@ -706,7 +706,7 @@ const AdminManagement = () => {
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700 }}>Gym Membership Packages</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Add, edit, or remove the packages that members subscribe to.</p>
             </div>
-            {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner') && (
+            {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') && (
               <button className="btn btn-primary" onClick={handleOpenAddPlan} style={{ gap: '0.35rem', padding: '0.5rem 1rem', fontSize: '0.825rem' }}>
                 <Plus size={14} /> Add Package
               </button>
@@ -721,7 +721,7 @@ const AdminManagement = () => {
                     <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700, letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                       {plan.name}
                     </h4>
-                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner') && (
+                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') && (
                       <div style={{ display: 'flex', gap: '0.25rem' }}>
                         <button 
                           className="btn btn-secondary" 
@@ -790,7 +790,7 @@ const AdminManagement = () => {
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700 }}>Personal Trainers</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Manage the fitness instructors and trainers assigned to gym members.</p>
             </div>
-            {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner') && (
+            {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') && (
               <button className="btn btn-primary" onClick={handleOpenAddTrainer} style={{ gap: '0.35rem', padding: '0.5rem 1rem', fontSize: '0.825rem' }}>
                 <Plus size={14} /> Add Trainer
               </button>
@@ -809,7 +809,7 @@ const AdminManagement = () => {
                 <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{trainer.name || trainer.full_name}</div>
-                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner') && (
+                    {(currentUser?.role === 'super_admin' || currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') && (
                       <div style={{ display: 'flex', gap: '0.15rem' }}>
                         <button 
                           className="btn btn-secondary" 

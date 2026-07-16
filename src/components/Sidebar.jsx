@@ -45,7 +45,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
   const inventorySubItems = allInventorySubItems.filter(item => {
     if (!currentUser) return false;
-    if (currentUser.role === 'gym_owner') return true;
+    if (currentUser.role === 'gym_owner' || currentUser.role === 'admin') return true;
     return ['inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'].includes(item.id);
   });
 
@@ -72,17 +72,13 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
 
-    // Regular gym staff can only access members, registrations, access, break_timer
-    if (currentUser.role !== 'gym_owner' && currentUser.role !== 'super_admin') {
-      return ['members', 'registrations', 'access', 'break_timer'].includes(item.id);
-    }
-    
-    // Gym owners can access everything except Console
-    if (currentUser.role === 'gym_owner') {
+    // Gym owners and standard admins ('admin') can access everything except Console
+    if (currentUser.role === 'gym_owner' || currentUser.role === 'admin') {
       return item.id !== 'console';
     }
     
-    return true;
+    // Regular gym staff can only access members, registrations, access, break_timer
+    return ['members', 'registrations', 'access', 'break_timer'].includes(item.id);
   });
 
   return (

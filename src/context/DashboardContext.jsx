@@ -2022,8 +2022,8 @@ export const DashboardProvider = ({ children }) => {
     try {
       const orgId = currentUser?.gymId || DEFAULT_ORG_ID;
 
-      // 1. Sync settings changes to COLLECTIONS.GYMS if gym owner
-      if (currentUser?.role === 'gym_owner') {
+      // 1. Sync settings changes to COLLECTIONS.GYMS if gym owner or standard admin
+      if (currentUser?.role === 'gym_owner' || currentUser?.role === 'admin') {
         const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', '==', orgId)));
         if (!gymSnap.empty) {
           const gymDocRef = gymSnap.docs[0].ref;
