@@ -109,8 +109,8 @@ const SaaSSubscriptionConsole = () => {
   return (
     <div style={{ padding: '2rem' }}>
       <div style={{
-        background: 'rgba(255, 255, 255, 0.01)',
-        border: '1px solid rgba(255, 255, 255, 0.04)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-color)',
         borderRadius: '12px',
         padding: '2rem'
       }}>
@@ -152,10 +152,10 @@ const SaaSSubscriptionConsole = () => {
                 display: 'flex', 
                 flexDirection: 'column', 
                 justifyContent: 'space-between', 
-                border: '1px solid rgba(255, 255, 255, 0.05)',
+                border: '1px solid var(--border-color)',
                 borderLeft: '4px solid #a855f7', 
                 borderRadius: '10px',
-                background: 'rgba(255, 255, 255, 0.02)',
+                background: 'var(--bg-secondary)',
                 position: 'relative', 
                 padding: '1.5rem',
                 gap: '1rem',
@@ -167,7 +167,7 @@ const SaaSSubscriptionConsole = () => {
               {/* Header info */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', margin: 0, color: '#fff' }}>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', margin: 0, color: 'var(--text-main)' }}>
                     {plan.name}
                   </h4>
                   <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -206,9 +206,9 @@ const SaaSSubscriptionConsole = () => {
                   gridTemplateColumns: '1fr 1fr', 
                   gap: '0.75rem', 
                   padding: '0.75rem', 
-                  background: 'rgba(255, 255, 255, 0.01)', 
+                  background: 'var(--bg-card)', 
                   borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-color)',
                   marginBottom: '1.25rem'
                 }}>
                   <div>
