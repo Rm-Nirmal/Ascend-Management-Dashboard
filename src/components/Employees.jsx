@@ -14,7 +14,10 @@ const Employees = () => {
     breakLogs,
     showToast,
     admins,
-    auditLogs
+    auditLogs,
+    leaveRequests,
+    approveLeaveRequest,
+    rejectLeaveRequest
   } = useDashboard();
 
   // Search & Filter state
@@ -36,8 +39,14 @@ const Employees = () => {
     salary: '',
     next_salary_date: '',
     status: 'active',
-    total_leaves: '0'
+    total_leaves: '0',
+    working_hours: '8',
+    daily_break_time: '60',
+    monthly_leaves: '2',
+    holidays: '1'
   });
+  const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'leaves'
+  const [calendarDate, setCalendarDate] = useState(() => new Date());
 
   // Filter lists
   const activeEmployees = useMemo(() => {
@@ -136,7 +145,14 @@ const Employees = () => {
       showToast('Please fill in all required fields.', 'warning');
       return;
     }
-    const res = await addEmployee(empForm);
+    const payload = {
+      ...empForm,
+      working_hours: parseInt(empForm.working_hours) || 8,
+      daily_break_time: parseInt(empForm.daily_break_time) || 60,
+      monthly_leaves: parseInt(empForm.monthly_leaves) || 2,
+      holidays: parseInt(empForm.holidays) || 1,
+    };
+    const res = await addEmployee(payload);
     if (res.success) {
       showToast(`Hired ${empForm.full_name} successfully!`, 'success');
       setShowAddModal(false);
@@ -148,7 +164,11 @@ const Employees = () => {
         salary: '',
         next_salary_date: '',
         status: 'active',
-        total_leaves: '0'
+        total_leaves: '0',
+        working_hours: '8',
+        daily_break_time: '60',
+        monthly_leaves: '2',
+        holidays: '1'
       });
     } else {
       showToast(res.message || 'Hiring failed.', 'error');
@@ -162,7 +182,14 @@ const Employees = () => {
       showToast('Please fill in all required fields.', 'warning');
       return;
     }
-    const res = await updateEmployee(editingEmployee.id, empForm);
+    const payload = {
+      ...empForm,
+      working_hours: parseInt(empForm.working_hours) || 8,
+      daily_break_time: parseInt(empForm.daily_break_time) || 60,
+      monthly_leaves: parseInt(empForm.monthly_leaves) || 2,
+      holidays: parseInt(empForm.holidays) || 1,
+    };
+    const res = await updateEmployee(editingEmployee.id, payload);
     if (res.success) {
       showToast(`Updated details for ${empForm.full_name} successfully!`, 'success');
       setEditingEmployee(null);
@@ -200,7 +227,11 @@ const Employees = () => {
             salary: '',
             next_salary_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             status: 'active',
-            total_leaves: '0'
+            total_leaves: '0',
+            working_hours: '8',
+            daily_break_time: '60',
+            monthly_leaves: '2',
+            holidays: '1'
           });
           setShowAddModal(true);
         }}>
@@ -208,10 +239,57 @@ const Employees = () => {
         </button>
       </div>
 
-      <div style={{ marginBottom: '1.5rem' }} />
+      {/* Tab Switcher */}
+      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
+        <button
+          onClick={() => setActiveSubTab('directory')}
+          style={{
+            padding: '0.75rem 1rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeSubTab === 'directory' ? '2px solid var(--color-primary)' : '2px solid transparent',
+            color: activeSubTab === 'directory' ? 'var(--color-primary)' : 'var(--text-muted)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: '0.9rem'
+          }}
+        >
+          Employee Directory
+        </button>
+        <button
+          onClick={() => setActiveSubTab('leaves')}
+          style={{
+            padding: '0.75rem 1rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeSubTab === 'leaves' ? '2px solid var(--color-primary)' : '2px solid transparent',
+            color: activeSubTab === 'leaves' ? 'var(--color-primary)' : 'var(--text-muted)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          Leave Management
+          {leaveRequests.filter(r => r.status === 'pending').length > 0 && (
+            <span style={{
+              background: 'var(--color-danger, #ef4444)',
+              color: '#fff',
+              fontSize: '0.7rem',
+              padding: '0.1rem 0.4rem',
+              borderRadius: '10px',
+              fontWeight: 700
+            }}>
+              {leaveRequests.filter(r => r.status === 'pending').length}
+            </span>
+          )}
+        </button>
+      </div>
 
-      {/* View 1: Directory */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {activeSubTab === 'directory' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           {/* Metrics summary cards */}
           <div className="metrics-grid">
             <div className="glass-card metric-card" style={{ '--card-accent': 'var(--color-primary)' }}>
@@ -357,23 +435,27 @@ const Employees = () => {
                             <button 
                               className="btn btn-secondary" 
                               style={{ padding: '0.4rem' }}
-                              onClick={() => {
-                                setEmpForm({
-                                  full_name: emp.full_name,
-                                  email: emp.email,
-                                  phone: emp.phone,
-                                  role: emp.role,
-                                  salary: emp.salary.toString(),
-                                  next_salary_date: emp.next_salary_date,
-                                  status: emp.status,
-                                  total_leaves: (emp.total_leaves || 0).toString()
-                                });
-                                setEditingEmployee(emp);
-                              }}
-                              title="Edit Details"
-                            >
-                              <Edit2 size={12} />
-                            </button>
+                            onClick={() => {
+                              setEmpForm({
+                                full_name: emp.full_name,
+                                email: emp.email,
+                                phone: emp.phone,
+                                role: emp.role,
+                                salary: emp.salary.toString(),
+                                next_salary_date: emp.next_salary_date,
+                                status: emp.status,
+                                total_leaves: (emp.total_leaves || 0).toString(),
+                                working_hours: (emp.working_hours || 8).toString(),
+                                daily_break_time: (emp.daily_break_time || 60).toString(),
+                                monthly_leaves: (emp.monthly_leaves || 2).toString(),
+                                holidays: (emp.holidays || 1).toString()
+                              });
+                              setEditingEmployee(emp);
+                            }}
+                            title="Edit Details"
+                          >
+                            <Edit2 size={12} />
+                          </button>
                             <button 
                               className="btn btn-danger" 
                               style={{ padding: '0.4rem', border: '1px solid rgba(239,68,68,0.2)' }}
@@ -392,6 +474,207 @@ const Employees = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Leave Management Tab View */}
+      {activeSubTab === 'leaves' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem', alignItems: 'start' }}>
+          {/* Calendar Grid */}
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700 }}>
+                Leave Calendar - {calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))}
+                >
+                  &larr; Prev
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                  onClick={() => setCalendarDate(new Date())}
+                >
+                  Today
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))}
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
+
+            {/* Calendar Grid Header */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+              <div>Sun</div>
+              <div>Mon</div>
+              <div>Tue</div>
+              <div>Wed</div>
+              <div>Thu</div>
+              <div>Fri</div>
+              <div>Sat</div>
+            </div>
+
+            {/* Calendar Grid Body */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+              {(() => {
+                const year = calendarDate.getFullYear();
+                const month = calendarDate.getMonth();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const firstDayIndex = new Date(year, month, 1).getDay();
+                
+                const cells = [];
+                // Empty days for padding
+                for (let i = 0; i < firstDayIndex; i++) {
+                  cells.push(<div key={`empty-${i}`} style={{ minHeight: '80px', background: 'transparent' }} />);
+                }
+
+                // Month days
+                for (let day = 1; day <= daysInMonth; day++) {
+                  const dayStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                  const dayRequests = leaveRequests.filter(r => dayStr >= r.startDate && dayStr <= r.endDate);
+
+                  cells.push(
+                    <div
+                      key={`day-${day}`}
+                      style={{
+                        minHeight: '80px',
+                        padding: '0.35rem',
+                        background: 'rgba(255,255,255,0.01)',
+                        border: '1px solid rgba(255,255,255,0.03)',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.25rem',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>{day}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', overflowY: 'auto', flexGrow: 1 }}>
+                        {dayRequests.map(r => {
+                          const isApproved = r.status === 'approved';
+                          const isPending = r.status === 'pending';
+                          const badgeColor = isApproved ? 'rgba(16,185,129,0.15)' : isPending ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)';
+                          const textColor = isApproved ? '#10b981' : isPending ? '#f59e0b' : '#ef4444';
+                          return (
+                            <div
+                              key={r.id}
+                              style={{
+                                fontSize: '0.625rem',
+                                padding: '0.1rem 0.25rem',
+                                borderRadius: '4px',
+                                background: badgeColor,
+                                color: textColor,
+                                border: `1px solid ${textColor}33`,
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis',
+                                overflow: 'hidden'
+                              }}
+                              title={`${r.employeeName}: ${r.reason} (${r.status})`}
+                            >
+                              {r.employeeName}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+                return cells;
+              })()}
+            </div>
+          </div>
+
+          {/* Pending Leave Requests */}
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Calendar size={18} style={{ color: 'var(--color-primary)' }} />
+              Pending Approvals
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {leaveRequests.filter(r => r.status === 'pending').length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.85rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                  No pending leave requests.
+                </div>
+              ) : (
+                leaveRequests.filter(r => r.status === 'pending').map(req => {
+                  const days = Math.round((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                  return (
+                    <div
+                      key={req.id}
+                      style={{
+                        padding: '1rem',
+                        background: 'rgba(255,255,255,0.01)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '10px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                        <div>
+                          <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{req.employeeName}</strong>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {req.startDate} to {req.endDate} ({days} days)
+                          </div>
+                        </div>
+                        <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Pending</span>
+                      </div>
+
+                      <p style={{ fontSize: '0.8rem', fontStyle: 'italic', margin: '0.25rem 0', color: 'var(--text-muted)' }}>
+                        "{req.reason || 'No reason provided.'}"
+                      </p>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <button
+                          className="btn btn-primary"
+                          style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+                          onClick={async () => {
+                            if (confirm(`Approve leave request for ${req.employeeName}?`)) {
+                              const res = await approveLeaveRequest(req.id);
+                              if (res.success) {
+                                showToast(`Leave request approved.`, 'success');
+                              } else {
+                                showToast(res.message || 'Approval failed.', 'error');
+                              }
+                            }
+                          }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="btn btn-danger"
+                          style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem', border: '1px solid rgba(239,68,68,0.2)' }}
+                          onClick={async () => {
+                            if (confirm(`Reject leave request for ${req.employeeName}?`)) {
+                              const res = await rejectLeaveRequest(req.id);
+                              if (res.success) {
+                                showToast(`Leave request rejected.`, 'info');
+                              } else {
+                                showToast(res.message || 'Rejection failed.', 'error');
+                              }
+                            }
+                          }}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal 1: Add Employee Directly */}
       {showAddModal && (
@@ -494,6 +777,66 @@ const Employees = () => {
                     onChange={(e) => setEmpForm({...empForm, total_leaves: e.target.value})} 
                     className="glass-input" 
                     style={{ marginTop: '0.25rem' }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid-2">
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Daily Working Hours *</label>
+                  <select 
+                    value={empForm.working_hours} 
+                    onChange={(e) => setEmpForm({...empForm, working_hours: e.target.value})} 
+                    className="glass-select" 
+                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.625rem', height: '40px' }}
+                    required
+                  >
+                    <option value="4">4 Hours (Part-time)</option>
+                    <option value="6">6 Hours</option>
+                    <option value="8">8 Hours (Standard)</option>
+                    <option value="10">10 Hours</option>
+                    <option value="12">12 Hours (Extended)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Daily Break Time *</label>
+                  <select 
+                    value={empForm.daily_break_time} 
+                    onChange={(e) => setEmpForm({...empForm, daily_break_time: e.target.value})} 
+                    className="glass-select" 
+                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.625rem', height: '40px' }}
+                    required
+                  >
+                    <option value="15">15 Minutes</option>
+                    <option value="30">30 Minutes</option>
+                    <option value="45">45 Minutes</option>
+                    <option value="60">60 Minutes (1 Hour)</option>
+                    <option value="90">90 Minutes</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid-2">
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Leaves Allowance *</label>
+                  <input 
+                    type="number" 
+                    value={empForm.monthly_leaves} 
+                    onChange={(e) => setEmpForm({...empForm, monthly_leaves: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                    required 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Holidays Allowance *</label>
+                  <input 
+                    type="number" 
+                    value={empForm.holidays} 
+                    onChange={(e) => setEmpForm({...empForm, holidays: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                    required 
                   />
                 </div>
               </div>
@@ -630,6 +973,66 @@ const Employees = () => {
                 </div>
               </div>
 
+              <div className="grid-2">
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Daily Working Hours *</label>
+                  <select 
+                    value={empForm.working_hours} 
+                    onChange={(e) => setEmpForm({...empForm, working_hours: e.target.value})} 
+                    className="glass-select" 
+                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.625rem', height: '40px' }}
+                    required
+                  >
+                    <option value="4">4 Hours (Part-time)</option>
+                    <option value="6">6 Hours</option>
+                    <option value="8">8 Hours (Standard)</option>
+                    <option value="10">10 Hours</option>
+                    <option value="12">12 Hours (Extended)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Daily Break Time *</label>
+                  <select 
+                    value={empForm.daily_break_time} 
+                    onChange={(e) => setEmpForm({...empForm, daily_break_time: e.target.value})} 
+                    className="glass-select" 
+                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.625rem', height: '40px' }}
+                    required
+                  >
+                    <option value="15">15 Minutes</option>
+                    <option value="30">30 Minutes</option>
+                    <option value="45">45 Minutes</option>
+                    <option value="60">60 Minutes (1 Hour)</option>
+                    <option value="90">90 Minutes</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid-2">
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Leaves Allowance *</label>
+                  <input 
+                    type="number" 
+                    value={empForm.monthly_leaves} 
+                    onChange={(e) => setEmpForm({...empForm, monthly_leaves: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                    required 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Holidays Allowance *</label>
+                  <input 
+                    type="number" 
+                    value={empForm.holidays} 
+                    onChange={(e) => setEmpForm({...empForm, holidays: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                    required 
+                  />
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setEditingEmployee(null)}>
                   Cancel
@@ -711,6 +1114,22 @@ const Employees = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Joined Date:</span>
                       <span style={{ fontWeight: 600 }}>{selectedProfileEmployee.joined_at}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Working Hours:</span>
+                      <span style={{ fontWeight: 600 }}>{selectedProfileEmployee.working_hours || 8} hrs/day</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Daily Break Time:</span>
+                      <span style={{ fontWeight: 600 }}>{selectedProfileEmployee.daily_break_time || 60} mins/day</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Monthly Leaves:</span>
+                      <span style={{ fontWeight: 600 }}>{selectedProfileEmployee.monthly_leaves || 2} days/month</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Holidays Allowance:</span>
+                      <span style={{ fontWeight: 600 }}>{selectedProfileEmployee.holidays || 1} days/month</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Status:</span>

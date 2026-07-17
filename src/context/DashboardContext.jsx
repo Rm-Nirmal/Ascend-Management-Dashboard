@@ -298,6 +298,8 @@ export const DashboardProvider = ({ children }) => {
   const [employees, setEmployees] = useState([]);
   const [employeeRegistrations, setEmployeeRegistrations] = useState([]);
   const [breakLogs, setBreakLogs] = useState([]);
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [shiftLogs, setShiftLogs] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [income, setIncome] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -759,7 +761,7 @@ export const DashboardProvider = ({ children }) => {
       // ─── GYM OWNER / STAFF REAL-TIME LISTENERS ───
       const orgId = currentUser.gymId || DEFAULT_ORG_ID;
       let loadedCount = 0;
-      const totalCollections = 20;
+      const totalCollections = 22;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -1047,6 +1049,34 @@ export const DashboardProvider = ({ children }) => {
           setBreakLogs(logs);
           markLoaded();
         }, (err) => { console.error('Break logs error:', err); markLoaded(); })
+      );
+
+      // 21. Leave Requests (scoped)
+      const leaveRequestsQ = query(
+        collection(db, COLLECTIONS.LEAVE_REQUESTS),
+        where('gymId', '==', orgId)
+      );
+      unsubscribers.push(
+        onSnapshot(leaveRequestsQ, (snap) => {
+          const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setLeaveRequests(logs);
+          markLoaded();
+        }, (err) => { console.error('Leave requests error:', err); markLoaded(); })
+      );
+
+      // 22. Shift Logs (scoped)
+      const shiftLogsQ = query(
+        collection(db, COLLECTIONS.SHIFT_LOGS),
+        where('gymId', '==', orgId)
+      );
+      unsubscribers.push(
+        onSnapshot(shiftLogsQ, (snap) => {
+          const logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          logs.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+          setShiftLogs(logs);
+          markLoaded();
+        }, (err) => { console.error('Shift logs error:', err); markLoaded(); })
       );
     }
 
@@ -2653,6 +2683,119 @@ export const DashboardProvider = ({ children }) => {
       return { success: false, message: friendlyFirestoreError(err) };
     }
   }, [breakLogs, logAudit]);
+
+  const clockInOutShift = useCallback(async (employeeId, employeeName) => {
+    try {
+      const activeShift = shiftLogs.find(
+        s => s.employeeId === employeeId && s.status === 'active'
+      );
+
+      if (activeShift) {
+        // Clock Out
+        const shiftRef = doc(db, COLLECTIONS.SHIFT_LOGS, activeShift.id);
+        const endTime = new Date().toISOString();
+        const startTime = new Date(activeShift.startTime);
+        const duration = Math.max(0, Math.floor((new Date(endTime) - startTime) / 1000));
+
+        await updateDoc(shiftRef, {
+          endTime,
+          status: 'completed',
+          duration,
+        });
+
+        await logAudit('employee.shift_stop', 'employee', employeeId, `Clocked out shift for ${employeeName}. Duration: ${Math.floor(duration / 60)} minutes.`);
+        return { success: true, action: 'clock_out' };
+      } else {
+        // Clock In
+        const newShift = {
+          gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+          employeeId,
+          employeeName,
+          startTime: new Date().toISOString(),
+          endTime: null,
+          status: 'active',
+          duration: 0,
+        };
+
+        const docRef = await addDoc(collection(db, COLLECTIONS.SHIFT_LOGS), newShift);
+        await logAudit('employee.shift_start', 'employee', employeeId, `Clocked in shift for ${employeeName}`);
+        return { success: true, action: 'clock_in', id: docRef.id };
+      }
+    } catch (err) {
+      console.error('clockInOutShift error:', err);
+      return { success: false, message: err.message || err };
+    }
+  }, [currentUser, shiftLogs, logAudit]);
+
+  const requestLeave = useCallback(async (leaveData) => {
+    try {
+      const newRequest = {
+        gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+        employeeId: leaveData.employeeId,
+        employeeName: leaveData.employeeName,
+        startDate: leaveData.startDate,
+        endDate: leaveData.endDate,
+        reason: leaveData.reason,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+      const docRef = await addDoc(collection(db, COLLECTIONS.LEAVE_REQUESTS), newRequest);
+      await logAudit('leave.request', 'employee', leaveData.employeeId, `Requested leave from ${leaveData.startDate} to ${leaveData.endDate}`);
+      return { success: true, id: docRef.id };
+    } catch (err) {
+      console.error('requestLeave error:', err);
+      return { success: false, message: err.message || err };
+    }
+  }, [currentUser, logAudit]);
+
+  const approveLeaveRequest = useCallback(async (requestId) => {
+    try {
+      const req = leaveRequests.find(r => r.id === requestId);
+      if (!req) return { success: false, message: 'Leave request not found.' };
+
+      const reqRef = doc(db, COLLECTIONS.LEAVE_REQUESTS, requestId);
+      await updateDoc(reqRef, { status: 'approved' });
+
+      // Find corresponding employee
+      const employee = employees.find(e => e.id === req.employeeId);
+      if (employee) {
+        const start = new Date(req.startDate);
+        const end = new Date(req.endDate);
+        const days = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+
+        const newMonthlyLeaves = Math.max(0, (parseInt(employee.monthly_leaves) || 0) - days);
+        
+        const empRef = doc(db, COLLECTIONS.EMPLOYEES, req.employeeId);
+        await updateDoc(empRef, {
+          monthly_leaves: newMonthlyLeaves,
+          status: 'on_leave'
+        });
+
+        await logAudit('leave.approve', 'employee', req.employeeId, `Approved leave request for ${req.employeeName} (${days} day(s)). Decremented monthly leaves to ${newMonthlyLeaves}`);
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('approveLeaveRequest error:', err);
+      return { success: false, message: err.message || err };
+    }
+  }, [leaveRequests, employees, logAudit]);
+
+  const rejectLeaveRequest = useCallback(async (requestId) => {
+    try {
+      const req = leaveRequests.find(r => r.id === requestId);
+      if (!req) return { success: false, message: 'Leave request not found.' };
+
+      const reqRef = doc(db, COLLECTIONS.LEAVE_REQUESTS, requestId);
+      await updateDoc(reqRef, { status: 'rejected' });
+
+      await logAudit('leave.reject', 'employee', req.employeeId, `Rejected leave request for ${req.employeeName}`);
+      return { success: true };
+    } catch (err) {
+      console.error('rejectLeaveRequest error:', err);
+      return { success: false, message: err.message || err };
+    }
+  }, [leaveRequests, logAudit]);
 
   // ═══════════════════════════════════════════════════════════════════
   // INVOICING & PAYMENTS
@@ -4851,6 +4994,14 @@ export const DashboardProvider = ({ children }) => {
       rejectEmployeeRegistration,
       startBreak,
       stopBreak,
+      clockInOutShift,
+      requestLeave,
+      approveLeaveRequest,
+      rejectLeaveRequest,
+
+      // State exports
+      leaveRequests,
+      shiftLogs,
 
       // Payment Actions
       recordPayment,

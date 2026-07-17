@@ -23,7 +23,10 @@ const Payments = () => {
     undoPayment,
     trainers,
     processStaffPayroll,
-    gymSettings
+    gymSettings,
+    shiftLogs,
+    breakLogs,
+    leaveRequests
   } = useDashboard();
 
   const [now] = useState(() => Date.now());
@@ -44,6 +47,90 @@ const Payments = () => {
   const [selectedTrainer, setSelectedTrainer] = useState(null);
   const [payrollHours, setPayrollHours] = useState(20);
   const [payrollPaymentMethod, setPayrollPaymentMethod] = useState('bank_transfer');
+
+  const selectedTrainerProgress = useMemo(() => {
+    if (!selectedTrainer) return null;
+    
+    const trainerId = selectedTrainer.id;
+    const currentMonth = new Date().toISOString().substring(0, 7); // e.g. "2026-07"
+    
+    const trainerShifts = (shiftLogs || []).filter(
+      s => s.employeeId === trainerId && s.startTime.startsWith(currentMonth)
+    );
+    const trainerBreaks = (breakLogs || []).filter(
+      b => b.employeeId === trainerId && b.status === 'completed' && b.startTime.startsWith(currentMonth)
+    );
+    const trainerLeaves = (leaveRequests || []).filter(
+      r => r.employeeId === trainerId && r.status === 'approved' && r.startDate.startsWith(currentMonth)
+    );
+
+    const totalShiftSeconds = trainerShifts.reduce((sum, s) => sum + (s.duration || 0), 0);
+    const totalBreakSeconds = trainerBreaks.reduce((sum, b) => sum + (b.duration || 0), 0);
+    const netWorkedSeconds = Math.max(0, totalShiftSeconds - totalBreakSeconds);
+    const netWorkedHours = Math.round((netWorkedSeconds / 3600) * 10) / 10;
+
+    const expectedDailyHours = selectedTrainer.working_hours || 8;
+    const expectedDailySeconds = expectedDailyHours * 3600;
+
+    const dailyStats = {};
+    trainerShifts.forEach(s => {
+      const date = s.startTime.substring(0, 10);
+      if (!dailyStats[date]) dailyStats[date] = { shiftSeconds: 0, breakSeconds: 0, lateCount: 0 };
+      dailyStats[date].shiftSeconds += (s.duration || 0);
+
+      const startDate = new Date(s.startTime);
+      if (startDate.getHours() > 9 || (startDate.getHours() === 9 && startDate.getMinutes() > 5)) {
+        dailyStats[date].lateCount = 1;
+      }
+    });
+
+    trainerBreaks.forEach(b => {
+      const date = b.startTime.substring(0, 10);
+      if (dailyStats[date]) {
+        dailyStats[date].breakSeconds += (b.duration || 0);
+      }
+    });
+
+    let totalOvertimeSeconds = 0;
+    let lateDaysCount = 0;
+    Object.keys(dailyStats).forEach(date => {
+      const netDailySeconds = Math.max(0, dailyStats[date].shiftSeconds - dailyStats[date].breakSeconds);
+      if (netDailySeconds > expectedDailySeconds) {
+        totalOvertimeSeconds += (netDailySeconds - expectedDailySeconds);
+      }
+      if (dailyStats[date].lateCount > 0) {
+        lateDaysCount++;
+      }
+    });
+
+    const overtimeHours = Math.round((totalOvertimeSeconds / 3600) * 10) / 10;
+    const uniqueDaysWorked = Object.keys(dailyStats).length;
+
+    let approvedLeavesDays = 0;
+    trainerLeaves.forEach(req => {
+      const start = new Date(req.startDate);
+      const end = new Date(req.endDate);
+      const diff = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+      approvedLeavesDays += diff;
+    });
+
+    return {
+      uniqueDaysWorked,
+      netWorkedHours,
+      totalBreakSeconds,
+      overtimeHours,
+      lateDaysCount,
+      approvedLeavesDays,
+      expectedDailyHours,
+      dailyBreakTimeAllowed: selectedTrainer.daily_break_time || 60
+    };
+  }, [selectedTrainer, shiftLogs, breakLogs, leaveRequests]);
+
+  useEffect(() => {
+    if (selectedTrainerProgress) {
+      setPayrollHours(Math.max(1, Math.round(selectedTrainerProgress.netWorkedHours)));
+    }
+  }, [selectedTrainerProgress]);
 
   const handleProcessPayrollSubmit = async (e) => {
     e.preventDefault();
@@ -663,7 +750,7 @@ const Payments = () => {
                           <button 
                             className="btn btn-primary" 
                             style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
-                            onClick={() => { setSelectedTrainer(t); setPayrollHours(20); }}
+                            onClick={() => { setSelectedTrainer(t); }}
                           >
                             Process Pay
                           </button>
@@ -932,6 +1019,55 @@ const Payments = () => {
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Specialization: {selectedTrainer.specialization || 'General'}</div>
               </div>
             </div>
+
+            {selectedTrainerProgress && (
+              <div style={{
+                background: 'rgba(255,255,255,0.01)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                padding: '0.85rem',
+                fontSize: '0.8rem',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem'
+              }}>
+                <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.35rem', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem', color: 'var(--color-primary)', letterSpacing: '0.05em' }}>
+                  Monthly Progress Report ({new Date().toLocaleString('default', { month: 'long' })})
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Days Clocked In:</span>
+                    <strong style={{ color: '#fff' }}>{selectedTrainerProgress.uniqueDaysWorked} Days</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Work Hours Logged:</span>
+                    <strong style={{ color: '#fff' }}>{selectedTrainerProgress.netWorkedHours} hrs</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Total Break Time:</span>
+                    <strong style={{ color: '#f59e0b' }}>
+                      {Math.round(selectedTrainerProgress.totalBreakSeconds / 60)} mins
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Extra Hours (OT):</span>
+                    <strong style={{ color: 'var(--color-success)' }}>+{selectedTrainerProgress.overtimeHours} hrs</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Late Clock-ins:</span>
+                    <strong style={{ color: 'var(--color-danger)' }}>{selectedTrainerProgress.lateDaysCount} Late(s)</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Leaves Taken:</span>
+                    <strong style={{ color: '#fff' }}>{selectedTrainerProgress.approvedLeavesDays} Day(s)</strong>
+                  </div>
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontStyle: 'italic', borderTop: '1px dashed var(--border-color)', paddingTop: '0.35rem', marginTop: '0.15rem' }}>
+                  Quota: {selectedTrainerProgress.expectedDailyHours} hrs/day, max break {selectedTrainerProgress.dailyBreakTimeAllowed} mins/day.
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleProcessPayrollSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
               <div className="grid-2" style={{ gap: '1rem' }}>

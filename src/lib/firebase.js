@@ -57,6 +57,8 @@ export const COLLECTIONS = {
   DEVICES: 'devices',
   NOTIFICATION_TEMPLATES: 'notificationTemplates',
   BREAK_LOGS: 'breakLogs',
+  LEAVE_REQUESTS: 'leaveRequests',
+  SHIFT_LOGS: 'shiftLogs',
 };
 
 // Default organization ID (single-tenant for now)
