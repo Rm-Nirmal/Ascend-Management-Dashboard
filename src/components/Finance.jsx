@@ -1874,17 +1874,6 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button 
-                className="btn btn-secondary"
-                onClick={() => {
-                  const url = `${window.location.origin}${window.location.pathname}?view=expenses_log&gymId=${gymSettings?.gymId || 'gym_ascend_hq'}`;
-                  navigator.clipboard.writeText(url);
-                  showToast('Expenses log link copied to clipboard!', 'success');
-                }}
-                style={{ gap: '0.45rem', display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)' }}
-              >
-                <Link size={14} /> Share Log Link
-              </button>
               <button className="btn btn-primary" onClick={openAddExpenseModal}>
                 <Plus size={16} /> Record Expense
               </button>
