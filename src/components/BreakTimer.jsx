@@ -1,6 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
-import { Play, Square, Coffee, Clock, Calendar, CheckCircle, Briefcase, FileText, CheckSquare, PlusSquare } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { 
+  Play, Square, Coffee, Clock, Calendar, CheckCircle, 
+  Briefcase, FileText, CheckSquare, PlusSquare, Info, AlertTriangle 
+} from 'lucide-react';
 
 const BreakTimer = () => {
   const {
@@ -19,6 +24,11 @@ const BreakTimer = () => {
   // Navigation tab
   const [activeTab, setActiveTab] = useState('desk'); // 'desk' | 'leaves'
   const [calendarDate, setCalendarDate] = useState(() => new Date());
+
+  // Form states for Shift Report & Handover
+  const [roleTitle, setRoleTitle] = useState('');
+  const [tasksCompleted, setTasksCompleted] = useState('');
+  const [shiftNotes, setShiftNotes] = useState('');
 
   // Find corresponding employee record
   const currentEmployee = useMemo(() => {
@@ -113,15 +123,42 @@ const BreakTimer = () => {
       showToast('Please stop your active break before clocking out of your shift!', 'warning');
       return;
     }
-    const res = await clockInOutShift(employeeId, employeeName);
-    if (res.success) {
-      if (res.action === 'clock_in') {
-        showToast('Shift started! Have a productive day.', 'success');
+
+    if (activeShift) {
+      // Clocking out: end shift and save handover notes
+      const confirmClockOut = window.confirm('Are you sure you want to end your shift for today?');
+      if (!confirmClockOut) return;
+
+      const res = await clockInOutShift(employeeId, employeeName);
+      if (res.success) {
+        try {
+          // Update the shift log document in Firestore with custom daily report fields
+          const shiftRef = doc(db, 'shiftLogs', activeShift.id);
+          await updateDoc(shiftRef, {
+            notes: shiftNotes.trim(),
+            tasksCompleted: tasksCompleted.trim(),
+            roleTitle: roleTitle.trim()
+          });
+          showToast('Shift ended! Handover report submitted successfully.', 'success');
+        } catch (err) {
+          console.error('Error saving shift report:', err);
+          showToast('Shift ended, but failed to save report details.', 'warning');
+        }
+        // Reset local states
+        setRoleTitle('');
+        setTasksCompleted('');
+        setShiftNotes('');
       } else {
-        showToast('Shift ended! Shift logs updated.', 'info');
+        showToast(res.message || 'Failed to clock out.', 'error');
       }
     } else {
-      showToast(res.message || 'Failed to update shift.', 'error');
+      // Clocking in
+      const res = await clockInOutShift(employeeId, employeeName);
+      if (res.success) {
+        showToast('Shift started! Have a productive day.', 'success');
+      } else {
+        showToast(res.message || 'Failed to clock in.', 'error');
+      }
     }
   };
 
@@ -143,6 +180,14 @@ const BreakTimer = () => {
       .filter(b => b && b.employeeId === employeeId && b.status === 'completed')
       .slice(0, 10); // Show last 10 completed breaks
   }, [breakLogs, employeeId]);
+
+  // Filter completed shifts for current employee
+  const myCompletedShifts = useMemo(() => {
+    return (shiftLogs || [])
+      .filter(s => s && s.employeeId === employeeId && s.status === 'completed')
+      .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
+      .slice(0, 5); // Show last 5 completed shifts
+  }, [shiftLogs, employeeId]);
 
   // Sum today's break duration
   const todaysTotalBreakTime = useMemo(() => {
@@ -171,6 +216,25 @@ const BreakTimer = () => {
   const todaysNetWorkTime = useMemo(() => {
     return Math.max(0, todaysTotalShiftTime - todaysTotalBreakTime);
   }, [todaysTotalShiftTime, todaysTotalBreakTime]);
+
+  const expectedDailyHours = currentEmployee?.working_hours || 8;
+  
+  // Calculate active shift progress percentage
+  const progressPct = useMemo(() => {
+    if (!activeShift) return 0;
+    const activeHours = shiftElapsed / 3600;
+    return Math.min(100, Math.round((activeHours / expectedDailyHours) * 100));
+  }, [activeShift, shiftElapsed, expectedDailyHours]);
+
+  // Calculate dynamic target clock-out time (start + target hours + break hours)
+  const targetClockOutTime = useMemo(() => {
+    if (!activeShift) return '--';
+    const startTimeMs = new Date(activeShift.startTime).getTime();
+    const targetMs = expectedDailyHours * 3600 * 1000;
+    const breakMs = todaysTotalBreakTime * 1000;
+    const targetTime = new Date(startTimeMs + targetMs + breakMs);
+    return targetTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }, [activeShift, expectedDailyHours, todaysTotalBreakTime]);
 
   const formatFriendlyDuration = (totalSeconds) => {
     if (totalSeconds === 0) return '0 seconds';
@@ -293,7 +357,7 @@ const BreakTimer = () => {
               pointerEvents: 'none'
             }} />
 
-            {/* Shift Indicators */}
+            {/* Shift Status Badges */}
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <span className="badge" style={{
                 fontSize: '0.7rem',
@@ -304,7 +368,7 @@ const BreakTimer = () => {
                 fontWeight: 700,
                 textTransform: 'uppercase'
               }}>
-                {activeShift ? 'Shift Clocked In' : 'Shift Clocked Out'}
+                {activeShift ? 'Shift Active' : 'Off Duty'}
               </span>
               {activeShift && (
                 <span className="badge" style={{
@@ -316,7 +380,7 @@ const BreakTimer = () => {
                   fontWeight: 700,
                   textTransform: 'uppercase'
                 }}>
-                  {activeBreak ? 'On Rest Break' : 'On Active Duty'}
+                  {activeBreak ? 'Rest Break' : 'Active Duty'}
                 </span>
               )}
             </div>
@@ -324,15 +388,11 @@ const BreakTimer = () => {
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.25rem' }}>
               {employeeName}
             </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.825rem', maxWidth: '320px', marginBottom: '1.5rem' }}>
-              {!activeShift 
-                ? 'You are currently off-duty. Please clock in to start your work shift.' 
-                : (activeBreak 
-                  ? 'Your rest break is active. Remember to end it when returning to duty.' 
-                  : 'You are clocked in. You can log rest breaks or clock out when your shift ends.'
-                )
-              }
-            </p>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '1.5rem' }}>
+              <Briefcase size={12} />
+              <span>Role: {currentEmployee?.role || 'Gym Staff'}</span>
+            </div>
 
             {isOnLeaveToday && (
               <div style={{
@@ -356,7 +416,7 @@ const BreakTimer = () => {
             )}
 
             {/* Timer Displays */}
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
               {/* Shift Work Hours Counter */}
               <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -366,7 +426,7 @@ const BreakTimer = () => {
                   {formatTime(todaysNetWorkTime)}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                  Total Shift time minus break logs. Expected: <strong>{currentEmployee?.working_hours || 8} Hours</strong>.
+                  Total shift duration minus breaks. Daily target: <strong>{expectedDailyHours} Hours</strong>.
                 </div>
               </div>
 
@@ -382,6 +442,76 @@ const BreakTimer = () => {
                 </div>
               )}
             </div>
+
+            {/* Active Shift Progress Metrics */}
+            {activeShift && (
+              <div style={{ width: '100%', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                  <span>Daily Shift Progress</span>
+                  <span style={{ color: progressPct >= 100 ? 'var(--color-success)' : 'var(--color-primary)', fontWeight: 700 }}>{progressPct}%</span>
+                </div>
+                <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
+                  <div style={{
+                    width: `${progressPct}%`,
+                    height: '100%',
+                    background: progressPct >= 100 ? 'var(--color-success)' : 'var(--color-primary)',
+                    borderRadius: '4px',
+                    boxShadow: progressPct >= 100 ? '0 0 10px var(--color-success)' : '0 0 10px var(--color-primary)',
+                    transition: 'width 0.5s ease-out'
+                  }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  <span>Clocked In: {new Date(activeShift.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                  <span>Target Clock-out: {targetClockOutTime}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Daily Handover Report (Only displayed when active shift is running) */}
+            {activeShift && (
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem', textAlign: 'left', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <FileText size={14} />
+                  Daily Handover & Shift Report
+                </span>
+                
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Shift Role / Desk Section</label>
+                  <input 
+                    type="text" 
+                    className="glass-input" 
+                    value={roleTitle}
+                    onChange={(e) => setRoleTitle(e.target.value)}
+                    placeholder="e.g. Front Desk Reception, Floor Trainer"
+                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', width: '100%' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Tasks Accomplished</label>
+                  <textarea 
+                    className="glass-input" 
+                    value={tasksCompleted}
+                    onChange={(e) => setTasksCompleted(e.target.value)}
+                    placeholder="List registrations, cleaning duties, till matches, etc."
+                    rows={2}
+                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', width: '100%', resize: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Handover Notes / Incident Logs</label>
+                  <textarea 
+                    className="glass-input" 
+                    value={shiftNotes}
+                    onChange={(e) => setShiftNotes(e.target.value)}
+                    placeholder="Note client concerns, equipment issues, or drawer summaries..."
+                    rows={2}
+                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', width: '100%', resize: 'none' }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '360px' }}>
@@ -399,11 +529,11 @@ const BreakTimer = () => {
               >
                 {activeShift ? (
                   <>
-                    <Square size={16} fill="currentColor" /> Clock Out Shift
+                    <Square size={16} fill="currentColor" /> End Shift for Today
                   </>
                 ) : (
                   <>
-                    <Play size={16} fill="currentColor" /> Clock In Shift
+                    <Play size={16} fill="currentColor" /> Start Work Shift
                   </>
                 )}
               </button>
@@ -452,14 +582,73 @@ const BreakTimer = () => {
               </div>
               <div className="glass-card" style={{ padding: '1.25rem' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', textTransform: 'uppercase' }}>Work Status</span>
-                {todaysNetWorkTime >= (currentEmployee?.working_hours || 8) * 3600 ? (
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '0.25rem', color: '#10b981' }}>
-                    Daily Quota Met! (OT logged)
+                {todaysNetWorkTime >= expectedDailyHours * 3600 ? (
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '0.25rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <CheckCircle size={14} /> Daily Quota Achieved
                   </div>
                 ) : (
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '0.25rem', color: 'var(--text-muted)' }}>
-                    Quota Incomplete
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '0.25rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Info size={14} /> Quota Incomplete ({progressPct}%)
                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* Shift History Ledger */}
+            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Briefcase size={16} style={{ color: 'var(--color-primary)' }} />
+                  Recent Shift History
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.15rem' }}>
+                  Your logged work shifts and daily handovers.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto' }}>
+                {myCompletedShifts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                    No shifts logged recently.
+                  </div>
+                ) : (
+                  myCompletedShifts.map((log) => {
+                    const date = new Date(log.startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    const startStr = new Date(log.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    const endStr = log.endTime ? new Date(log.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '--';
+
+                    return (
+                      <div key={log.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.85rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.8rem', color: '#fff' }}>{date}</span>
+                          <span className="badge" style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', fontWeight: 600 }}>
+                            Clocked Out
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <span>Time: <strong>{startStr} - {endStr}</strong></span>
+                          <span>Net: <strong>{formatFriendlyDuration(log.duration || 0)}</strong></span>
+                        </div>
+                        {log.roleTitle && (
+                          <div style={{ fontSize: '0.75rem', marginTop: '0.15rem' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Role: </span>
+                            <strong style={{ color: 'var(--color-primary)' }}>{log.roleTitle}</strong>
+                          </div>
+                        )}
+                        {log.tasksCompleted && (
+                          <div style={{ fontSize: '0.725rem', background: 'rgba(0,0,0,0.15)', padding: '0.35rem 0.5rem', borderRadius: '4px', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                            <strong style={{ color: 'var(--text-muted)', fontSize: '0.65rem', display: 'block', textTransform: 'uppercase', marginBottom: '0.15rem' }}>Handover Summary:</strong>
+                            {log.tasksCompleted}
+                          </div>
+                        )}
+                        {log.notes && (
+                          <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontStyle: 'italic', borderLeft: '2px solid var(--border-color)', paddingLeft: '0.5rem', marginTop: '0.15rem' }}>
+                            &ldquo;{log.notes}&rdquo;
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -476,7 +665,7 @@ const BreakTimer = () => {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '200px', overflowY: 'auto' }}>
                 {myCompletedBreaks.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
                     No break intervals logged recently.
