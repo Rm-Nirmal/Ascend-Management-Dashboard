@@ -20,6 +20,7 @@ const Payments = () => {
   const {
     invoices,
     recordPayment,
+    undoPayment,
     trainers,
     processStaffPayroll,
     gymSettings
@@ -440,9 +441,29 @@ const Payments = () => {
                                     </button>
                                   </>
                                 ) : (
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontStyle: 'italic', display: 'flex', alignItems: 'center' }}>
-                                    Processed
-                                  </span>
+                                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontStyle: 'italic' }}>
+                                       Processed
+                                     </span>
+                                     {inv.status === 'paid' && (
+                                       <button 
+                                         className="btn btn-secondary" 
+                                         style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                                         onClick={async () => {
+                                           if (confirm(`Are you sure you want to undo the payment for invoice ${inv.invoice_number}?`)) {
+                                             const res = await undoPayment(inv.id);
+                                             if (res.success) {
+                                               alert(`Payment for invoice ${inv.invoice_number} undid successfully.`);
+                                             } else {
+                                               alert(res.message || 'Failed to undo payment.');
+                                             }
+                                           }
+                                         }}
+                                       >
+                                         Undo
+                                       </button>
+                                     )}
+                                   </div>
                                 )}
                               </div>
                             </td>

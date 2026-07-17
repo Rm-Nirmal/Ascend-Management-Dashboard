@@ -89,6 +89,16 @@ const helperCalculateRenewalCountdownEnd = (countdownEnd, months = 1) => {
   return baseDate.toISOString();
 };
 
+/**
+ * Subtract months from countdown_end for undoing a membership renewal.
+ */
+const helperCalculateUndoCountdownEnd = (countdownEnd, months = 1) => {
+  if (!countdownEnd) return new Date().toISOString();
+  const baseDate = new Date(countdownEnd);
+  baseDate.setMonth(baseDate.getMonth() - parseInt(months));
+  return baseDate.toISOString();
+};
+
 
 
 // ─── Firestore Error Friendlifier ─────────────────────────────────────
@@ -2685,9 +2695,57 @@ export const DashboardProvider = ({ children }) => {
       }
     } catch (err) {
       console.error('recordPayment error:', err);
-      setError(friendlyFirestoreError(err));
     }
   }, [invoices, members, plans, logAudit]);
+
+  const undoPayment = useCallback(async (invoiceId) => {
+    try {
+      const inv = invoices.find(i => i.id === invoiceId);
+      if (!inv) return { success: false, message: 'Invoice not found.' };
+
+      const invoiceRef = doc(db, COLLECTIONS.INVOICES, invoiceId);
+      const isOverdue = inv.due_date && new Date(inv.due_date).getTime() < Date.now();
+      const revertedStatus = isOverdue ? 'overdue' : 'open';
+
+      await updateDoc(invoiceRef, {
+        status: revertedStatus,
+        paid_at: null,
+        payment_method: null,
+      });
+
+      await logAudit(
+        'payment.undo', 'invoice', invoiceId,
+        `Undid payment of LKR ${inv.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+      );
+
+      // Revert membership extension if it is a membership invoice
+      if (inv.member_id && inv.plan_id) {
+        const member = members.find(m => m.id === inv.member_id);
+        if (member) {
+          const periodMonths = 1;
+          const revertedCountdownEnd = helperCalculateUndoCountdownEnd(member.countdown_end, periodMonths);
+
+          const isExpired = new Date(revertedCountdownEnd).getTime() < Date.now();
+          const revertedMemberStatus = isExpired ? 'expired' : 'active';
+
+          const memberRef = doc(db, COLLECTIONS.MEMBERS, inv.member_id);
+          await updateDoc(memberRef, {
+            status: revertedMemberStatus,
+            countdown_end: revertedCountdownEnd,
+            next_payment_date: revertedCountdownEnd,
+          });
+
+          await logAudit('member.undo_renew', 'member', inv.member_id,
+            `Reverted membership renewal for ${member.full_name} due to payment undo (New Expiry: ${new Date(revertedCountdownEnd).toLocaleDateString()})`
+          );
+        }
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('undoPayment error:', err);
+      return { success: false, message: err.message || err };
+    }
+  }, [invoices, members, logAudit]);
 
   // ═══════════════════════════════════════════════════════════════════
   // ACCESS CONTROL (Check-in / Check-out & Device Operations)
@@ -4796,6 +4854,8 @@ export const DashboardProvider = ({ children }) => {
 
       // Payment Actions
       recordPayment,
+      undoPayment,
+      helperCalculateUndoCountdownEnd,
 
       // Access Actions
       checkInMember,

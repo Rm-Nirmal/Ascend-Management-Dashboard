@@ -18,7 +18,9 @@ const Members = () => {
     invoices,
     currentUser,
     showToast,
-    gymSettings
+    gymSettings,
+    undoPayment,
+    helperCalculateUndoCountdownEnd
   } = useDashboard();
 
   // Component States
@@ -1242,6 +1244,36 @@ const Members = () => {
                           title="View Receipt"
                         >
                           <Printer size={10} /> View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (confirm(`Are you sure you want to undo payment for ${inv.invoice_number}?`)) {
+                              const res = await undoPayment(inv.id);
+                              if (res.success) {
+                                alert(`Payment for invoice ${inv.invoice_number} undid successfully.`);
+                                // Re-update selectedMember profile details local state so they update in drawer
+                                if (selectedMember && selectedMember.id === inv.member_id) {
+                                  const periodMonths = 1;
+                                  const revertedCountdownEnd = helperCalculateUndoCountdownEnd(selectedMember.countdown_end, periodMonths);
+                                  const isExpired = new Date(revertedCountdownEnd).getTime() < Date.now();
+                                  setSelectedMember(prev => ({
+                                    ...prev,
+                                    status: isExpired ? 'expired' : 'active',
+                                    countdown_end: revertedCountdownEnd,
+                                    next_payment_date: revertedCountdownEnd
+                                  }));
+                                }
+                              } else {
+                                alert(res.message || 'Failed to undo payment.');
+                              }
+                            }
+                          }}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', color: 'var(--color-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                          title="Undo Payment"
+                        >
+                          Undo
                         </button>
                       </div>
                     </div>
