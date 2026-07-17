@@ -185,11 +185,11 @@ const BreakTimer = () => {
     return parts.join(' ');
   };
 
-  // Leave Form State
   const [leaveForm, setLeaveForm] = useState({
     startDate: '',
     endDate: '',
-    reason: ''
+    reason: '',
+    type: 'paid'
   });
   const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
 
@@ -210,11 +210,12 @@ const BreakTimer = () => {
         employeeName,
         startDate: leaveForm.startDate,
         endDate: leaveForm.endDate,
-        reason: leaveForm.reason
+        reason: leaveForm.reason,
+        type: leaveForm.type || 'paid'
       });
       if (res.success) {
         showToast('Leave request submitted to owner for review!', 'success');
-        setLeaveForm({ startDate: '', endDate: '', reason: '' });
+        setLeaveForm({ startDate: '', endDate: '', reason: '', type: 'paid' });
       } else {
         showToast(res.message || 'Request failed.', 'error');
       }
@@ -668,6 +669,20 @@ const BreakTimer = () => {
                       style={{ marginTop: '0.25rem', padding: '0.5rem' }}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Leave Type</label>
+                  <select
+                    className="glass-select"
+                    value={leaveForm.type || 'paid'}
+                    onChange={(e) => setLeaveForm({ ...leaveForm, type: e.target.value })}
+                    style={{ width: '100%', marginTop: '0.25rem', padding: '0.5rem', height: '38px' }}
+                    required
+                  >
+                    <option value="paid">Paid Leave</option>
+                    <option value="unpaid">Unpaid Leave</option>
+                  </select>
                 </div>
 
                 <div>

@@ -17,7 +17,8 @@ const Employees = () => {
     auditLogs = [],
     leaveRequests = [],
     approveLeaveRequest,
-    rejectLeaveRequest
+    rejectLeaveRequest,
+    shiftLogs = []
   } = useDashboard();
 
   const [nowTime] = useState(() => Date.now());
@@ -49,6 +50,11 @@ const Employees = () => {
   });
   const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'leaves'
   const [calendarDate, setCalendarDate] = useState(() => new Date());
+
+  // Performance Report States
+  const [reportEmployee, setReportEmployee] = useState(null);
+  const [reportMonth, setReportMonth] = useState(() => new Date().getMonth());
+  const [reportYear, setReportYear] = useState(() => new Date().getFullYear());
 
   const getResolvedEmployeeStatus = useCallback((emp) => {
     if (!emp) return 'active';
@@ -165,6 +171,113 @@ const Employees = () => {
       r.endDate >= todayStr
     );
   }, [selectedProfileEmployee, leaveRequests, nowTime]);
+
+  const reportData = useMemo(() => {
+    if (!reportEmployee) return null;
+    
+    const empId = reportEmployee.id;
+    const targetMonthStr = `${reportYear}-${(reportMonth + 1).toString().padStart(2, '0')}`;
+    
+    const empBreaks = (Array.isArray(breakLogs) ? breakLogs : []).filter(
+      b => b && b.employeeId === empId && b.status === 'completed' && b.startTime?.startsWith(targetMonthStr)
+    );
+    const totalBreakSeconds = empBreaks.reduce((sum, b) => sum + (b.duration || 0), 0);
+    
+    const empShifts = (Array.isArray(shiftLogs) ? shiftLogs : []).filter(
+      s => s && s.employeeId === empId && s.status === 'completed' && s.startTime?.startsWith(targetMonthStr)
+    );
+    const totalShiftSeconds = empShifts.reduce((sum, s) => sum + (s.duration || 0), 0);
+    const netWorkedSeconds = Math.max(0, totalShiftSeconds - totalBreakSeconds);
+    const netWorkedHours = Math.round((netWorkedSeconds / 3600) * 10) / 10;
+    
+    const expectedDailyHours = reportEmployee.working_hours || 8;
+    const expectedDailySeconds = expectedDailyHours * 3600;
+    
+    const dailyStats = {};
+    empShifts.forEach(s => {
+      const date = s.startTime.substring(0, 10);
+      if (!dailyStats[date]) dailyStats[date] = { shiftSeconds: 0, breakSeconds: 0, lateCount: 0 };
+      dailyStats[date].shiftSeconds += (s.duration || 0);
+      
+      const startDate = new Date(s.startTime);
+      if (startDate.getHours() > 9 || (startDate.getHours() === 9 && startDate.getMinutes() > 5)) {
+        dailyStats[date].lateCount = 1;
+      }
+    });
+    
+    empBreaks.forEach(b => {
+      const date = b.startTime.substring(0, 10);
+      if (dailyStats[date]) {
+        dailyStats[date].breakSeconds += (b.duration || 0);
+      }
+    });
+    
+    let totalOvertimeSeconds = 0;
+    let lateDaysCount = 0;
+    Object.keys(dailyStats).forEach(date => {
+      const netDailySeconds = Math.max(0, dailyStats[date].shiftSeconds - dailyStats[date].breakSeconds);
+      if (netDailySeconds > expectedDailySeconds) {
+        totalOvertimeSeconds += (netDailySeconds - expectedDailySeconds);
+      }
+      if (dailyStats[date].lateCount > 0) {
+        lateDaysCount++;
+      }
+    });
+    
+    const overtimeHours = Math.round((totalOvertimeSeconds / 3600) * 10) / 10;
+    const uniqueDaysWorked = Object.keys(dailyStats).length;
+    
+    const empLeaves = (Array.isArray(leaveRequests) ? leaveRequests : []).filter(
+      r => r && 
+      r.employeeId === empId && 
+      r.status === 'approved' && 
+      (r.startDate.startsWith(targetMonthStr) || r.endDate.startsWith(targetMonthStr))
+    );
+    
+    let unpaidLeaveDays = 0;
+    empLeaves.forEach(req => {
+      const start = new Date(req.startDate);
+      const end = new Date(req.endDate);
+      let temp = new Date(start);
+      while (temp <= end) {
+        const tempStr = temp.toISOString().split('T')[0];
+        if (tempStr.startsWith(targetMonthStr)) {
+          if (req.type === 'unpaid') {
+            unpaidLeaveDays++;
+          }
+        }
+        temp.setDate(temp.getDate() + 1);
+      }
+    });
+    
+    const attendanceRate = Math.min(100, Math.round((uniqueDaysWorked / 22) * 100)) || 0;
+    const onTimeArrivals = uniqueDaysWorked > 0 ? uniqueDaysWorked - lateDaysCount : 0;
+    const punctualityRate = uniqueDaysWorked > 0 ? Math.round((onTimeArrivals / uniqueDaysWorked) * 100) : 100;
+    
+    let progressScore = Math.round((attendanceRate * 0.45) + (punctualityRate * 0.45));
+    if (overtimeHours > 0) {
+      progressScore = Math.min(100, progressScore + Math.min(10, Math.round(overtimeHours)));
+    }
+    
+    let rating = 'Needs Improvement';
+    if (progressScore >= 90) rating = 'Excellent Performance';
+    else if (progressScore >= 75) rating = 'Good Progress';
+    else if (progressScore >= 50) rating = 'Satisfactory';
+    
+    return {
+      totalBreakSeconds,
+      netWorkedHours,
+      overtimeHours,
+      unpaidLeaveDays,
+      uniqueDaysWorked,
+      lateDaysCount,
+      punctualityRate,
+      attendanceRate,
+      progressScore,
+      rating,
+      shiftsCount: empShifts.length
+    };
+  }, [reportEmployee, reportMonth, reportYear, shiftLogs, breakLogs, leaveRequests, nowTime]);
 
   // Add employee directly
   const handleAddSubmit = async (e) => {
@@ -462,6 +575,19 @@ const Employees = () => {
                             </button>
                             <button 
                               className="btn btn-secondary" 
+                              style={{ padding: '0.4rem', borderColor: 'rgba(59, 130, 246, 0.3)' }}
+                              onClick={() => {
+                                setReportEmployee(emp);
+                                const now = new Date();
+                                setReportMonth(now.getMonth());
+                                setReportYear(now.getFullYear());
+                              }}
+                              title="View Monthly Performance Report"
+                            >
+                              <ClipboardList size={12} style={{ color: '#3b82f6' }} />
+                            </button>
+                            <button 
+                              className="btn btn-secondary" 
                               style={{ padding: '0.4rem' }}
                             onClick={() => {
                               setEmpForm({
@@ -651,7 +777,7 @@ const Employees = () => {
                         <div>
                           <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{req.employeeName}</strong>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            {req.startDate} to {req.endDate} ({days} days)
+                            {req.startDate} to {req.endDate} ({days} days • <span style={{ color: req.type === 'unpaid' ? 'var(--color-danger, #ef4444)' : 'var(--color-success, #10b981)' }}>{req.type === 'unpaid' ? 'Unpaid' : 'Paid'}</span>)
                           </div>
                         </div>
                         <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Pending</span>
@@ -1223,7 +1349,7 @@ const Employees = () => {
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#fff' }}>
                               <span>{leave.startDate} to {leave.endDate}</span>
-                              <span style={{ color: 'var(--color-primary)' }}>{days} {days === 1 ? 'Day' : 'Days'}</span>
+                              <span style={{ color: 'var(--color-primary)' }}>{days} {days === 1 ? 'Day' : 'Days'} • <span style={{ color: leave.type === 'unpaid' ? 'var(--color-danger, #ef4444)' : 'var(--color-success, #10b981)' }}>{leave.type === 'unpaid' ? 'Unpaid' : 'Paid'}</span></span>
                             </div>
                             {leave.reason && (
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', fontStyle: 'italic' }}>
@@ -1404,6 +1530,153 @@ const Employees = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
               <button className="btn btn-secondary" onClick={() => { setSelectedProfileEmployee(null); setBreakFilter('daily'); }}>
                 Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Monthly Performance & Progress Report */}
+      {reportEmployee && reportData && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '600px', width: '95%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ClipboardList size={20} style={{ color: 'var(--color-primary)' }} />
+                Monthly Performance Report
+              </h2>
+              <button onClick={() => setReportEmployee(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Employee Profile Header & Month Selectors */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{reportEmployee.full_name}</h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{reportEmployee.role}</span>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <select 
+                  className="glass-select" 
+                  value={reportMonth} 
+                  onChange={(e) => setReportMonth(parseInt(e.target.value))}
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem', height: '34px' }}
+                >
+                  {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m, idx) => (
+                    <option key={idx} value={idx}>{m}</option>
+                  ))}
+                </select>
+                <select 
+                  className="glass-select" 
+                  value={reportYear} 
+                  onChange={(e) => setReportYear(parseInt(e.target.value))}
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem', height: '34px' }}
+                >
+                  {['2025', '2026', '2027', '2028', '2029', '2030'].map(y => (
+                    <option key={y} value={parseInt(y)}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Report Metrics Grid */}
+            <div className="grid-2" style={{ gap: '1rem', marginBottom: '1.5rem' }}>
+              <div style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(245,158,11,0.05), rgba(255,255,255,0.01))', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Coffee size={18} style={{ color: '#f59e0b' }} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Total Break Time</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f59e0b' }}>
+                    {formatFriendlyDuration(reportData.totalBreakSeconds)}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.05), rgba(255,255,255,0.01))', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock size={18} style={{ color: '#10b981' }} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Overtime Work</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10b981' }}>
+                    {reportData.overtimeHours} hrs
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(239,68,68,0.05), rgba(255,255,255,0.01))', border: '1px solid rgba(239,68,68,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Calendar size={18} style={{ color: '#ef4444' }} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Unpaid Leaves</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ef4444' }}>
+                    {reportData.unpaidLeaveDays} {reportData.unpaidLeaveDays === 1 ? 'day' : 'days'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ padding: '1rem', background: 'linear-gradient(135deg, rgba(59,130,246,0.05), rgba(255,255,255,0.01))', border: '1px solid rgba(59,130,246,0.15)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Briefcase size={18} style={{ color: '#3b82f6' }} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 600, textTransform: 'uppercase' }}>Hours Worked</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#3b82f6' }}>
+                    {reportData.netWorkedHours} hrs
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>Monthly Performance & Progress</h4>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Overall Index Score: <strong>{reportData.progressScore}%</strong></span>
+                </div>
+                <span 
+                  className={`badge badge-${reportData.progressScore >= 90 ? 'active' : reportData.progressScore >= 75 ? 'pending' : 'frozen'}`}
+                  style={{
+                    fontSize: '0.7rem',
+                    padding: '0.3rem 0.65rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  {reportData.rating}
+                </span>
+              </div>
+
+              <div style={{ height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '5px', overflow: 'hidden', marginBottom: '1rem' }}>
+                <div style={{ 
+                  width: `${reportData.progressScore}%`, 
+                  height: '100%', 
+                  background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-glow))', 
+                  borderRadius: '5px',
+                  boxShadow: '0 0 10px var(--color-primary)'
+                }} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', fontSize: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Attendance Rate (22 standard days):</span>
+                  <span style={{ fontWeight: 700, color: '#fff' }}>{reportData.attendanceRate}% ({reportData.uniqueDaysWorked} / 22 days worked)</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Punctuality Rate:</span>
+                  <span style={{ fontWeight: 700, color: '#fff' }}>{reportData.punctualityRate}% ({reportData.uniqueDaysWorked - reportData.lateDaysCount} / {reportData.uniqueDaysWorked} on-time)</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+              <button className="btn btn-secondary" onClick={() => setReportEmployee(null)}>
+                Close Report
               </button>
             </div>
           </div>

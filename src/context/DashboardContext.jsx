@@ -2736,6 +2736,7 @@ export const DashboardProvider = ({ children }) => {
         startDate: leaveData.startDate,
         endDate: leaveData.endDate,
         reason: leaveData.reason,
+        type: leaveData.type || 'paid',
         status: 'pending',
         createdAt: new Date().toISOString(),
       };
