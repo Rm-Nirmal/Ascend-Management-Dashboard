@@ -423,7 +423,7 @@ const BreakTimer = () => {
                   Today's Net Working Time (Live)
                 </span>
                 <div style={{ fontFamily: 'monospace', fontSize: '3rem', fontWeight: 700, color: activeShift && !activeBreak ? 'var(--color-primary)' : 'var(--text-primary)', margin: '0.25rem 0' }}>
-                  {formatTime(todaysNetWorkTime)}
+                  {formatTime(activeShift ? todaysNetWorkTime : 0)}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   Total shift duration minus breaks. Daily target: <strong>{expectedDailyHours} Hours</strong>.
