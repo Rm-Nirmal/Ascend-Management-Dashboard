@@ -17,7 +17,8 @@ const Overview = () => {
     trainers,
     income: rawIncome,
     expenses: rawExpenses,
-    showToast
+    showToast,
+    gymSettings
   } = useDashboard();
 
   const invoices = useMemo(() => {
@@ -532,7 +533,7 @@ const Overview = () => {
         let csvContent = "data:text/csv;charset=utf-8,";
         
         // Title & Header info
-        csvContent += `Ascend Gym Management Dashboard - Report Snapshot\n`;
+        csvContent += `${gymSettings?.gymName || 'Gym'} Management Dashboard - Report Snapshot\n`;
         csvContent += `Generated At,${new Date().toLocaleString()}\n`;
         csvContent += `Timeframe,${timeframe.toUpperCase()}\n`;
         csvContent += `Selected Period,${timeframe === 'daily' ? selectedDate : timeframe === 'yearly' ? selectedYear : selectedMonth}\n\n`;
@@ -565,7 +566,7 @@ const Overview = () => {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        const fileName = `Ascend_Report_${timeframe}_${timeframe === 'daily' ? selectedDate : timeframe === 'yearly' ? selectedYear : selectedMonth}.csv`;
+        const fileName = `${(gymSettings?.gymName || 'Gym').replace(/\s+/g, '_')}_Report_${timeframe}_${timeframe === 'daily' ? selectedDate : timeframe === 'yearly' ? selectedYear : selectedMonth}.csv`;
         link.setAttribute("download", fileName);
         document.body.appendChild(link);
         link.click();
@@ -586,7 +587,7 @@ const Overview = () => {
       <div className="page-header">
         <div className="page-info">
           <h1>Analytics Dashboard</h1>
-          <p>Real-time telemetry and financial summaries for Ascend Gym HQ.</p>
+          <p>Real-time telemetry and financial summaries for {gymSettings?.gymName || 'Client Gym'}.</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           
