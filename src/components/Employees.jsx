@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Search, Plus, Edit2, Trash2, Mail, Phone, Briefcase, 
@@ -19,6 +19,8 @@ const Employees = () => {
     approveLeaveRequest,
     rejectLeaveRequest
   } = useDashboard();
+
+  const [nowTime] = useState(() => Date.now());
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,7 +112,7 @@ const Employees = () => {
   const profileBreakStats = useMemo(() => {
     if (!selectedProfileEmployee) return { totalSeconds: 0, logs: [] };
     const empId = selectedProfileEmployee.id;
-    const now = new Date();
+    const now = new Date(nowTime);
     
     const empBreaks = (Array.isArray(breakLogs) ? breakLogs : []).filter(
       b => b && b.employeeId === empId && b.status === 'completed'
@@ -122,16 +124,16 @@ const Employees = () => {
     if (breakFilter === 'daily') {
       filteredBreaks = empBreaks.filter(b => b && b.startTime && b.startTime.startsWith(todayStr));
     } else if (breakFilter === 'weekly') {
-      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const oneWeekAgo = new Date(nowTime - 7 * 24 * 60 * 60 * 1000);
       filteredBreaks = empBreaks.filter(b => b && b.startTime && new Date(b.startTime) >= oneWeekAgo);
     } else if (breakFilter === 'monthly') {
-      const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const oneMonthAgo = new Date(nowTime - 30 * 24 * 60 * 60 * 1000);
       filteredBreaks = empBreaks.filter(b => b && b.startTime && new Date(b.startTime) >= oneMonthAgo);
     }
     
     const totalSeconds = filteredBreaks.reduce((sum, b) => sum + (b.duration || 0), 0);
     return { totalSeconds, logs: filteredBreaks };
-  }, [selectedProfileEmployee, breakLogs, breakFilter]);
+  }, [selectedProfileEmployee, breakLogs, breakFilter, nowTime]);
 
   const linkedAdminForProfile = useMemo(() => {
     if (!selectedProfileEmployee || !admins) return null;

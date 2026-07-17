@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   DollarSign, Landmark, CreditCard, Sparkles, X, Check, Mail, Printer, Eye, Calendar 
