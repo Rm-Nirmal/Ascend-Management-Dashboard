@@ -7,6 +7,14 @@ import {
   Briefcase, FileText, CheckSquare, PlusSquare, Info, AlertTriangle 
 } from 'lucide-react';
 
+// Timezone-safe local date string helper
+const getLocalDateStr = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const BreakTimer = () => {
   const {
     currentUser,
@@ -50,7 +58,7 @@ const BreakTimer = () => {
 
   const isOnLeaveToday = useMemo(() => {
     if (!leaveRequests) return false;
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateStr();
     return (leaveRequests || []).some(r => 
       r && 
       r.employeeId === employeeId && 
@@ -191,7 +199,7 @@ const BreakTimer = () => {
 
   // Sum today's break duration
   const todaysTotalBreakTime = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateStr();
     const todaysSeconds = (breakLogs || [])
       .filter(b => b && b.employeeId === employeeId && b.status === 'completed' && b.startTime && b.startTime.startsWith(todayStr))
       .reduce((sum, b) => sum + (b.duration || 0), 0);
@@ -203,7 +211,7 @@ const BreakTimer = () => {
 
   // Sum today's total shift duration
   const todaysTotalShiftTime = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalDateStr();
     const completedSeconds = (shiftLogs || [])
       .filter(s => s && s.employeeId === employeeId && s.status === 'completed' && s.startTime && s.startTime.startsWith(todayStr))
       .reduce((sum, s) => sum + (s.duration || 0), 0);
@@ -588,9 +596,35 @@ const BreakTimer = () => {
                   </div>
                 ) : (
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '0.25rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <Info size={14} /> Quota Incomplete ({progressPct}%)
+                    <Info size={14} /> Quota Incomplete
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Daily Hours Quota Summary Panel */}
+            <div className="glass-card" style={{ padding: '1.5rem', borderLeft: '4px solid var(--color-primary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Daily Quota Progress
+              </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff' }}>
+                  {formatTime(todaysNetWorkTime)} <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>worked today</span>
+                </div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                  Target: {expectedDailyHours} hrs
+                </div>
+              </div>
+              <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden', marginTop: '0.25rem' }}>
+                <div style={{
+                  width: `${Math.min(100, Math.round((todaysNetWorkTime / (expectedDailyHours * 3600)) * 100))}%`,
+                  height: '100%',
+                  background: 'var(--color-primary)',
+                  borderRadius: '3px'
+                }} />
+              </div>
+              <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                Accumulated: <strong>{((todaysNetWorkTime / (expectedDailyHours * 3600)) * 100).toFixed(1)}%</strong> of expected shift hours.
               </div>
             </div>
 
@@ -606,7 +640,7 @@ const BreakTimer = () => {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '250px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '220px', overflowY: 'auto' }}>
                 {myCompletedShifts.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
                     No shifts logged recently.
@@ -665,7 +699,7 @@ const BreakTimer = () => {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '200px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '180px', overflowY: 'auto' }}>
                 {myCompletedBreaks.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.8rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
                     No break intervals logged recently.
