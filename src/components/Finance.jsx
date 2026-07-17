@@ -180,6 +180,13 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [currentUser, isStandardStaff]);
 
+  // Handle async currentUser loading for staff tab default fallback
+  useEffect(() => {
+    if (isStandardStaff && !['income', 'expenses', 'log_income', 'log_expense'].includes(activeFinanceTab)) {
+      setActiveFinanceTab('income');
+    }
+  }, [isStandardStaff, activeFinanceTab]);
+
   // Payroll Tab States
   const [payrollSubTab, setPayrollSubTab] = useState('directory'); // 'directory', 'history', 'analytics'
   const [payrollSearch, setPayrollSearch] = useState('');

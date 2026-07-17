@@ -223,6 +223,17 @@ const DashboardContentShell = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [currentUser]);
 
+  // Sync tab from URL on initial load once currentUser is fetched asynchronously
+  useEffect(() => {
+    if (currentUser) {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view');
+      if (viewParam && isAllowedTab(viewParam) && viewParam !== activeTab) {
+        setActiveTab(viewParam);
+      }
+    }
+  }, [currentUser]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Inject custom theme color & mode dynamically

@@ -90,7 +90,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     }
     
     // Regular gym staff (including standard_admin) can only access:
-    return ['members', 'registrations', 'access', 'break_timer', 'log_income', 'log_expense'].includes(item.id);
+    return ['members', 'registrations', 'access', 'break_timer', 'finance'].includes(item.id);
   });
 
   const isDark = gymSettings?.darkMode !== false;
@@ -115,24 +115,12 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         <nav className="sidebar-nav" style={{ overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: '4px' }}>
           {navItems.map(item => {
             const Icon = item.icon;
-            const params = new URLSearchParams(window.location.search);
-            const subTab = params.get('tab');
-            const isActive = activeTab === item.id || 
-              (item.id === 'log_income' && (activeTab.startsWith('log_income') || (activeTab === 'finance' && subTab === 'income'))) ||
-              (item.id === 'log_expense' && (activeTab.startsWith('log_expense') || (activeTab === 'finance' && subTab === 'expenses')));
+            const isActive = activeTab === item.id;
             return (
               <a 
                 key={item.id} 
                 className={`nav-link ${isActive ? 'active' : ''}`}
-                onClick={() => {
-                  if (item.id === 'log_income') {
-                    setActiveTab(`log_income_${Date.now()}`);
-                  } else if (item.id === 'log_expense') {
-                    setActiveTab(`log_expense_${Date.now()}`);
-                  } else {
-                    setActiveTab(item.id);
-                  }
-                }}
+                onClick={() => setActiveTab(item.id)}
               >
                 <Icon size={18} />
                 <span>{item.name}</span>
