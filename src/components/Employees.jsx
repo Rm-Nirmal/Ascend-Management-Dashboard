@@ -155,6 +155,17 @@ const Employees = () => {
     });
   }, [selectedProfileEmployee, auditLogs, linkedAdminForProfile]);
 
+  const upcomingLeavesForProfile = useMemo(() => {
+    if (!selectedProfileEmployee || !leaveRequests) return [];
+    const todayStr = new Date(nowTime).toISOString().split('T')[0];
+    return (Array.isArray(leaveRequests) ? leaveRequests : []).filter(
+      r => r && 
+      r.employeeId === selectedProfileEmployee.id && 
+      r.status === 'approved' && 
+      r.endDate >= todayStr
+    );
+  }, [selectedProfileEmployee, leaveRequests, nowTime]);
+
   // Add employee directly
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -1178,6 +1189,51 @@ const Employees = () => {
                     border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
                     <Calendar size={18} style={{ color: 'var(--color-primary)' }} />
+                  </div>
+                </div>
+
+                {/* Upcoming Approved Leaves Card */}
+                <div className="glass-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                    <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Calendar size={14} style={{ color: 'var(--color-primary)' }} /> Upcoming Approved Leaves
+                    </h4>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto' }}>
+                    {upcomingLeavesForProfile.length === 0 ? (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '0.5rem 0' }}>
+                        No upcoming approved leaves.
+                      </div>
+                    ) : (
+                      upcomingLeavesForProfile.map((leave) => {
+                        const start = new Date(leave.startDate);
+                        const end = new Date(leave.endDate);
+                        const days = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+                        return (
+                          <div 
+                            key={leave.id}
+                            style={{
+                              padding: '0.75rem',
+                              background: 'rgba(255, 255, 255, 0.01)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#fff' }}>
+                              <span>{leave.startDate} to {leave.endDate}</span>
+                              <span style={{ color: 'var(--color-primary)' }}>{days} {days === 1 ? 'Day' : 'Days'}</span>
+                            </div>
+                            {leave.reason && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                                "{leave.reason}"
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>
