@@ -166,6 +166,7 @@ const DashboardContentShell = () => {
 
     // Check if the feature has been disabled by the SaaS super administrator
     const disabledFeatures = gymSettings?.disabledFeatures || [];
+    console.log("DEBUG - isAllowedTab:", tab, "gymSettings:", gymSettings, "disabledFeatures:", disabledFeatures, "currentUserRole:", currentUser?.role);
     let featureKey = tab;
     if (featureKey.startsWith('inventory')) featureKey = 'inventory';
     if (disabledFeatures.includes(featureKey)) return false;

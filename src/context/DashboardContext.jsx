@@ -124,6 +124,23 @@ export const getUrlGymId = () => {
   return pathGymId || DEFAULT_ORG_ID;
 };
 
+// Generate up to 10 variations of gymId for robust case-insensitive queries
+export const getGymIdVariations = (id) => {
+  if (!id) return [];
+  const variations = new Set([
+    id,
+    id.toLowerCase(),
+    id.toUpperCase(),
+    id.replace(/[-_]/g, ''),
+    id.replace(/[-_]/g, '').toLowerCase(),
+    id.replace(/-/g, '_'),
+    id.replace(/-/g, '_').toLowerCase(),
+    id.replace(/_/g, '-'),
+    id.replace(/_/g, '-').toLowerCase(),
+  ]);
+  return Array.from(variations).slice(0, 10);
+};
+
 // Get the base URL, preserving the repository name subdirectory for GitHub Pages
 export const getBaseUrl = () => {
   const origin = window.location.origin;
@@ -891,10 +908,10 @@ export const DashboardProvider = ({ children }) => {
         }, (err) => { console.error('Income error:', err); markLoaded(); })
       );
 
-      // 11. Gym Settings (scoped)
+      // 11. Gym Settings (scoped with case/delimiter variations)
       const settingsQ = query(
         collection(db, COLLECTIONS.GYM_SETTINGS),
-        where('gymId', '==', orgId)
+        where('gymId', 'in', getGymIdVariations(orgId))
       );
       unsubscribers.push(
         onSnapshot(settingsQ, (snap) => {
@@ -1931,7 +1948,9 @@ export const DashboardProvider = ({ children }) => {
   // Update Gym Directory details
   const updateGymDetails = useCallback(async (gymId, updatedFields) => {
     try {
-      const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', '==', gymId)));
+      const variations = getGymIdVariations(gymId);
+      
+      const gymSnap = await getDocs(query(collection(db, COLLECTIONS.GYMS), where('gymId', 'in', variations)));
       if (gymSnap.empty) {
         return { success: false, message: 'Gym not found.' };
       }
@@ -1952,7 +1971,7 @@ export const DashboardProvider = ({ children }) => {
       await updateDoc(gymRef, updateData);
 
       // Also update gym settings
-      const settingsSnap = await getDocs(query(collection(db, COLLECTIONS.GYM_SETTINGS), where('gymId', '==', gymId)));
+      const settingsSnap = await getDocs(query(collection(db, COLLECTIONS.GYM_SETTINGS), where('gymId', 'in', variations)));
       if (!settingsSnap.empty) {
         const settingsUpdate = {
           gymName: updatedFields.gymName,
@@ -1964,7 +1983,10 @@ export const DashboardProvider = ({ children }) => {
         if (updatedFields.disabledFeatures !== undefined) {
           settingsUpdate.disabledFeatures = updatedFields.disabledFeatures;
         }
-        await updateDoc(settingsSnap.docs[0].ref, settingsUpdate);
+        // Update all matching docs to ensure synchronization
+        for (const settingsDoc of settingsSnap.docs) {
+          await updateDoc(settingsDoc.ref, settingsUpdate);
+        }
       } else {
         const newSettings = {
           gymId: gymId,
