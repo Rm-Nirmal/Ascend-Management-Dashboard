@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 const Announcements = () => {
-  const { announcements, publishAnnouncement, showToast } = useDashboard();
+  const { announcements, publishAnnouncement, showToast, gyms } = useDashboard();
   
   // Form states
   const [title, setTitle] = useState('');
@@ -30,6 +30,10 @@ const Announcements = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState(null);
+
+  // Target audience states
+  const [targetAudience, setTargetAudience] = useState('all'); // 'all' or 'specific'
+  const [selectedGymIds, setSelectedGymIds] = useState([]);
 
   // Search & Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,8 +71,15 @@ const Announcements = () => {
       return;
     }
 
+    if (targetAudience === 'specific' && selectedGymIds.length === 0) {
+      setError('Please select at least one target gym workspace.');
+      return;
+    }
+
     setIsPublishing(true);
     setError('');
+
+    const targetList = targetAudience === 'all' ? ['all'] : selectedGymIds;
 
     try {
       if (editingId) {
@@ -79,6 +90,7 @@ const Announcements = () => {
           content: content.trim(),
           category,
           priority,
+          targetGymIds: targetList,
           updatedAt: new Date().toISOString()
         });
         showToast('Announcement updated successfully!', 'success');
@@ -87,13 +99,16 @@ const Announcements = () => {
         setContent('');
         setCategory('announcement');
         setPriority('medium');
+        setTargetAudience('all');
+        setSelectedGymIds([]);
       } else {
         // Publish flow
         const res = await publishAnnouncement({
           title: title.trim(),
           content: content.trim(),
           category,
-          priority
+          priority,
+          targetGymIds: targetList
         });
 
         if (res.success) {
@@ -101,6 +116,8 @@ const Announcements = () => {
           setContent('');
           setCategory('announcement');
           setPriority('medium');
+          setTargetAudience('all');
+          setSelectedGymIds([]);
         } else {
           setError(res.message || 'Failed to publish announcement.');
         }
@@ -118,6 +135,14 @@ const Announcements = () => {
     setContent(ann.content);
     setCategory(ann.category);
     setPriority(ann.priority);
+    
+    if (!ann.targetGymIds || ann.targetGymIds.includes('all')) {
+      setTargetAudience('all');
+      setSelectedGymIds([]);
+    } else {
+      setTargetAudience('specific');
+      setSelectedGymIds(ann.targetGymIds);
+    }
     setError('');
   };
 
@@ -127,6 +152,8 @@ const Announcements = () => {
     setContent('');
     setCategory('announcement');
     setPriority('medium');
+    setTargetAudience('all');
+    setSelectedGymIds([]);
     setError('');
   };
 
@@ -220,8 +247,8 @@ const Announcements = () => {
       
       {/* Header banner */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.05))',
-        border: '1px solid rgba(168, 85, 247, 0.2)',
+        background: 'rgba(255, 255, 255, 0.02)',
+        border: '1px solid var(--border-color)',
         borderRadius: '12px',
         padding: '1.5rem',
         display: 'flex',
@@ -359,11 +386,107 @@ const Announcements = () => {
             <textarea 
               className="form-control" 
               placeholder="Write the details of the broadcast..."
-              style={{ minHeight: '140px', resize: 'vertical' }}
+              style={{ minHeight: '120px', resize: 'vertical' }}
               value={content}
               onChange={e => setContent(e.target.value)}
               required
             />
+          </div>
+
+          {/* Target Audience Selector */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <label style={{ fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Target Audience</label>
+            <div style={{ display: 'flex', gap: '1.25rem', margin: '0.15rem 0' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <input 
+                  type="radio" 
+                  name="targetAudience" 
+                  value="all" 
+                  checked={targetAudience === 'all'} 
+                  onChange={() => {
+                    setTargetAudience('all');
+                    setSelectedGymIds([]);
+                  }} 
+                />
+                All Gym Workspaces
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                <input 
+                  type="radio" 
+                  name="targetAudience" 
+                  value="specific" 
+                  checked={targetAudience === 'specific'} 
+                  onChange={() => setTargetAudience('specific')} 
+                />
+                Specific Workspaces
+              </label>
+            </div>
+
+            {targetAudience === 'specific' && (
+              <div style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.6rem',
+                marginTop: '0.25rem'
+              }}>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', height: 'auto', borderRadius: '4px' }}
+                    onClick={() => setSelectedGymIds(gyms.map(g => g.gymId))}
+                  >
+                    Select All
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem', height: 'auto', borderRadius: '4px' }}
+                    onClick={() => setSelectedGymIds([])}
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                <div style={{
+                  maxHeight: '120px',
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.4rem',
+                  paddingRight: '0.25rem'
+                }}>
+                  {gyms.length === 0 ? (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No workspaces found.</span>
+                  ) : (
+                    gyms.map(gym => {
+                      const isChecked = selectedGymIds.includes(gym.gymId);
+                      const handleCheckboxChange = () => {
+                        if (isChecked) {
+                          setSelectedGymIds(selectedGymIds.filter(id => id !== gym.gymId));
+                        } else {
+                          setSelectedGymIds([...selectedGymIds, gym.gymId]);
+                        }
+                      };
+                      return (
+                        <label key={gym.gymId} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked} 
+                            onChange={handleCheckboxChange} 
+                          />
+                          <span>{gym.gymName} <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>({gym.gymId})</span></span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -427,7 +550,7 @@ const Announcements = () => {
           border: '1px solid var(--border-color)',
           borderRadius: '12px',
           padding: '1.5rem',
-          maxHeight: '720px',
+          maxHeight: '750px',
           overflow: 'hidden'
         }}>
           {/* Filters Bar */}
@@ -579,6 +702,25 @@ const Announcements = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', paddingRight: '3.5rem' }}>
                       {getPriorityBadge(ann.priority)}
                       {getCategoryBadge(ann.category)}
+
+                      {/* Target audience badge */}
+                      <span style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-muted)',
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '4px'
+                      }}>
+                        {!ann.targetGymIds || ann.targetGymIds.includes('all') ? (
+                          'Broadcast: All Gyms'
+                        ) : (
+                          `Broadcast: ${ann.targetGymIds.length} Gym${ann.targetGymIds.length > 1 ? 's' : ''}`
+                        )}
+                      </span>
                     </div>
 
                     <h5 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', paddingRight: '3.5rem' }}>
@@ -588,6 +730,12 @@ const Announcements = () => {
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, lineHeight: '1.5' }}>
                       {ann.content}
                     </p>
+
+                    {!ann.targetGymIds || ann.targetGymIds.includes('all') ? null : (
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-dark)', marginTop: '-0.25rem', lineHeight: '1.3' }}>
+                        <strong>Targeted Workspaces:</strong> {ann.targetGymIds.map(id => gyms.find(g => g.gymId === id)?.gymName || id).join(', ')}
+                      </div>
+                    )}
 
                     <div style={{ 
                       display: 'flex', 

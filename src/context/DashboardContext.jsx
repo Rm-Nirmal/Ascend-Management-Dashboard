@@ -907,12 +907,17 @@ export const DashboardProvider = ({ children }) => {
         }, (err) => { console.error('Settings error:', err); markLoaded(); })
       );
 
-      // 12. Announcements (global)
+      // 12. Announcements (filtered by targetGymIds)
       unsubscribers.push(
         onSnapshot(collection(db, COLLECTIONS.ANNOUNCEMENTS), (snap) => {
-          const ann = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-          ann.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          setAnnouncements(ann);
+          const allAnn = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const filteredAnn = allAnn.filter(a => 
+            !a.targetGymIds || 
+            a.targetGymIds.includes('all') || 
+            a.targetGymIds.includes(orgId)
+          );
+          filteredAnn.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setAnnouncements(filteredAnn);
           markLoaded();
         }, (err) => { console.error('Announcements error:', err); markLoaded(); })
       );
@@ -1960,6 +1965,20 @@ export const DashboardProvider = ({ children }) => {
           settingsUpdate.disabledFeatures = updatedFields.disabledFeatures;
         }
         await updateDoc(settingsSnap.docs[0].ref, settingsUpdate);
+      } else {
+        const newSettings = {
+          gymId: gymId,
+          gymName: updatedFields.gymName || 'Client Gym',
+          themeColor: '#3b82f6',
+          darkMode: true,
+          logo: '',
+          phone: updatedFields.phone || '',
+          address: updatedFields.address || '',
+          currency: updatedFields.currency || 'LKR',
+          timezone: updatedFields.timezone || 'Asia/Colombo',
+          disabledFeatures: updatedFields.disabledFeatures || []
+        };
+        await addDoc(collection(db, COLLECTIONS.GYM_SETTINGS), newSettings);
       }
 
       await logAudit(
@@ -2057,10 +2076,11 @@ export const DashboardProvider = ({ children }) => {
         category: annData.category || 'announcement',
         priority: annData.priority || 'medium',
         publishedBy: currentUser?.name || 'Super Admin',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        targetGymIds: annData.targetGymIds || ['all']
       };
       await addDoc(collection(db, COLLECTIONS.ANNOUNCEMENTS), newAnn);
-      await logAudit('announcement.publish', 'announcement', 'global', `Published global announcement: ${annData.title}`);
+      await logAudit('announcement.publish', 'announcement', 'global', `Published announcement: ${annData.title}`);
       showToast('Announcement broadcasted successfully!', 'success');
       return { success: true };
     } catch (err) {

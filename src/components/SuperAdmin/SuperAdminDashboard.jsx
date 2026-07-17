@@ -30,6 +30,7 @@ import ClientAuditLogs from './ClientAuditLogs';
 import SaaSFinance from './SaaSFinance';
 import SecurityDevices from './SecurityDevices';
 import NotificationTemplates from './NotificationTemplates';
+import logoWhite from '../../assets/logo_white.webp';
 
 const SuperAdminDashboard = () => {
   const { currentUser, logout, showToast } = useDashboard();
@@ -93,11 +94,15 @@ const SuperAdminDashboard = () => {
       <aside className="sidebar">
         <div>
           {/* Brand Logo */}
-          <div className="sidebar-logo" style={{ marginBottom: '2.5rem' }}>
-            <Dumbbell className="icon" style={{ color: '#ffffff' }} />
-            <span className="logo-text" style={{ color: '#ffffff', fontWeight: 800 }}>
-              FITGENCORE
-            </span>
+          <div className="sidebar-logo" style={{ marginBottom: '2.5rem', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', padding: '0 0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+              <img 
+                src={logoWhite} 
+                alt="Fitgencore Logo" 
+                style={{ height: '22px', objectFit: 'contain', maxWidth: '85%' }} 
+              />
+            </div>
+            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', paddingLeft: '0.25rem', marginTop: '0.25rem' }}>powered by wickgen</span>
           </div>
 
           {/* Navigation links */}
@@ -181,31 +186,6 @@ const SuperAdminDashboard = () => {
 
           {/* User actions */}
           <div className="topbar-actions">
-            {/* Live status light */}
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.35rem', 
-              background: 'rgba(255, 255, 255, 0.05)', 
-              padding: '0.4rem 0.75rem', 
-              borderRadius: '6px', 
-              border: '1px solid var(--border-color)', 
-              fontSize: '0.75rem', 
-              color: 'var(--text-main)', 
-              fontWeight: 600 
-            }}>
-              <ShieldCheck size={14} style={{ color: '#10b981' }} /> System Online
-            </div>
-
-
-
-            <button 
-              className="btn btn-secondary"
-              style={{ fontSize: '0.75rem' }}
-              onClick={() => showToast(`Global Account ID: ${currentUser?.id || 'N/A'}`, 'info')}
-            >
-              ID Lookup
-            </button>
           </div>
         </header>
 
@@ -217,36 +197,32 @@ const SuperAdminDashboard = () => {
       <style>{`
         /* Monochromatic Dark Theme overrides for Super Admin Panel */
         
-        /* 1. Override elements utilizing hardcoded purple colors (#a855f7) */
-        .app-container [style*="a855f7"] {
+        /* 1. Override text & icon colors containing purple hex/rgb */
+        .app-container [style*="a855f7"],
+        .app-container [style*="168, 85, 247"],
+        .app-container [style*="168,85,247"] {
           color: #ffffff !important;
-        }
-        
-        /* Sidebar active border and state */
-        .app-container [style*="borderLeftColor: '#a855f7'"],
-        .app-container [style*="border-left-color: #a855f7"] {
-          border-left-color: #ffffff !important;
-        }
-        
-        /* Active tabs bottom line */
-        .app-container [style*="borderBottom: '2px solid #a855f7'"],
-        .app-container [style*="border-bottom: 2px solid #a855f7"],
-        .app-container [style*="borderBottomColor: '#a855f7'"] {
-          border-bottom-color: #ffffff !important;
-          border-bottom-width: 2px !important;
         }
 
-        /* Active drawer tab buttons text */
-        .app-container [style*="color: '#a855f7'"],
-        .app-container [style*="color:#a855f7"] {
-          color: #ffffff !important;
+        /* Sidebar active border */
+        .app-container [style*="borderLeftColor"],
+        .app-container [style*="border-left-color"] {
+          border-left-color: #ffffff !important;
+        }
+
+        /* Active tabs bottom line */
+        .app-container [style*="borderBottom"],
+        .app-container [style*="border-bottom"] {
+          border-bottom-color: #ffffff !important;
         }
 
         /* Purple background opacities */
         .app-container [style*="background: 'rgba(168, 85, 247"],
         .app-container [style*="background:rgba(168, 85, 247"],
         .app-container [style*="background-color:rgba(168, 85, 247"],
-        .app-container [style*="background-color: 'rgba(168, 85, 247"] {
+        .app-container [style*="background-color: 'rgba(168, 85, 247"],
+        .app-container [style*="rgba(168, 85, 247"],
+        .app-container [style*="rgba(168,85,247"] {
           background-color: rgba(255, 255, 255, 0.05) !important;
           background: rgba(255, 255, 255, 0.05) !important;
         }
@@ -254,39 +230,48 @@ const SuperAdminDashboard = () => {
         /* Purple border lines */
         .app-container [style*="border: '1px solid rgba(168, 85, 247"],
         .app-container [style*="border: 1px solid rgba(168, 85, 247"],
-        .app-container [style*="border-color: rgba(168, 85, 247"] {
+        .app-container [style*="border-color: rgba(168, 85, 247"],
+        .app-container [style*="border-color:rgba(168,85,247"] {
           border-color: var(--border-color) !important;
         }
 
         /* 2. Overwrite buttons and headers using purple gradients */
-        .app-container [style*="linear-gradient("][style*="a855f7"] {
+        .app-container [style*="linear-gradient("][style*="a855f7"],
+        .app-container [style*="linear-gradient("][style*="168, 85, 247"],
+        .app-container [style*="linear-gradient("][style*="168,85,247"] {
           background: #ffffff !important;
           color: #000000 !important;
           border-color: transparent !important;
           box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1) !important;
         }
         
-        .app-container [style*="linear-gradient("][style*="a855f7"] * {
+        .app-container [style*="linear-gradient("][style*="a855f7"] *,
+        .app-container [style*="linear-gradient("][style*="168, 85, 247"] *,
+        .app-container [style*="linear-gradient("][style*="168,85,247"] * {
           color: #000000 !important;
         }
 
-        .app-container [style*="linear-gradient("][style*="a855f7"]:hover {
+        .app-container [style*="linear-gradient("][style*="a855f7"]:hover,
+        .app-container [style*="linear-gradient("][style*="168, 85, 247"]:hover,
+        .app-container [style*="linear-gradient("][style*="168,85,247"]:hover {
           background: #e5e7eb !important;
           box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15) !important;
         }
 
-        /* Success tags should remain green, but standard purple tags go monochromatic */
-        .app-container [style*="color: '#a855f7'"][style*="background: 'rgba(168, 85, 247"] {
-          color: #ffffff !important;
-          background: rgba(255, 255, 255, 0.08) !important;
-          border: 1px solid var(--border-color) !important;
+        /* Progress bars quota */
+        .app-container [style*="background: percentQuotaUsed"],
+        .app-container [style*="background: '#a855f7'"],
+        .app-container [style*="background:#a855f7"],
+        .app-container [style*="background: rgb(168, 85, 247)"],
+        .app-container [style*="background:rgb(168, 85, 247)"] {
+          background: #ffffff !important;
         }
 
-        /* Progress bars quota */
-        .app-container [style*="background: percentQuotaUsed > 90 ? '#ef4444' : '#a855f7'"],
-        .app-container [style*="background: '#a855f7'"],
-        .app-container [style*="background:#a855f7"] {
-          background: #ffffff !important;
+        /* CheckCircle and success badges */
+        .app-container svg[style*="color: rgb(168, 85, 247)"],
+        .app-container svg[style*="color:rgb(168, 85, 247)"],
+        .app-container svg[style*="color:#a855f7"] {
+          color: #ffffff !important;
         }
       `}</style>
     </div>
