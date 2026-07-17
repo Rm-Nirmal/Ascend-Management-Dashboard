@@ -252,6 +252,9 @@ const DashboardContentShell = () => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
 
     let accentColor = gymSettings?.themeColor || '#ffffff';
+    if (accentColor === '#3b82f6') {
+      accentColor = '#ffffff';
+    }
     if (!isDark && (accentColor === '#ffffff' || accentColor.toLowerCase() === '#fff')) {
       accentColor = '#000000';
     }

@@ -64,7 +64,7 @@ const Employees = () => {
 
   // Filter lists
   const activeEmployees = useMemo(() => {
-    return employees.filter(e => e.status !== 'terminated');
+    return (employees || []).filter(e => e && e.status !== 'terminated');
   }, [employees]);
 
   const filteredEmployees = useMemo(() => {
@@ -88,7 +88,7 @@ const Employees = () => {
   }, [activeEmployees]);
 
   const rolesList = useMemo(() => {
-    const roles = new Set(activeEmployees.map(e => e.role));
+    const roles = new Set((activeEmployees || []).filter(Boolean).map(e => e.role));
     return Array.from(roles);
   }, [activeEmployees]);
 
@@ -144,7 +144,8 @@ const Employees = () => {
   const employeeActivities = useMemo(() => {
     if (!selectedProfileEmployee || !auditLogs) return [];
     
-    return auditLogs.filter(log => {
+    return (auditLogs || []).filter(log => {
+      if (!log) return false;
       const matchesAdminId = linkedAdminForProfile && (log.user_id === linkedAdminForProfile.id || log.user_id === linkedAdminForProfile.uid);
       const empName = selectedProfileEmployee.full_name || '';
       const matchesName = log.user_name?.toLowerCase() === empName.toLowerCase();
