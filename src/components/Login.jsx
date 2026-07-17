@@ -103,15 +103,16 @@ const Login = () => {
         border: '1px solid rgba(255, 255, 255, 0.08)'
       }}>
         {/* Brand Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2.25rem' }}>
-          <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.25rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'center', width: '100%' }}>
             <img 
               src={logoWhite} 
               alt="Fitgencore Logo" 
               style={{ height: '32px', objectFit: 'contain', maxWidth: '240px', margin: '0 auto' }} 
             />
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500, marginTop: '0.75rem' }}>
+          <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', opacity: 0.7, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1.25rem', fontWeight: 600 }}>powered by wickgen</span>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500, marginTop: '0.25rem' }}>
             Fitgencore Management Console
           </p>
           {/* Firebase connected indicator */}

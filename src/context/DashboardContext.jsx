@@ -1370,7 +1370,7 @@ export const DashboardProvider = ({ children }) => {
       const settings1 = {
         gymId: 'gym_ascend_hq',
         gymName: 'Fitgencore HQ',
-        themeColor: '#3b82f6',
+        themeColor: '#ffffff',
         darkMode: true,
         logo: '',
         phone: '+94 77 111 2222',
@@ -1631,7 +1631,7 @@ export const DashboardProvider = ({ children }) => {
       const newSettingsDoc = {
         gymId: generatedGymId,
         gymName: gymData.gymName,
-        themeColor: '#3b82f6',
+        themeColor: '#ffffff',
         darkMode: true,
         logo: '',
         phone: gymData.phone,
@@ -2031,7 +2031,7 @@ export const DashboardProvider = ({ children }) => {
         const newSettings = {
           gymId: gymId,
           gymName: updatedFields.gymName || 'Client Gym',
-          themeColor: '#3b82f6',
+          themeColor: '#ffffff',
           darkMode: true,
           logo: '',
           phone: updatedFields.phone || '',
@@ -2185,7 +2185,7 @@ export const DashboardProvider = ({ children }) => {
         const newSettings = {
           gymId: orgId,
           gymName: (currentUser?.name || 'Client') + ' Gym',
-          themeColor: '#3b82f6',
+          themeColor: '#ffffff',
           darkMode: true,
           logo: '',
           phone: '',

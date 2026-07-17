@@ -105,15 +105,15 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     <aside className="sidebar">
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* Brand Logo */}
-        <div className="sidebar-logo" style={{ marginBottom: '2.5rem', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', width: '100%', padding: '0 0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+        <div className="sidebar-logo" style={{ marginBottom: '2.5rem', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0 0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', width: '100%' }}>
             <img 
               src={logoSrc} 
               alt="Fitgencore Logo" 
-              style={{ height: '22px', objectFit: 'contain', maxWidth: '85%' }} 
+              style={{ height: '22px', objectFit: 'contain', maxWidth: '85%', margin: '0 auto' }} 
             />
           </div>
-          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', paddingLeft: '0.25rem', marginTop: '0.25rem' }}>powered by wickgen</span>
+          <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', opacity: 0.7, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '0.35rem', fontWeight: 600 }}>powered by wickgen</span>
         </div>
 
         {/* Navigation links */}
