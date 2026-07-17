@@ -5,6 +5,14 @@ import {
   DollarSign, Calendar, X, Eye, Clock, Coffee, ClipboardList
 } from 'lucide-react';
 
+const getLocalDateStr = (dateInput) => {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  const year = d.getFullYear();
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const Employees = () => {
   const {
     employees = [],
@@ -59,7 +67,7 @@ const Employees = () => {
   const getResolvedEmployeeStatus = useCallback((emp) => {
     if (!emp) return 'active';
     if (emp.status === 'terminated') return 'terminated';
-    const todayStr = new Date(nowTime).toISOString().split('T')[0];
+    const todayStr = getLocalDateStr(nowTime);
     const isOnLeaveToday = (Array.isArray(leaveRequests) ? leaveRequests : []).some(r => 
       r && 
       r.employeeId === emp.id && 
@@ -125,7 +133,7 @@ const Employees = () => {
     );
     
     let filteredBreaks = [];
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = getLocalDateStr(now);
     
     if (breakFilter === 'daily') {
       filteredBreaks = empBreaks.filter(b => b && b.startTime && b.startTime.startsWith(todayStr));
@@ -163,7 +171,7 @@ const Employees = () => {
 
   const upcomingLeavesForProfile = useMemo(() => {
     if (!selectedProfileEmployee || !leaveRequests) return [];
-    const todayStr = new Date(nowTime).toISOString().split('T')[0];
+    const todayStr = getLocalDateStr(nowTime);
     return (Array.isArray(leaveRequests) ? leaveRequests : []).filter(
       r => r && 
       r.employeeId === selectedProfileEmployee.id && 
@@ -240,7 +248,7 @@ const Employees = () => {
       const end = new Date(req.endDate);
       let temp = new Date(start);
       while (temp <= end) {
-        const tempStr = temp.toISOString().split('T')[0];
+        const tempStr = getLocalDateStr(temp);
         if (tempStr.startsWith(targetMonthStr)) {
           if (req.type === 'unpaid') {
             unpaidLeaveDays++;

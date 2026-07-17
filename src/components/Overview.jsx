@@ -594,14 +594,14 @@ const Overview = () => {
           {/* Specific Date / Month Picker Inputs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {timeframe === 'daily' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Select Date:</span>
                 <input 
                   type="date" 
                   value={selectedDate} 
                   onChange={(e) => setSelectedDate(e.target.value)} 
-                  className="glass-input" 
-                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', width: '130px' }} 
+                  style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', color: '#fff', outline: 'none', cursor: 'pointer', width: '120px' }} 
                 />
               </div>
             )}
