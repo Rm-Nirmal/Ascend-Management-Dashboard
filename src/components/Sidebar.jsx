@@ -26,7 +26,8 @@ import {
   Truck,
   TrendingUp,
   ShoppingBag,
-  Clock
+  Clock,
+  UserCheck
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -66,6 +67,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const allNavItems = [
     { id: 'overview', name: 'Dashboard Overview', icon: LayoutDashboard },
     { id: 'members', name: 'Members Directory', icon: Users },
+    { id: 'trainers', name: 'Personal Trainers', icon: UserCheck },
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
     { id: 'access', name: 'Access Control', icon: QrCode },
@@ -98,7 +100,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     }
     
     // Regular gym staff (including standard_admin) can only access:
-    return ['members', 'registrations', 'access', 'break_timer', 'finance'].includes(item.id);
+    return ['members', 'trainers', 'registrations', 'access', 'break_timer', 'finance'].includes(item.id);
   });
 
   const isDark = gymSettings?.darkMode !== false;

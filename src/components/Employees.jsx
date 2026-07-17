@@ -893,6 +893,7 @@ const Employees = () => {
                   >
                     <option value="Front Desk">Front Desk</option>
                     <option value="Personal Trainer">Personal Trainer</option>
+                    <option value="Trainer">Trainer</option>
                     <option value="Yoga Coach">Yoga Coach</option>
                     <option value="Gym Manager">Gym Manager</option>
                     <option value="Maintenance Staff">Maintenance Staff</option>
@@ -1071,6 +1072,7 @@ const Employees = () => {
                   >
                     <option value="Front Desk">Front Desk</option>
                     <option value="Personal Trainer">Personal Trainer</option>
+                    <option value="Trainer">Trainer</option>
                     <option value="Yoga Coach">Yoga Coach</option>
                     <option value="Gym Manager">Gym Manager</option>
                     <option value="Maintenance Staff">Maintenance Staff</option>

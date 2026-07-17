@@ -3,6 +3,7 @@ import { DashboardProvider, useDashboard } from './context/DashboardContext';
 import Sidebar from './components/Sidebar';
 import Overview from './components/Overview';
 import Members from './components/Members';
+import Trainers from './components/Trainers';
 import Registrations from './components/Registrations';
 import AccessConsole from './components/AccessConsole';
 import SubscriptionConsole from './components/SubscriptionConsole';
@@ -176,26 +177,26 @@ const DashboardContentShell = () => {
       currentUser.role === 'owner'
     ) {
       return [
-        'overview', 'members', 'registrations', 'employees', 'access',
+        'overview', 'members', 'trainers', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
         'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
       ].includes(tab);
     }
     if (currentUser.role === 'admin') {
       return [
-        'overview', 'members', 'registrations', 'employees', 'access',
+        'overview', 'members', 'trainers', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
         'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers'
       ].includes(tab);
     }
     if (currentUser.role === 'standard_admin' || currentUser.role === 'gym_assistant') {
       return [
-        'members', 'registrations', 'access',
+        'members', 'trainers', 'registrations', 'access',
         'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock',
         'break_timer', 'finance'
       ].includes(tab) || tab.startsWith('log_income') || tab.startsWith('log_expense');
     }
-    return ['members', 'registrations', 'access', 'break_timer', 'finance'].includes(tab) || tab.startsWith('log_income') || tab.startsWith('log_expense');
+    return ['members', 'trainers', 'registrations', 'access', 'break_timer', 'finance'].includes(tab) || tab.startsWith('log_income') || tab.startsWith('log_expense');
   };
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -348,6 +349,8 @@ const DashboardContentShell = () => {
         return <Overview />;
       case 'members':
         return <Members />;
+      case 'trainers':
+        return <Trainers />;
       case 'registrations':
         return <Registrations />;
       case 'employees':
