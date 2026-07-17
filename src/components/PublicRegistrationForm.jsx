@@ -258,7 +258,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
               <input 
                 type="text" 
                 required
-                placeholder="Amara Walker"
+                placeholder="Amara Silva"
                 value={publicForm.full_name}
                 onChange={(e) => setPublicForm({...publicForm, full_name: e.target.value})}
                 className="glass-input"
@@ -271,7 +271,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
               <input 
                 type="email" 
                 required
-                placeholder="amara@gmail.com"
+                placeholder="amara.silva@gmail.com"
                 value={publicForm.email}
                 onChange={(e) => setPublicForm({...publicForm, email: e.target.value})}
                 className="glass-input"
@@ -284,7 +284,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
               <input 
                 type="tel" 
                 required
-                placeholder="+1 (555) 998-1234"
+                placeholder="077 998 1234"
                 value={publicForm.phone}
                 onChange={(e) => setPublicForm({...publicForm, phone: e.target.value})}
                 className="glass-input"
@@ -436,7 +436,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
               <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Mobile</label>
               <input 
                 type="text" 
-                placeholder="+1 (555) 000-0000"
+                placeholder="071 234 5678"
                 value={publicForm.emergency_contact_phone}
                 onChange={(e) => setPublicForm({...publicForm, emergency_contact_phone: e.target.value})}
                 className="glass-input"

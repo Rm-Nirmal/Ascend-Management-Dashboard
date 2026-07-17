@@ -653,7 +653,7 @@ const AdminManagement = () => {
                   <input
                     type="text"
                     className="glass-input"
-                    placeholder="Sarah Jenkins"
+                    placeholder="Sarah Silva"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     readOnly={role === 'standard_admin'}
@@ -672,7 +672,7 @@ const AdminManagement = () => {
                   <input
                     type="email"
                     className="glass-input"
-                    placeholder="sarah@ascend.com"
+                    placeholder="sarah@gym.lk"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     readOnly={role === 'standard_admin'}
@@ -1014,7 +1014,7 @@ const AdminManagement = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Trainer Full Name *</label>
                 <input 
-                  type="text" required placeholder="e.g. Chris Bumstead" className="glass-input"
+                  type="text" required placeholder="e.g. Lucian Pushparaj" className="glass-input"
                   value={trainerForm.name} onChange={(e) => setTrainerForm({...trainerForm, name: e.target.value})}
                 />
               </div>

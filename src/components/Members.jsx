@@ -1455,7 +1455,7 @@ const Members = () => {
                     <input 
                       type="text" 
                       required
-                      placeholder="Jane Austin"
+                      placeholder="Nimal Perera"
                       value={newMemberForm.full_name}
                       onChange={(e) => setNewMemberForm({...newMemberForm, full_name: e.target.value})}
                       className="glass-input"
@@ -1467,7 +1467,7 @@ const Members = () => {
                     <input 
                       type="email" 
                       required
-                      placeholder="jane@example.com"
+                      placeholder="nimal@gmail.com"
                       value={newMemberForm.email}
                       onChange={(e) => setNewMemberForm({...newMemberForm, email: e.target.value})}
                       className="glass-input"
@@ -1478,7 +1478,7 @@ const Members = () => {
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phone Number</label>
                     <input 
                       type="tel" 
-                      placeholder="+1 (555) 012-3456"
+                      placeholder="077 123 4567"
                       value={newMemberForm.phone}
                       onChange={(e) => setNewMemberForm({...newMemberForm, phone: e.target.value})}
                       className="glass-input"
@@ -1597,7 +1597,7 @@ const Members = () => {
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Name</label>
                     <input 
                       type="text" 
-                      placeholder="John Smith"
+                      placeholder="K. Silva"
                       value={newMemberForm.emergency_contact_name}
                       onChange={(e) => setNewMemberForm({...newMemberForm, emergency_contact_name: e.target.value})}
                       className="glass-input"
@@ -1608,7 +1608,7 @@ const Members = () => {
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Phone</label>
                     <input 
                       type="text" 
-                      placeholder="+1 (555) 987-6543"
+                      placeholder="071 987 6543"
                       value={newMemberForm.emergency_contact_phone}
                       onChange={(e) => setNewMemberForm({...newMemberForm, emergency_contact_phone: e.target.value})}
                       className="glass-input"
@@ -1863,7 +1863,7 @@ const Members = () => {
                     <input 
                       type="text" 
                       required
-                      placeholder="Jane Austin"
+                      placeholder="Nimal Perera"
                       value={editMemberForm.full_name}
                       onChange={(e) => setEditMemberForm({...editMemberForm, full_name: e.target.value})}
                       className="glass-input"
@@ -1875,7 +1875,7 @@ const Members = () => {
                     <input 
                       type="email" 
                       required
-                      placeholder="jane@example.com"
+                      placeholder="nimal@gmail.com"
                       value={editMemberForm.email}
                       onChange={(e) => setEditMemberForm({...editMemberForm, email: e.target.value})}
                       className="glass-input"
@@ -1886,7 +1886,7 @@ const Members = () => {
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phone Number</label>
                     <input 
                       type="tel" 
-                      placeholder="+1 (555) 012-3456"
+                      placeholder="077 123 4567"
                       value={editMemberForm.phone}
                       onChange={(e) => setEditMemberForm({...editMemberForm, phone: e.target.value})}
                       className="glass-input"
@@ -2005,7 +2005,7 @@ const Members = () => {
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Name</label>
                     <input 
                       type="text" 
-                      placeholder="John Smith"
+                      placeholder="K. Silva"
                       value={editMemberForm.emergency_contact_name}
                       onChange={(e) => setEditMemberForm({...editMemberForm, emergency_contact_name: e.target.value})}
                       className="glass-input"
@@ -2016,7 +2016,7 @@ const Members = () => {
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Emergency Contact Phone</label>
                     <input 
                       type="text" 
-                      placeholder="+1 (555) 987-6543"
+                      placeholder="071 987 6543"
                       value={editMemberForm.emergency_contact_phone}
                       onChange={(e) => setEditMemberForm({...editMemberForm, emergency_contact_phone: e.target.value})}
                       className="glass-input"

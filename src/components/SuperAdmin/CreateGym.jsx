@@ -383,7 +383,7 @@ const CreateGym = () => {
                   type="text" 
                   className="glass-input" 
                   style={{ paddingLeft: '2.5rem' }} 
-                  placeholder="e.g. Iron Titan Gym"
+                  placeholder="e.g. Colombo Fitness Club"
                   value={gymName} 
                   onChange={e => setGymName(e.target.value)} 
                   required
@@ -461,7 +461,7 @@ const CreateGym = () => {
                     type="text" 
                     className="glass-input" 
                     style={{ paddingLeft: '2.5rem' }} 
-                    placeholder="e.g. John Doe"
+                    placeholder="e.g. Nimal Perera"
                     value={ownerName} 
                     onChange={e => setOwnerName(e.target.value)} 
                     required
@@ -477,7 +477,7 @@ const CreateGym = () => {
                     type="email" 
                     className="glass-input" 
                     style={{ paddingLeft: '2.5rem' }} 
-                    placeholder="e.g. owner@irontitan.com"
+                    placeholder="e.g. owner@colombofitness.lk"
                     value={ownerEmail} 
                     onChange={e => setOwnerEmail(e.target.value)} 
                     required
