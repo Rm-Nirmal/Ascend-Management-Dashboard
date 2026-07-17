@@ -1932,7 +1932,7 @@ export const DashboardProvider = ({ children }) => {
       }
       
       const gymRef = gymSnap.docs[0].ref;
-      await updateDoc(gymRef, {
+      const updateData = {
         gymName: updatedFields.gymName,
         ownerName: updatedFields.ownerName,
         phone: updatedFields.phone,
@@ -1940,7 +1940,11 @@ export const DashboardProvider = ({ children }) => {
         country: updatedFields.country,
         currency: updatedFields.currency,
         timezone: updatedFields.timezone,
-      });
+      };
+      if (updatedFields.disabledFeatures !== undefined) {
+        updateData.disabledFeatures = updatedFields.disabledFeatures;
+      }
+      await updateDoc(gymRef, updateData);
 
       // Also update gym settings
       const settingsSnap = await getDocs(query(collection(db, COLLECTIONS.GYM_SETTINGS), where('gymId', '==', gymId)));

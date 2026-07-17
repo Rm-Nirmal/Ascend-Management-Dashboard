@@ -1005,6 +1005,81 @@ const ClientsList = ({ setActiveTab }) => {
                       </div>
                     </div>
 
+                    {/* Dashboard Feature Controls */}
+                    <div>
+                      <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>Dashboard Feature Controls</h5>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1.25rem' }}>
+                        {[
+                          { key: 'ai', name: 'AI Insights Module', desc: 'Predictive churn risk and revenue forecasting' },
+                          { key: 'audit', name: 'System Audit Logs', desc: 'Detailed log tracking of gym activities' },
+                          { key: 'employees', name: 'Employees Desk & Payroll', desc: 'Staff directory and payslip processing' },
+                          { key: 'access', name: 'Access Control Console', desc: 'QR code scanning and attendance logs' },
+                          { key: 'registrations', name: 'Registration Queue', desc: 'New member registration approval workflow' },
+                          { key: 'finance', name: 'Finance Module', desc: 'Expense logging and income tracking' },
+                          { key: 'inventory', name: 'Inventory & POS Module', desc: 'Product catalogs, stock levels, and POS retail sales' },
+                          { key: 'support_tickets', name: 'Support Ticket Center', desc: 'Direct support communication channel' }
+                        ].map(feature => {
+                          const disabledFeatures = selectedGym.disabledFeatures || [];
+                          const isEnabled = !disabledFeatures.includes(feature.key);
+                          
+                          const toggleFeature = async () => {
+                            let newDisabled = [...disabledFeatures];
+                            if (isEnabled) {
+                              newDisabled.push(feature.key);
+                            } else {
+                              newDisabled = newDisabled.filter(k => k !== feature.key);
+                            }
+                            
+                            const res = await updateGymDetails(selectedGym.gymId, {
+                              gymName: selectedGym.gymName,
+                              ownerName: selectedGym.ownerName,
+                              phone: selectedGym.phone || '',
+                              address: selectedGym.address || '',
+                              country: selectedGym.country || '',
+                              currency: selectedGym.currency || '',
+                              timezone: selectedGym.timezone || '',
+                              disabledFeatures: newDisabled
+                            });
+                            
+                            if (res.success) {
+                              setSelectedGym(prev => ({
+                                ...prev,
+                                disabledFeatures: newDisabled
+                              }));
+                            }
+                          };
+
+                          return (
+                            <div key={feature.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                              <div>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', color: 'var(--text-main)' }}>{feature.name}</span>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{feature.desc}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={toggleFeature}
+                                style={{
+                                  background: isEnabled ? '#10b981' : 'rgba(255,255,255,0.05)',
+                                  border: 'none',
+                                  color: '#fff',
+                                  padding: '0.25rem 0.65rem',
+                                  borderRadius: '20px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  minWidth: '55px',
+                                  textAlign: 'center',
+                                  transition: 'background var(--transition-fast)'
+                                }}
+                              >
+                                {isEnabled ? 'ON' : 'OFF'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {/* Owner credentials card */}
                     <div>
                       <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>Owner Info</h5>

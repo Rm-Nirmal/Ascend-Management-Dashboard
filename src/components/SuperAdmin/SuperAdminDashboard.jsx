@@ -34,19 +34,16 @@ import NotificationTemplates from './NotificationTemplates';
 const SuperAdminDashboard = () => {
   const { currentUser, logout, showToast } = useDashboard();
   const [activeTab, setActiveTab] = useState('overview');
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('superAdminDarkMode') !== 'false';
-  });
+  const [darkMode] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('superAdminDarkMode', darkMode);
-    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', 'dark');
     
     // Nice purple color for SuperAdmin
-    const purpleAccent = darkMode ? '#a855f7' : '#7c3aed';
+    const purpleAccent = '#a855f7';
     document.documentElement.style.setProperty('--color-primary', purpleAccent);
     document.documentElement.style.setProperty('--color-primary-glow', `rgba(168, 85, 247, 0.15)`);
-  }, [darkMode]);
+  }, []);
 
   const navItems = [
     { id: 'overview', name: 'SaaS Overview', icon: LayoutDashboard },
@@ -201,24 +198,7 @@ const SuperAdminDashboard = () => {
               <ShieldCheck size={14} /> System Online
             </div>
 
-            {/* Theme Toggle Button */}
-            <button 
-              onClick={() => setDarkMode(!darkMode)}
-              className="btn btn-secondary"
-              style={{ 
-                padding: '0.45rem', 
-                borderRadius: '6px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                cursor: 'pointer',
-                width: '36px',
-                height: '36px'
-              }}
-              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
+
 
             <button 
               className="btn btn-secondary"

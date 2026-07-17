@@ -30,10 +30,13 @@ import {
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-  const { currentUser, logout, gymSettings } = useDashboard();
+  const { currentUser, logout, gymSettings, gyms } = useDashboard();
   const [inventoryExpanded, setInventoryExpanded] = useState(() => {
     return activeTab.startsWith('inventory_');
   });
+
+  const currentGym = gyms?.find(g => g.gymId === currentUser?.gymId);
+  const disabledFeatures = currentGym?.disabledFeatures || [];
 
   const allInventorySubItems = [
     { id: 'inventory_dashboard', name: 'Dashboard', icon: LayoutDashboard },
@@ -55,7 +58,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     return ['inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'].includes(item.id);
   });
 
-  const showInventory = currentUser && currentUser.role !== 'super_admin';
+  const showInventory = currentUser && currentUser.role !== 'super_admin' && !disabledFeatures.includes('inventory');
 
   // All potential nav items
   const allNavItems = [
@@ -79,6 +82,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   // Filter based on currentUser role
   const navItems = allNavItems.filter(item => {
     if (!currentUser) return false;
+
+    // Check if the feature is explicitly disabled for the tenant
+    if (disabledFeatures.includes(item.id)) return false;
 
     // Gym owners and Gym Admins can access everything except Console
     if (
