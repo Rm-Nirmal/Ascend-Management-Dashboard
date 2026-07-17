@@ -52,7 +52,7 @@ const Employees = () => {
     if (!emp) return 'active';
     if (emp.status === 'terminated') return 'terminated';
     const todayStr = new Date().toISOString().split('T')[0];
-    const isOnLeaveToday = (leaveRequests || []).some(r => 
+    const isOnLeaveToday = (Array.isArray(leaveRequests) ? leaveRequests : []).some(r => 
       r && 
       r.employeeId === emp.id && 
       r.status === 'approved' && 
@@ -64,7 +64,7 @@ const Employees = () => {
 
   // Filter lists
   const activeEmployees = useMemo(() => {
-    return (employees || []).filter(e => e && e.status !== 'terminated');
+    return (Array.isArray(employees) ? employees : []).filter(e => e && e.status !== 'terminated');
   }, [employees]);
 
   const filteredEmployees = useMemo(() => {
@@ -88,7 +88,7 @@ const Employees = () => {
   }, [activeEmployees]);
 
   const rolesList = useMemo(() => {
-    const roles = new Set((activeEmployees || []).filter(Boolean).map(e => e.role));
+    const roles = new Set((Array.isArray(activeEmployees) ? activeEmployees : []).filter(Boolean).map(e => e.role));
     return Array.from(roles);
   }, [activeEmployees]);
 
@@ -112,7 +112,7 @@ const Employees = () => {
     const empId = selectedProfileEmployee.id;
     const now = new Date();
     
-    const empBreaks = (breakLogs || []).filter(
+    const empBreaks = (Array.isArray(breakLogs) ? breakLogs : []).filter(
       b => b && b.employeeId === empId && b.status === 'completed'
     );
     
@@ -135,7 +135,7 @@ const Employees = () => {
 
   const linkedAdminForProfile = useMemo(() => {
     if (!selectedProfileEmployee || !admins) return null;
-    return (admins || []).find(
+    return (Array.isArray(admins) ? admins : []).find(
       a => a && (a.employeeId === selectedProfileEmployee.id || 
       (a.email && a.email.toLowerCase() === selectedProfileEmployee.email?.toLowerCase()))
     );
@@ -144,7 +144,7 @@ const Employees = () => {
   const employeeActivities = useMemo(() => {
     if (!selectedProfileEmployee || !auditLogs) return [];
     
-    return (auditLogs || []).filter(log => {
+    return (Array.isArray(auditLogs) ? auditLogs : []).filter(log => {
       if (!log) return false;
       const matchesAdminId = linkedAdminForProfile && (log.user_id === linkedAdminForProfile.id || log.user_id === linkedAdminForProfile.uid);
       const empName = selectedProfileEmployee.full_name || '';
@@ -288,7 +288,7 @@ const Employees = () => {
           }}
         >
           Leave Management
-          {(leaveRequests || []).filter(r => r && r.status === 'pending').length > 0 && (
+          {(Array.isArray(leaveRequests) ? leaveRequests : []).filter(r => r && r.status === 'pending').length > 0 && (
             <span style={{
               background: 'var(--color-danger, #ef4444)',
               color: '#fff',
@@ -297,7 +297,7 @@ const Employees = () => {
               borderRadius: '10px',
               fontWeight: 700
             }}>
-              {(leaveRequests || []).filter(r => r && r.status === 'pending').length}
+              {(Array.isArray(leaveRequests) ? leaveRequests : []).filter(r => r && r.status === 'pending').length}
             </span>
           )}
         </button>
@@ -553,7 +553,7 @@ const Employees = () => {
                 // Month days
                 for (let day = 1; day <= daysInMonth; day++) {
                   const dayStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                  const dayRequests = (leaveRequests || []).filter(r => dayStr >= r.startDate && dayStr <= r.endDate);
+                  const dayRequests = (Array.isArray(leaveRequests) ? leaveRequests : []).filter(r => r && dayStr >= r.startDate && dayStr <= r.endDate);
 
                   cells.push(
                     <div
@@ -614,12 +614,12 @@ const Employees = () => {
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {(leaveRequests || []).filter(r => r && r.status === 'pending').length === 0 ? (
+              {(Array.isArray(leaveRequests) ? leaveRequests : []).filter(r => r && r.status === 'pending').length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.85rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
                   No pending leave requests.
                 </div>
               ) : (
-                (leaveRequests || []).filter(r => r && r.status === 'pending').map(req => {
+                (Array.isArray(leaveRequests) ? leaveRequests : []).filter(r => r && r.status === 'pending').map(req => {
                   const days = (Math.round((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1) || 0;
                   return (
                     <div
