@@ -133,25 +133,13 @@ const BreakTimer = () => {
     }
 
     if (activeShift) {
-      // Clocking out: end shift and save handover notes
+      // Clocking out: end shift
       const confirmClockOut = window.confirm('Are you sure you want to end your shift for today?');
       if (!confirmClockOut) return;
 
       const res = await clockInOutShift(employeeId, employeeName);
       if (res.success) {
-        try {
-          // Update the shift log document in Firestore with custom daily report fields
-          const shiftRef = doc(db, 'shiftLogs', activeShift.id);
-          await updateDoc(shiftRef, {
-            notes: shiftNotes.trim(),
-            tasksCompleted: tasksCompleted.trim(),
-            roleTitle: roleTitle.trim()
-          });
-          showToast('Shift ended! Handover report submitted successfully.', 'success');
-        } catch (err) {
-          console.error('Error saving shift report:', err);
-          showToast('Shift ended, but failed to save report details.', 'warning');
-        }
+        showToast('Shift ended successfully!', 'success');
         // Reset local states
         setRoleTitle('');
         setTasksCompleted('');
@@ -489,51 +477,7 @@ const BreakTimer = () => {
               </div>
             )}
 
-            {/* Daily Handover Report (Only displayed when active shift is running) */}
-            {activeShift && (
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '1.25rem', textAlign: 'left', marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <FileText size={14} />
-                  Daily Handover & Shift Report
-                </span>
-                
-                <div>
-                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Shift Role / Desk Section</label>
-                  <input 
-                    type="text" 
-                    className="glass-input" 
-                    value={roleTitle}
-                    onChange={(e) => setRoleTitle(e.target.value)}
-                    placeholder="e.g. Front Desk Reception, Floor Trainer"
-                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', width: '100%' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Tasks Accomplished</label>
-                  <textarea 
-                    className="glass-input" 
-                    value={tasksCompleted}
-                    onChange={(e) => setTasksCompleted(e.target.value)}
-                    placeholder="List registrations, cleaning duties, till matches, etc."
-                    rows={2}
-                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', width: '100%', resize: 'none' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem', fontWeight: 600 }}>Handover Notes / Incident Logs</label>
-                  <textarea 
-                    className="glass-input" 
-                    value={shiftNotes}
-                    onChange={(e) => setShiftNotes(e.target.value)}
-                    placeholder="Note client concerns, equipment issues, or drawer summaries..."
-                    rows={2}
-                    style={{ fontSize: '0.75rem', padding: '0.4rem 0.6rem', width: '100%', resize: 'none' }}
-                  />
-                </div>
-              </div>
-            )}
+            {/* Handover form removed */}
 
             {/* Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '360px' }}>
@@ -885,26 +829,30 @@ const BreakTimer = () => {
               <form onSubmit={handleLeaveSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div className="grid-2" style={{ gap: '0.75rem' }}>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Start Date</label>
-                    <input
-                      type="date"
-                      className="glass-input"
-                      value={leaveForm.startDate}
-                      onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
-                      required
-                      style={{ marginTop: '0.25rem', padding: '0.5rem' }}
-                    />
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Start Date</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                      <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
+                      <input
+                        type="date"
+                        value={leaveForm.startDate}
+                        onChange={(e) => setLeaveForm({ ...leaveForm, startDate: e.target.value })}
+                        style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', color: '#fff', outline: 'none', cursor: 'pointer', width: '100%' }}
+                        required
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>End Date</label>
-                    <input
-                      type="date"
-                      className="glass-input"
-                      value={leaveForm.endDate}
-                      onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
-                      required
-                      style={{ marginTop: '0.25rem', padding: '0.5rem' }}
-                    />
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>End Date</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                      <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
+                      <input
+                        type="date"
+                        value={leaveForm.endDate}
+                        onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
+                        style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', color: '#fff', outline: 'none', cursor: 'pointer', width: '100%' }}
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
 
