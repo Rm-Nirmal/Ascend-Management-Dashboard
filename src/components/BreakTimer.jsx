@@ -367,17 +367,31 @@ const BreakTimer = () => {
 
             {/* Shift Status Badges */}
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
-              <span className="badge" style={{
-                fontSize: '0.7rem',
-                padding: '0.3rem 0.75rem',
-                background: activeShift ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                color: activeShift ? '#10b981' : '#ef4444',
-                border: activeShift ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)',
-                fontWeight: 700,
-                textTransform: 'uppercase'
-              }}>
-                {activeShift ? 'Shift Active' : 'Off Duty'}
-              </span>
+              {isOnLeaveToday ? (
+                <span className="badge" style={{
+                  fontSize: '0.7rem',
+                  padding: '0.3rem 0.75rem',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  color: '#f59e0b',
+                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase'
+                }}>
+                  On Leave
+                </span>
+              ) : (
+                <span className="badge" style={{
+                  fontSize: '0.7rem',
+                  padding: '0.3rem 0.75rem',
+                  background: activeShift ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  color: activeShift ? '#10b981' : '#ef4444',
+                  border: activeShift ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)',
+                  fontWeight: 700,
+                  textTransform: 'uppercase'
+                }}>
+                  {activeShift ? 'Shift Active' : 'Off Duty'}
+                </span>
+              )}
               {activeShift && (
                 <span className="badge" style={{
                   fontSize: '0.7rem',
