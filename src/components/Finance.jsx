@@ -2340,8 +2340,7 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 {[
                   { id: 'directory', label: 'Staff Directory' },
-                  { id: 'history', label: 'Payroll History' },
-                  { id: 'analytics', label: 'Reports & Analytics' }
+                  { id: 'history', label: 'Payroll History' }
                 ].map(sub => (
                   <button
                     key={sub.id}
@@ -2358,7 +2357,7 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
               </div>
 
               {/* Sub-tab Search */}
-              {payrollSubTab !== 'analytics' && (
+              {true && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: '0.2rem 0.75rem', borderRadius: '8px', width: '260px' }}>
                   <Search size={14} style={{ color: 'var(--text-muted)' }} />
                   <input
@@ -2519,85 +2518,7 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
               </div>
             )}
 
-            {/* Sub-Tab 3: Analytics & Reports */}
-            {payrollSubTab === 'analytics' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                  
-                  {/* Chart 1: Role Salary Distribution */}
-                  <div className="glass-card">
-                    <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 700, marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                      Payroll Budget by Department/Role
-                    </h4>
-                    {payrollRoleDistribution.length === 0 ? (
-                      <div style={{ height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                        No data available
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height={250}>
-                        <PieChart>
-                          <Pie
-                            data={payrollRoleDistribution}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={75}
-                            paddingAngle={4}
-                            dataKey="value"
-                          >
-                            {payrollRoleDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            formatter={(val) => `LKR ${val.toLocaleString()}`} 
-                            contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid var(--border-color)' }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: '0.75rem', marginTop: '10px' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
 
-                  {/* Chart 2: Payroll Trend */}
-                  <div className="glass-card">
-                    <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', fontWeight: 700, marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                      Payroll Payout Trend (Last 6 Months)
-                    </h4>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={payrollTrendData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                        <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
-                        <YAxis stroke="var(--text-muted)" fontSize={11} formatter={(val) => `LKR ${val.toLocaleString()}`} />
-                        <Tooltip 
-                          formatter={(val) => `LKR ${val.toLocaleString()}`} 
-                          contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid var(--border-color)' }}
-                        />
-                        <Bar dataKey="Payroll" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                </div>
-
-                {/* Payroll Export Card */}
-                <div className="glass-card" style={{ background: 'rgba(255,255,255,0.01)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div>
-                      <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem' }}>Full Payroll Audit Log</h4>
-                      <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Generate a printed audit log of all employee salary transactions for tax purposes.</p>
-                    </div>
-                    <button 
-                      className="btn btn-secondary" 
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem' }}
-                      onClick={() => window.print()}
-                    >
-                      <Printer size={14} /> Print Payroll Summary
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
           </div>
 

@@ -11,10 +11,8 @@ import {
   DollarSign, 
   Clock,
   Lock,
-  Moon,
   Save,
   Loader2,
-  Sliders,
   CreditCard
 } from 'lucide-react';
 
@@ -85,7 +83,6 @@ const ClientSettings = () => {
         }}>
           {[
             { id: 'details', name: 'Gym Details', icon: Building2 },
-            { id: 'appearance', name: 'Theme & Appearance', icon: Sliders },
             { id: 'subscription', name: 'Subscription & Limits', icon: CreditCard }
           ].map(tab => {
             const Icon = tab.icon;
@@ -209,74 +206,7 @@ const ClientSettings = () => {
 
 
 
-          {/* TAB 3: THEME & APPEARANCE */}
-          {activeTab === 'appearance' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              <div style={{ 
-                background: 'rgba(255,255,255,0.01)', 
-                border: '1px solid rgba(255,255,255,0.03)', 
-                borderRadius: '10px', 
-                padding: '1.5rem' 
-              }}>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Moon size={16} style={{ color: 'var(--color-primary)' }} /> Console Appearance Theme
-                </h4>
-                
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  {/* Dark Mode Option */}
-                  <div
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '10px',
-                      padding: '2rem 1.5rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '1rem',
-                      maxWidth: '340px',
-                      width: '100%',
-                      textAlign: 'center'
-                    }}
-                  >
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      background: 'rgba(255,255,255,0.06)',
-                      color: 'var(--color-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid var(--border-color)',
-                      boxShadow: '0 0 15px rgba(255,255,255,0.05)'
-                    }}>
-                      <Moon size={24} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Dark Mode Only</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.45rem', lineHeight: '1.4' }}>
-                        This workspace console is styled exclusively for premium dark slate presentation.
-                      </div>
-                    </div>
-                    <span style={{
-                      fontSize: '0.65rem',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: '1px solid var(--border-color)',
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '4px',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em'
-                    }}>
-                      Locked
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {/* TAB 4: SUBSCRIPTION & LIMITS */}
           {activeTab === 'subscription' && (
