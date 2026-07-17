@@ -472,7 +472,7 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
                 style={{ marginTop: '0.2rem', accentColor: 'var(--color-primary)' }}
               />
               <span>
-                <strong>Follow Gym Rules:</strong> I agree to follow all gym rules, safety guidelines, and instructions given by ASCEND Fitness Studios and its staff.
+                <strong>Follow Gym Rules:</strong> I agree to follow all gym rules, safety guidelines, and instructions given by GYM and its staff.
               </span>
             </label>
 
