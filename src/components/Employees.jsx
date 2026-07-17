@@ -920,26 +920,16 @@ const Employees = () => {
                 </div>
               </div>
 
-              <div className="grid-2">
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Next Salary Date *</label>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Next Salary Date *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
                   <input 
                     type="date" 
                     value={empForm.next_salary_date} 
                     onChange={(e) => setEmpForm({...empForm, next_salary_date: e.target.value})} 
-                    className="glass-input" 
-                    style={{ marginTop: '0.25rem' }}
+                    style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', color: '#fff', outline: 'none', cursor: 'pointer', width: '100%' }}
                     required 
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Annual Leaves</label>
-                  <input 
-                    type="number" 
-                    value={empForm.total_leaves} 
-                    onChange={(e) => setEmpForm({...empForm, total_leaves: e.target.value})} 
-                    className="glass-input" 
-                    style={{ marginTop: '0.25rem' }}
                   />
                 </div>
               </div>
@@ -981,7 +971,7 @@ const Employees = () => {
 
               <div className="grid-2">
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Leaves Allowance *</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Leaves *</label>
                   <input 
                     type="number" 
                     value={empForm.monthly_leaves} 
@@ -992,7 +982,7 @@ const Employees = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Holidays Allowance *</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Holidays *</label>
                   <input 
                     type="number" 
                     value={empForm.holidays} 
@@ -1099,27 +1089,19 @@ const Employees = () => {
                 </div>
               </div>
 
-              <div className="grid-3">
+              <div className="grid-2">
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Next Salary Date *</label>
-                  <input 
-                    type="date" 
-                    value={empForm.next_salary_date} 
-                    onChange={(e) => setEmpForm({...empForm, next_salary_date: e.target.value})} 
-                    className="glass-input" 
-                    style={{ marginTop: '0.25rem' }}
-                    required 
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Leaves</label>
-                  <input 
-                    type="number" 
-                    value={empForm.total_leaves} 
-                    onChange={(e) => setEmpForm({...empForm, total_leaves: e.target.value})} 
-                    className="glass-input" 
-                    style={{ marginTop: '0.25rem' }}
-                  />
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Next Salary Date *</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
+                    <input 
+                      type="date" 
+                      value={empForm.next_salary_date} 
+                      onChange={(e) => setEmpForm({...empForm, next_salary_date: e.target.value})} 
+                      style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', color: '#fff', outline: 'none', cursor: 'pointer', width: '100%' }}
+                      required 
+                    />
+                  </div>
                 </div>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Status *</label>
@@ -1174,7 +1156,7 @@ const Employees = () => {
 
               <div className="grid-2">
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Leaves Allowance *</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Leaves *</label>
                   <input 
                     type="number" 
                     value={empForm.monthly_leaves} 
@@ -1185,7 +1167,7 @@ const Employees = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Holidays Allowance *</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Holidays *</label>
                   <input 
                     type="number" 
                     value={empForm.holidays} 
