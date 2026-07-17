@@ -46,9 +46,12 @@ const Employees = () => {
 
   const filteredEmployees = useMemo(() => {
     return activeEmployees.filter(emp => {
-      const matchSearch = emp.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          emp.phone.includes(searchTerm);
+      const nameStr = emp.full_name || '';
+      const emailStr = emp.email || '';
+      const phoneStr = emp.phone || '';
+      const matchSearch = nameStr.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          emailStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          phoneStr.includes(searchTerm);
       const matchRole = roleFilter === 'all' || emp.role === roleFilter;
       return matchSearch && matchRole;
     });
@@ -120,7 +123,8 @@ const Employees = () => {
     
     return auditLogs.filter(log => {
       const matchesAdminId = linkedAdminForProfile && (log.user_id === linkedAdminForProfile.id || log.user_id === linkedAdminForProfile.uid);
-      const matchesName = log.user_name?.toLowerCase() === selectedProfileEmployee.full_name.toLowerCase();
+      const empName = selectedProfileEmployee.full_name || '';
+      const matchesName = log.user_name?.toLowerCase() === empName.toLowerCase();
       return matchesAdminId || matchesName;
     });
   }, [selectedProfileEmployee, auditLogs, linkedAdminForProfile]);
@@ -305,9 +309,9 @@ const Employees = () => {
                               border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontWeight: 700, color: 'var(--color-primary)'
                             }}>
-                              {emp.full_name.charAt(0)}
+                              {(emp.full_name || '').charAt(0)}
                             </div>
-                            <div style={{ fontWeight: 600 }}>{emp.full_name}</div>
+                            <div style={{ fontWeight: 600 }}>{emp.full_name || 'Unnamed Employee'}</div>
                           </div>
                         </td>
                         <td>
@@ -671,10 +675,10 @@ const Employees = () => {
                     border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontWeight: 700, fontSize: '1.5rem', color: 'var(--color-primary)'
                   }}>
-                    {selectedProfileEmployee.full_name.charAt(0)}
+                    {(selectedProfileEmployee.full_name || '').charAt(0)}
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{selectedProfileEmployee.full_name}</h3>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{selectedProfileEmployee.full_name || 'Unnamed Employee'}</h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <Briefcase size={12} /> {selectedProfileEmployee.role}
                     </p>

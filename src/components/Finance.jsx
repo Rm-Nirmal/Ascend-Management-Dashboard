@@ -231,7 +231,8 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
 
     // Find employees who have NOT been paid this month
     const pendingStaff = activeStaff.filter(emp => {
-      const hasBeenPaid = paidSalaries.some(exp => exp.employee_id === emp.id || exp.title.includes(emp.full_name));
+      const empName = emp.full_name || '';
+      const hasBeenPaid = paidSalaries.some(exp => exp.employee_id === emp.id || (exp.title || '').includes(empName));
       return !hasBeenPaid;
     });
     const pendingThisMonth = pendingStaff.reduce((sum, emp) => sum + (parseFloat(emp.salary) || 0), 0);
@@ -307,7 +308,7 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
 
 
   const getEmployeeLastPaidDate = (empId, empName) => {
-    const records = payrollHistory.filter(exp => exp.employee_id === empId || exp.title.includes(empName));
+    const records = payrollHistory.filter(exp => exp.employee_id === empId || (exp.title || '').includes(empName || ''));
     if (records.length === 0) return 'Never';
     return records[0].date;
   };
@@ -318,7 +319,7 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     return expenses.some(exp => 
       exp.category === 'Salary' && 
-      (exp.employee_id === empId || exp.title.includes(empName)) &&
+      (exp.employee_id === empId || (exp.title || '').includes(empName || '')) &&
       exp.date && 
       isWithinRange(exp.date, startOfMonth, endOfMonth)
     );
