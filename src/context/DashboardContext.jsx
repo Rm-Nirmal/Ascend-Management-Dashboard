@@ -2240,8 +2240,8 @@ export const DashboardProvider = ({ children }) => {
       const cleanName = gymName.trim().replace(/[^a-zA-Z]/g, '');
       const prefix = (cleanName.substring(0, 3).toUpperCase() || 'GYM') + '-';
 
-      // Find the next member code sequentially (in order starting with 1000)
-      let maxNum = 999;
+      // Find the next member code sequentially (in order starting with 0001)
+      let maxNum = 0;
       members.forEach(m => {
         if (m.member_code && m.member_code.startsWith(prefix)) {
           const numStr = m.member_code.replace(prefix, '');
@@ -2251,7 +2251,7 @@ export const DashboardProvider = ({ children }) => {
           }
         }
       });
-      const memberCode = `${prefix}${maxNum + 1}`;
+      const memberCode = `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
 
       const newMemberData = helperCreateMemberObject(restMemberData, memberCode, resolvedGymId);
 
@@ -2412,6 +2412,9 @@ export const DashboardProvider = ({ children }) => {
           countdown_end: new Date().toISOString(),
           next_payment_date: new Date().toISOString(),
           gymId: req.gymId || currentUser?.gymId || DEFAULT_ORG_ID,
+          rules_health_declaration: req.rules_health_declaration || false,
+          rules_follow_gym_rules: req.rules_follow_gym_rules || false,
+          rules_membership_conduct: req.rules_membership_conduct || false,
         });
 
         // Update registration status in Firestore
@@ -2664,7 +2667,6 @@ export const DashboardProvider = ({ children }) => {
         if (inv.member_id && inv.plan_id) {
           const member = members.find(m => m.id === inv.member_id);
           if (member) {
-            const plan = plans.find(p => p.id === inv.plan_id) || plans[0];
             const periodMonths = 1;
             const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end, periodMonths);
 

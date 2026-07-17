@@ -367,9 +367,7 @@ const Registrations = () => {
 
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Program & Billing details</span>
-                <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                  Gym Branch: <strong>Ascend Headquarters (HQ)</strong>
-                </div>
+
                 <div style={{ fontSize: '0.85rem' }}>
                   Target Plan: <strong>{plans.find(p => p.id === selectedReq.plan_id)?.name || 'N/A'}</strong>
                 </div>

@@ -275,7 +275,10 @@ const Members = () => {
     weight_kg: '',
     height_cm: '',
     body_fat_pct: '',
-    trainer_id: ''
+    trainer_id: '',
+    rules_health_declaration: false,
+    rules_follow_gym_rules: false,
+    rules_membership_conduct: false
   });
 
   const uniqueMembers = useMemo(() => {
@@ -336,7 +339,7 @@ const Members = () => {
 
   const latestInvoice = useMemo(() => {
     if (!selectedMember || !invoices) return null;
-    const memberInvoices = invoices.filter(inv => inv.member_id === selectedMember.id);
+    const memberInvoices = invoices.filter(inv => inv.member_id === selectedMember.id && inv.status === 'paid');
     if (memberInvoices.length === 0) return null;
     return [...memberInvoices].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0];
   }, [selectedMember, invoices]);
@@ -344,7 +347,7 @@ const Members = () => {
   const memberInvoices = useMemo(() => {
     if (!selectedMember || !invoices) return [];
     return invoices
-      .filter(inv => inv.member_id === selectedMember.id)
+      .filter(inv => inv.member_id === selectedMember.id && inv.status === 'paid')
       .sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at));
   }, [selectedMember, invoices]);
 
@@ -433,7 +436,10 @@ const Members = () => {
         ...newMemberForm,
         plan_id: newMemberForm.plan_id,
         trainer_id: newMemberForm.trainer_id || null,
-        auto_renew: true
+        auto_renew: true,
+        status: 'expired',
+        countdown_end: new Date().toISOString(),
+        next_payment_date: new Date().toISOString()
       });
 
       setShowAddModal(false);
@@ -452,7 +458,10 @@ const Members = () => {
         weight_kg: '',
         height_cm: '',
         body_fat_pct: '',
-        trainer_id: ''
+        trainer_id: '',
+        rules_health_declaration: false,
+        rules_follow_gym_rules: false,
+        rules_membership_conduct: false
       });
       
       // Select the newly created member to view QR details
@@ -637,7 +646,7 @@ const Members = () => {
               ) : (
                 displayedMembers.map(member => {
                   const plan = plans.find(p => p.id === member.plan_id);
-                  const memberInvs = invoices ? invoices.filter(inv => inv.member_id === member.id) : [];
+                  const memberInvs = invoices ? invoices.filter(inv => inv.member_id === member.id && inv.status === 'paid') : [];
                   const latestInv = memberInvs.length > 0 
                     ? [...memberInvs].sort((a, b) => new Date(b.issued_at || b.created_at) - new Date(a.issued_at || a.created_at))[0]
                     : null;
@@ -1119,6 +1128,77 @@ const Members = () => {
               </button>
             </div>
 
+            {/* Gym Agreements & Declarations Checklist */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.75rem' }}>
+                Gym Agreements & Declarations
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
+                  <span style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    width: '18px', 
+                    height: '18px', 
+                    borderRadius: '4px', 
+                    background: selectedMember.rules_health_declaration ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: selectedMember.rules_health_declaration ? '1px solid rgb(16, 185, 129)' : '1px solid rgb(239, 68, 68)',
+                    color: selectedMember.rules_health_declaration ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)',
+                    fontWeight: 'bold',
+                    fontSize: '0.7rem'
+                  }}>
+                    {selectedMember.rules_health_declaration ? '✓' : '✗'}
+                  </span>
+                  <span style={{ color: selectedMember.rules_health_declaration ? '#fff' : 'var(--text-muted)' }}>
+                    Health Declaration Agreed
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
+                  <span style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    width: '18px', 
+                    height: '18px', 
+                    borderRadius: '4px', 
+                    background: selectedMember.rules_follow_gym_rules ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: selectedMember.rules_follow_gym_rules ? '1px solid rgb(16, 185, 129)' : '1px solid rgb(239, 68, 68)',
+                    color: selectedMember.rules_follow_gym_rules ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)',
+                    fontWeight: 'bold',
+                    fontSize: '0.7rem'
+                  }}>
+                    {selectedMember.rules_follow_gym_rules ? '✓' : '✗'}
+                  </span>
+                  <span style={{ color: selectedMember.rules_follow_gym_rules ? '#fff' : 'var(--text-muted)' }}>
+                    Follow Gym Rules Agreed
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
+                  <span style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    width: '18px', 
+                    height: '18px', 
+                    borderRadius: '4px', 
+                    background: selectedMember.rules_membership_conduct ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: selectedMember.rules_membership_conduct ? '1px solid rgb(16, 185, 129)' : '1px solid rgb(239, 68, 68)',
+                    color: selectedMember.rules_membership_conduct ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)',
+                    fontWeight: 'bold',
+                    fontSize: '0.7rem'
+                  }}>
+                    {selectedMember.rules_membership_conduct ? '✓' : '✗'}
+                  </span>
+                  <span style={{ color: selectedMember.rules_membership_conduct ? '#fff' : 'var(--text-muted)' }}>
+                    Membership & Conduct Agreed
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Payment History & Receipts Section */}
             <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
               <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>
@@ -1385,7 +1465,6 @@ const Members = () => {
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
-                        <option value="prefer_not_to_say">Declined</option>
                       </select>
                     </div>
                     <div>
@@ -1527,6 +1606,46 @@ const Members = () => {
                     className="glass-input"
                     style={{ marginTop: '0.25rem' }}
                   />
+                </div>
+
+                <div style={{ marginTop: '0.75rem', background: 'rgba(255, 255, 255, 0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Gym Agreements & Declarations</span>
+                  
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', fontSize: '0.75rem', color: '#fff', lineHeight: '1.4' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={newMemberForm.rules_health_declaration} 
+                      onChange={(e) => setNewMemberForm({...newMemberForm, rules_health_declaration: e.target.checked})}
+                      style={{ marginTop: '0.15rem', accentColor: 'var(--color-primary)' }}
+                    />
+                    <span>
+                      <strong>Health Declaration:</strong> I confirm that I do not have any medical condition, injury, or health issue that would make exercise unsafe for me, and I will inform the gym if my health condition changes.
+                    </span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', fontSize: '0.75rem', color: '#fff', lineHeight: '1.4' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={newMemberForm.rules_follow_gym_rules} 
+                      onChange={(e) => setNewMemberForm({...newMemberForm, rules_follow_gym_rules: e.target.checked})}
+                      style={{ marginTop: '0.15rem', accentColor: 'var(--color-primary)' }}
+                    />
+                    <span>
+                      <strong>Follow Gym Rules:</strong> I agree to follow all gym rules, safety guidelines, and instructions given by ASCEND Fitness Studios and its staff.
+                    </span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', fontSize: '0.75rem', color: '#fff', lineHeight: '1.4' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={newMemberForm.rules_membership_conduct} 
+                      onChange={(e) => setNewMemberForm({...newMemberForm, rules_membership_conduct: e.target.checked})}
+                      style={{ marginTop: '0.15rem', accentColor: 'var(--color-primary)' }}
+                    />
+                    <span>
+                      <strong>Membership & Conduct:</strong> I understand that my membership is non-transferable, unauthorized access is prohibited, and violation of gym rules may result in suspension or termination of my membership without refund.
+                    </span>
+                  </label>
                 </div>
               </div>
 
@@ -1754,7 +1873,6 @@ const Members = () => {
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
-                        <option value="prefer_not_to_say">Declined</option>
                       </select>
                     </div>
                     <div>

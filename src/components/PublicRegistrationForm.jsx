@@ -33,6 +33,9 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
     weight_kg: '',
     height_cm: '',
     body_fat_pct: '',
+    rules_health_declaration: false,
+    rules_follow_gym_rules: false,
+    rules_membership_conduct: false,
   });
 
   useEffect(() => {
@@ -127,6 +130,9 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
         weight_kg: '',
         height_cm: '',
         body_fat_pct: '',
+        rules_health_declaration: false,
+        rules_follow_gym_rules: false,
+        rules_membership_conduct: false,
       });
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -437,6 +443,50 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
                 style={{ marginTop: '0.25rem' }}
               />
             </div>
+          </div>
+        </div>
+        
+        {/* Section 5: Gym Agreements & Declarations */}
+        <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h4 style={{ color: '#ffffff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', margin: 0 }}>
+            5. Gym Agreements & Declarations
+          </h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#fff', lineHeight: '1.4' }}>
+              <input 
+                type="checkbox" 
+                checked={publicForm.rules_health_declaration} 
+                onChange={(e) => setPublicForm({...publicForm, rules_health_declaration: e.target.checked})}
+                style={{ marginTop: '0.2rem', accentColor: 'var(--color-primary)' }}
+              />
+              <span>
+                <strong>Health Declaration:</strong> I confirm that I do not have any medical condition, injury, or health issue that would make exercise unsafe for me, and I will inform the gym if my health condition changes.
+              </span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#fff', lineHeight: '1.4' }}>
+              <input 
+                type="checkbox" 
+                checked={publicForm.rules_follow_gym_rules} 
+                onChange={(e) => setPublicForm({...publicForm, rules_follow_gym_rules: e.target.checked})}
+                style={{ marginTop: '0.2rem', accentColor: 'var(--color-primary)' }}
+              />
+              <span>
+                <strong>Follow Gym Rules:</strong> I agree to follow all gym rules, safety guidelines, and instructions given by ASCEND Fitness Studios and its staff.
+              </span>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', fontSize: '0.8rem', color: '#fff', lineHeight: '1.4' }}>
+              <input 
+                type="checkbox" 
+                checked={publicForm.rules_membership_conduct} 
+                onChange={(e) => setPublicForm({...publicForm, rules_membership_conduct: e.target.checked})}
+                style={{ marginTop: '0.2rem', accentColor: 'var(--color-primary)' }}
+              />
+              <span>
+                <strong>Membership & Conduct:</strong> I understand that my membership is non-transferable, unauthorized access is prohibited, and violation of gym rules may result in suspension or termination of my membership without refund.
+              </span>
+            </label>
           </div>
         </div>
 
