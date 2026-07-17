@@ -30,13 +30,12 @@ import {
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-  const { currentUser, logout, gymSettings, gyms } = useDashboard();
+  const { currentUser, logout, gymSettings } = useDashboard();
   const [inventoryExpanded, setInventoryExpanded] = useState(() => {
     return activeTab.startsWith('inventory_');
   });
 
-  const currentGym = gyms?.find(g => g.gymId === currentUser?.gymId);
-  const disabledFeatures = currentGym?.disabledFeatures || [];
+  const disabledFeatures = gymSettings?.disabledFeatures || [];
 
   const allInventorySubItems = [
     { id: 'inventory_dashboard', name: 'Dashboard', icon: LayoutDashboard },

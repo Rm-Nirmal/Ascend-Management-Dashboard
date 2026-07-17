@@ -182,9 +182,9 @@ const Announcements = () => {
 
   const getCategoryBadge = (cat) => {
     let label = 'Announcement';
-    let color = '#a855f7'; // purple
-    let bg = 'rgba(168, 85, 247, 0.05)';
-    let border = '1px solid rgba(168, 85, 247, 0.15)';
+    let color = '#ffffff'; // white
+    let bg = 'rgba(255, 255, 255, 0.05)';
+    let border = '1px solid var(--border-color)';
 
     if (cat === 'maintenance') {
       label = 'Maintenance';
@@ -245,7 +245,7 @@ const Announcements = () => {
         gap: '1.25rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '10px' }}>
-          <div style={{ background: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', padding: '0.5rem', borderRadius: '6px' }}>
+          <div style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#ffffff', padding: '0.5rem', borderRadius: '6px' }}>
             <Megaphone size={20} />
           </div>
           <div>
@@ -301,7 +301,7 @@ const Announcements = () => {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Megaphone size={18} style={{ color: '#a855f7' }} /> 
+              <Megaphone size={18} style={{ color: '#ffffff' }} /> 
               {editingId ? 'Edit Broadcast Details' : 'Broadcast New Notice'}
             </h4>
             {editingId && (
@@ -403,8 +403,8 @@ const Announcements = () => {
             style={{ 
               marginTop: '0.5rem', 
               justifyContent: 'center', 
-              background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
-              color: '#ffffff',
+              background: '#ffffff',
+              color: '#000000',
               borderColor: 'transparent',
               padding: '0.75rem',
               fontWeight: 700,
@@ -499,8 +499,8 @@ const Announcements = () => {
                   <div 
                     key={ann.id} 
                     style={{
-                      background: isEditingThis ? 'rgba(168, 85, 247, 0.05)' : 'var(--bg-secondary)',
-                      border: isEditingThis ? '1px solid #a855f7' : '1px solid var(--border-color)',
+                      background: isEditingThis ? 'rgba(255, 255, 255, 0.05)' : 'var(--bg-secondary)',
+                      border: isEditingThis ? '1px solid #ffffff' : '1px solid var(--border-color)',
                       borderRadius: '8px',
                       padding: '1.25rem',
                       position: 'relative',
@@ -535,8 +535,8 @@ const Announcements = () => {
                           transition: 'all 0.2s ease'
                         }}
                         onMouseEnter={e => {
-                          e.currentTarget.style.color = '#a855f7';
-                          e.currentTarget.style.background = 'rgba(168, 85, 247, 0.05)';
+                          e.currentTarget.style.color = '#ffffff';
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
                         }}
                         onMouseLeave={e => {
                           e.currentTarget.style.color = 'var(--text-dark)';

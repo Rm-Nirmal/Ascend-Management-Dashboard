@@ -39,10 +39,9 @@ const SuperAdminDashboard = () => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
     
-    // Nice purple color for SuperAdmin
-    const purpleAccent = '#a855f7';
-    document.documentElement.style.setProperty('--color-primary', purpleAccent);
-    document.documentElement.style.setProperty('--color-primary-glow', `rgba(168, 85, 247, 0.15)`);
+    // Monochromatic theme (black, grey, white)
+    document.documentElement.style.setProperty('--color-primary', '#ffffff');
+    document.documentElement.style.setProperty('--color-primary-glow', 'rgba(255, 255, 255, 0.08)');
   }, []);
 
   const navItems = [
@@ -95,8 +94,8 @@ const SuperAdminDashboard = () => {
         <div>
           {/* Brand Logo */}
           <div className="sidebar-logo" style={{ marginBottom: '2.5rem' }}>
-            <Dumbbell className="icon" style={{ color: '#a855f7' }} /> {/* Purple for SuperAdmin */}
-            <span className="logo-text" style={{ background: 'linear-gradient(to right, #a855f7, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 800 }}>
+            <Dumbbell className="icon" style={{ color: '#ffffff' }} />
+            <span className="logo-text" style={{ color: '#ffffff', fontWeight: 800 }}>
               FITGENCORE
             </span>
           </div>
@@ -111,7 +110,7 @@ const SuperAdminDashboard = () => {
                   key={item.id} 
                   className={`nav-link ${isActive ? 'active' : ''}`}
                   onClick={() => setActiveTab(item.id)}
-                  style={isActive ? { borderLeftColor: '#a855f7', background: 'rgba(168, 85, 247, 0.05)', color: '#a855f7' } : {}}
+                  style={isActive ? { borderLeftColor: '#ffffff', background: 'rgba(255, 255, 255, 0.05)', color: '#ffffff' } : {}}
                 >
                   <Icon size={18} />
                   <span>{item.name}</span>
@@ -133,7 +132,7 @@ const SuperAdminDashboard = () => {
               <span className="user-name" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100px', display: 'block' }}>
                 {currentUser?.name || 'Super Admin'}
               </span>
-              <span className="user-role" style={{ fontSize: '0.7rem', color: '#a855f7', fontWeight: 600 }}>
+              <span className="user-role" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                 Super Admin
               </span>
             </div>
@@ -187,15 +186,15 @@ const SuperAdminDashboard = () => {
               display: 'flex', 
               alignItems: 'center', 
               gap: '0.35rem', 
-              background: 'rgba(168, 85, 247, 0.05)', 
+              background: 'rgba(255, 255, 255, 0.05)', 
               padding: '0.4rem 0.75rem', 
               borderRadius: '6px', 
-              border: '1px solid rgba(168, 85, 247, 0.15)', 
+              border: '1px solid var(--border-color)', 
               fontSize: '0.75rem', 
-              color: '#a855f7', 
+              color: 'var(--text-main)', 
               fontWeight: 600 
             }}>
-              <ShieldCheck size={14} /> System Online
+              <ShieldCheck size={14} style={{ color: '#10b981' }} /> System Online
             </div>
 
 
@@ -215,6 +214,81 @@ const SuperAdminDashboard = () => {
           {renderView()}
         </div>
       </div>
+      <style>{`
+        /* Monochromatic Dark Theme overrides for Super Admin Panel */
+        
+        /* 1. Override elements utilizing hardcoded purple colors (#a855f7) */
+        .app-container [style*="a855f7"] {
+          color: #ffffff !important;
+        }
+        
+        /* Sidebar active border and state */
+        .app-container [style*="borderLeftColor: '#a855f7'"],
+        .app-container [style*="border-left-color: #a855f7"] {
+          border-left-color: #ffffff !important;
+        }
+        
+        /* Active tabs bottom line */
+        .app-container [style*="borderBottom: '2px solid #a855f7'"],
+        .app-container [style*="border-bottom: 2px solid #a855f7"],
+        .app-container [style*="borderBottomColor: '#a855f7'"] {
+          border-bottom-color: #ffffff !important;
+          border-bottom-width: 2px !important;
+        }
+
+        /* Active drawer tab buttons text */
+        .app-container [style*="color: '#a855f7'"],
+        .app-container [style*="color:#a855f7"] {
+          color: #ffffff !important;
+        }
+
+        /* Purple background opacities */
+        .app-container [style*="background: 'rgba(168, 85, 247"],
+        .app-container [style*="background:rgba(168, 85, 247"],
+        .app-container [style*="background-color:rgba(168, 85, 247"],
+        .app-container [style*="background-color: 'rgba(168, 85, 247"] {
+          background-color: rgba(255, 255, 255, 0.05) !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* Purple border lines */
+        .app-container [style*="border: '1px solid rgba(168, 85, 247"],
+        .app-container [style*="border: 1px solid rgba(168, 85, 247"],
+        .app-container [style*="border-color: rgba(168, 85, 247"] {
+          border-color: var(--border-color) !important;
+        }
+
+        /* 2. Overwrite buttons and headers using purple gradients */
+        .app-container [style*="linear-gradient("][style*="a855f7"] {
+          background: #ffffff !important;
+          color: #000000 !important;
+          border-color: transparent !important;
+          box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1) !important;
+        }
+        
+        .app-container [style*="linear-gradient("][style*="a855f7"] * {
+          color: #000000 !important;
+        }
+
+        .app-container [style*="linear-gradient("][style*="a855f7"]:hover {
+          background: #e5e7eb !important;
+          box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15) !important;
+        }
+
+        /* Success tags should remain green, but standard purple tags go monochromatic */
+        .app-container [style*="color: '#a855f7'"][style*="background: 'rgba(168, 85, 247"] {
+          color: #ffffff !important;
+          background: rgba(255, 255, 255, 0.08) !important;
+          border: 1px solid var(--border-color) !important;
+        }
+
+        /* Progress bars quota */
+        .app-container [style*="background: percentQuotaUsed > 90 ? '#ef4444' : '#a855f7'"],
+        .app-container [style*="background: '#a855f7'"],
+        .app-container [style*="background:#a855f7"] {
+          background: #ffffff !important;
+        }
+      `}</style>
     </div>
   );
 };

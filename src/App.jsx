@@ -158,16 +158,14 @@ const DashboardContentShell = () => {
     showToast, 
     gymSettings, 
     announcements,
-    updateGymSettings,
-    gyms
+    updateGymSettings
   } = useDashboard();
   const isAllowedTab = (tab) => {
     if (!currentUser) return false;
     if (currentUser.role === 'super_admin') return true;
 
     // Check if the feature has been disabled by the SaaS super administrator
-    const currentGym = gyms?.find(g => g.gymId === currentUser?.gymId);
-    const disabledFeatures = currentGym?.disabledFeatures || [];
+    const disabledFeatures = gymSettings?.disabledFeatures || [];
     let featureKey = tab;
     if (featureKey.startsWith('inventory')) featureKey = 'inventory';
     if (disabledFeatures.includes(featureKey)) return false;

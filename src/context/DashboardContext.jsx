@@ -1949,13 +1949,17 @@ export const DashboardProvider = ({ children }) => {
       // Also update gym settings
       const settingsSnap = await getDocs(query(collection(db, COLLECTIONS.GYM_SETTINGS), where('gymId', '==', gymId)));
       if (!settingsSnap.empty) {
-        await updateDoc(settingsSnap.docs[0].ref, {
+        const settingsUpdate = {
           gymName: updatedFields.gymName,
           phone: updatedFields.phone,
           address: updatedFields.address,
           currency: updatedFields.currency,
           timezone: updatedFields.timezone,
-        });
+        };
+        if (updatedFields.disabledFeatures !== undefined) {
+          settingsUpdate.disabledFeatures = updatedFields.disabledFeatures;
+        }
+        await updateDoc(settingsSnap.docs[0].ref, settingsUpdate);
       }
 
       await logAudit(
