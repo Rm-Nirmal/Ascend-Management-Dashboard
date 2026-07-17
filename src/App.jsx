@@ -173,8 +173,7 @@ const DashboardContentShell = () => {
 
     if (
       currentUser.role === 'gym_owner' || 
-      currentUser.role === 'owner' || 
-      currentUser.role === 'admin'
+      currentUser.role === 'owner'
     ) {
       return [
         'overview', 'members', 'registrations', 'employees', 'access',
@@ -182,10 +181,17 @@ const DashboardContentShell = () => {
         'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
       ].includes(tab);
     }
+    if (currentUser.role === 'admin') {
+      return [
+        'overview', 'members', 'registrations', 'employees', 'access',
+        'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
+        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers'
+      ].includes(tab);
+    }
     if (currentUser.role === 'standard_admin' || currentUser.role === 'gym_assistant') {
       return [
         'members', 'registrations', 'access',
-        'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports',
+        'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock',
         'break_timer', 'finance'
       ].includes(tab) || tab.startsWith('log_income') || tab.startsWith('log_expense');
     }

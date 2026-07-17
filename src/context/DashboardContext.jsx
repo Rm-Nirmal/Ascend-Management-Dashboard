@@ -1484,8 +1484,8 @@ export const DashboardProvider = ({ children }) => {
           gender: 'male',
           date_of_birth: '1995-03-15',
           status: 'active',
-          member_code: 'ASC-1001',
-          qr_token: 'qr_token_ASC-1001',
+          member_code: 'ASC-0001',
+          qr_token: 'qr_token_ASC-0001',
           joined_at: '2026-05-05',
           countdown_end: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
           weight_kg: 78.5,
@@ -1505,8 +1505,8 @@ export const DashboardProvider = ({ children }) => {
           gender: 'female',
           date_of_birth: '1998-07-22',
           status: 'active',
-          member_code: 'ASC-1002',
-          qr_token: 'qr_token_ASC-1002',
+          member_code: 'ASC-0002',
+          qr_token: 'qr_token_ASC-0002',
           joined_at: '2026-04-10',
           countdown_end: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
           weight_kg: 58.0,
@@ -2277,21 +2277,20 @@ export const DashboardProvider = ({ children }) => {
         gymName = resolvedGymId === 'gym_ascend_hq' ? 'Fitgencore' : 'Client Gym';
       }
 
-      const cleanName = gymName.trim().replace(/[^a-zA-Z]/g, '');
+       const cleanName = gymName.trim().replace(/[^a-zA-Z]/g, '');
       const prefix = (cleanName.substring(0, 3).toUpperCase() || 'GYM') + '-';
 
-      // Find the next member code sequentially (in order starting with 0001)
-      let maxNum = 0;
-      members.forEach(m => {
-        if (m.member_code && m.member_code.startsWith(prefix)) {
-          const numStr = m.member_code.replace(prefix, '');
-          const num = parseInt(numStr, 10);
-          if (!isNaN(num) && num > maxNum) {
-            maxNum = num;
-          }
-        }
-      });
-      const memberCode = `${prefix}${String(maxNum + 1).padStart(4, '0')}`;
+      // Find the next unused member code starting from 0001
+      let nextNum = 1;
+      const existingCodes = new Set(
+        members
+          .filter(m => m && m.member_code && m.member_code.startsWith(prefix))
+          .map(m => m.member_code)
+      );
+      while (existingCodes.has(`${prefix}${String(nextNum).padStart(4, '0')}`)) {
+        nextNum++;
+      }
+      const memberCode = `${prefix}${String(nextNum).padStart(4, '0')}`;
 
       const newMemberData = helperCreateMemberObject(restMemberData, memberCode, resolvedGymId);
 

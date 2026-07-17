@@ -49,12 +49,15 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
   const inventorySubItems = allInventorySubItems.filter(item => {
     if (!currentUser) return false;
+    if (item.id === 'inventory_reports') {
+      return currentUser.role === 'gym_owner' || currentUser.role === 'owner';
+    }
     if (
       currentUser.role === 'gym_owner' || 
       currentUser.role === 'owner' || 
       currentUser.role === 'admin'
     ) return true;
-    return ['inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports'].includes(item.id);
+    return ['inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock'].includes(item.id);
   });
 
   const showInventory = currentUser && currentUser.role !== 'super_admin' && !disabledFeatures.includes('inventory');
