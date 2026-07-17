@@ -5,14 +5,14 @@ import { Play, Square, Coffee, Clock, Calendar, CheckCircle, Briefcase, FileText
 const BreakTimer = () => {
   const {
     currentUser,
-    employees,
-    breakLogs,
+    employees = [],
+    breakLogs = [],
     startBreak,
     stopBreak,
     showToast,
-    shiftLogs,
+    shiftLogs = [],
     clockInOutShift,
-    leaveRequests,
+    leaveRequests = [],
     requestLeave
   } = useDashboard();
 
@@ -227,7 +227,7 @@ const BreakTimer = () => {
 
   // My Leave Requests
   const myLeaveRequests = useMemo(() => {
-    return leaveRequests.filter(r => r.employeeId === employeeId);
+    return (leaveRequests || []).filter(r => r.employeeId === employeeId);
   }, [leaveRequests, employeeId]);
 
   return (

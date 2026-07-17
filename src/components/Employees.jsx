@@ -7,15 +7,15 @@ import {
 
 const Employees = () => {
   const {
-    employees,
+    employees = [],
     addEmployee,
     updateEmployee,
     deleteEmployee,
-    breakLogs,
+    breakLogs = [],
     showToast,
-    admins,
-    auditLogs,
-    leaveRequests,
+    admins = [],
+    auditLogs = [],
+    leaveRequests = [],
     approveLeaveRequest,
     rejectLeaveRequest
   } = useDashboard();
@@ -52,7 +52,8 @@ const Employees = () => {
     if (!emp) return 'active';
     if (emp.status === 'terminated') return 'terminated';
     const todayStr = new Date().toISOString().split('T')[0];
-    const isOnLeaveToday = leaveRequests.some(r => 
+    const isOnLeaveToday = (leaveRequests || []).some(r => 
+      r && 
       r.employeeId === emp.id && 
       r.status === 'approved' && 
       todayStr >= r.startDate && 
@@ -286,7 +287,7 @@ const Employees = () => {
           }}
         >
           Leave Management
-          {leaveRequests.filter(r => r.status === 'pending').length > 0 && (
+          {(leaveRequests || []).filter(r => r.status === 'pending').length > 0 && (
             <span style={{
               background: 'var(--color-danger, #ef4444)',
               color: '#fff',
@@ -295,7 +296,7 @@ const Employees = () => {
               borderRadius: '10px',
               fontWeight: 700
             }}>
-              {leaveRequests.filter(r => r.status === 'pending').length}
+              {(leaveRequests || []).filter(r => r.status === 'pending').length}
             </span>
           )}
         </button>
@@ -551,7 +552,7 @@ const Employees = () => {
                 // Month days
                 for (let day = 1; day <= daysInMonth; day++) {
                   const dayStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                  const dayRequests = leaveRequests.filter(r => dayStr >= r.startDate && dayStr <= r.endDate);
+                  const dayRequests = (leaveRequests || []).filter(r => dayStr >= r.startDate && dayStr <= r.endDate);
 
                   cells.push(
                     <div
@@ -612,12 +613,12 @@ const Employees = () => {
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {leaveRequests.filter(r => r.status === 'pending').length === 0 ? (
+              {(leaveRequests || []).filter(r => r.status === 'pending').length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontSize: '0.85rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
                   No pending leave requests.
                 </div>
               ) : (
-                leaveRequests.filter(r => r.status === 'pending').map(req => {
+                (leaveRequests || []).filter(r => r.status === 'pending').map(req => {
                   const days = Math.round((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1;
                   return (
                     <div
