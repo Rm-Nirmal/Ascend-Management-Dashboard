@@ -423,7 +423,7 @@ const Employees = () => {
                           </div>
                         </td>
                         <td style={{ fontWeight: 700 }}>
-                          LKR {parseFloat(emp.salary).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          LKR {(parseFloat(emp.salary) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </td>
                         <td style={{ color: 'var(--text-muted)' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.85rem' }}>
@@ -572,14 +572,14 @@ const Employees = () => {
                     >
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>{day}</span>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', overflowY: 'auto', flexGrow: 1 }}>
-                        {dayRequests.map(r => {
+                        {dayRequests.map((r, idx) => {
                           const isApproved = r.status === 'approved';
                           const isPending = r.status === 'pending';
                           const badgeColor = isApproved ? 'rgba(16,185,129,0.15)' : isPending ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)';
                           const textColor = isApproved ? '#10b981' : isPending ? '#f59e0b' : '#ef4444';
                           return (
                             <div
-                              key={r.id}
+                              key={r.id || `req-${idx}`}
                               style={{
                                 fontSize: '0.625rem',
                                 padding: '0.1rem 0.25rem',
@@ -620,7 +620,7 @@ const Employees = () => {
                 </div>
               ) : (
                 (leaveRequests || []).filter(r => r && r.status === 'pending').map(req => {
-                  const days = Math.round((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                  const days = (Math.round((new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1) || 0;
                   return (
                     <div
                       key={req.id}
