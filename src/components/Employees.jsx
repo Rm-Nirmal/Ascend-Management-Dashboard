@@ -1203,7 +1203,7 @@ const Employees = () => {
       {/* Modal 3: Employee Profile Details */}
       {selectedProfileEmployee && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '800px', width: '90%' }}>
+          <div className="modal-content profile-modal-content">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Eye size={20} style={{ color: 'var(--color-primary)' }} />
@@ -1214,7 +1214,8 @@ const Employees = () => {
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '2rem', alignItems: 'start' }}>
+            <div className="profile-modal-body">
+              <div className="profile-modal-grid">
               {/* Left Column: Details & Leaves */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {/* Profile Header Card */}
@@ -1526,8 +1527,9 @@ const Employees = () => {
                 </div>
               </div>
             </div>
+            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
               <button className="btn btn-secondary" onClick={() => { setSelectedProfileEmployee(null); setBreakFilter('daily'); }}>
                 Close Profile
               </button>

@@ -1044,6 +1044,56 @@ textarea.form-control {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Custom Profile Modal Layout to prevent screen overflow and add wider screen support */
+.profile-modal-content {
+  max-width: 1100px;
+  width: 95%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2rem;
+}
+
+.profile-modal-body {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Custom scrollbar styling for a premium aesthetic */
+.profile-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.profile-modal-body::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: 4px;
+}
+
+.profile-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.profile-modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.profile-modal-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .profile-modal-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
 .drawer-content {
   background: var(--bg-secondary);
   border-left: 1px solid var(--border-color);
