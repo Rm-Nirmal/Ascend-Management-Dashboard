@@ -22,8 +22,8 @@ const BreakTimer = () => {
 
   // Find corresponding employee record
   const currentEmployee = useMemo(() => {
-    if (!currentUser?.email) return null;
-    return employees.find(e => e.email.toLowerCase() === currentUser.email.toLowerCase());
+    if (!currentUser?.email || !employees) return null;
+    return (employees || []).find(e => e && e.email && e.email.toLowerCase() === currentUser.email.toLowerCase());
   }, [currentUser, employees]);
 
   const employeeId = currentEmployee?.id || currentUser?.id || 'unknown';
@@ -31,17 +31,18 @@ const BreakTimer = () => {
 
   // Find active break and shift for the logged-in user
   const activeBreak = useMemo(() => {
-    return breakLogs.find(b => b.employeeId === employeeId && b.status === 'active');
+    return (breakLogs || []).find(b => b.employeeId === employeeId && b.status === 'active');
   }, [breakLogs, employeeId]);
 
   const activeShift = useMemo(() => {
-    return shiftLogs.find(s => s.employeeId === employeeId && s.status === 'active');
+    return (shiftLogs || []).find(s => s.employeeId === employeeId && s.status === 'active');
   }, [shiftLogs, employeeId]);
 
   const isOnLeaveToday = useMemo(() => {
     if (!leaveRequests) return false;
     const todayStr = new Date().toISOString().split('T')[0];
-    return leaveRequests.some(r => 
+    return (leaveRequests || []).some(r => 
+      r && 
       r.employeeId === employeeId && 
       r.status === 'approved' && 
       todayStr >= r.startDate && 
@@ -138,16 +139,16 @@ const BreakTimer = () => {
 
   // Filter completed breaks for current employee
   const myCompletedBreaks = useMemo(() => {
-    return breakLogs
-      .filter(b => b.employeeId === employeeId && b.status === 'completed')
+    return (breakLogs || [])
+      .filter(b => b && b.employeeId === employeeId && b.status === 'completed')
       .slice(0, 10); // Show last 10 completed breaks
   }, [breakLogs, employeeId]);
 
   // Sum today's break duration
   const todaysTotalBreakTime = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const todaysSeconds = breakLogs
-      .filter(b => b.employeeId === employeeId && b.status === 'completed' && b.startTime.startsWith(todayStr))
+    const todaysSeconds = (breakLogs || [])
+      .filter(b => b && b.employeeId === employeeId && b.status === 'completed' && b.startTime && b.startTime.startsWith(todayStr))
       .reduce((sum, b) => sum + (b.duration || 0), 0);
     
     // Add active break if it exists
@@ -158,8 +159,8 @@ const BreakTimer = () => {
   // Sum today's total shift duration
   const todaysTotalShiftTime = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const completedSeconds = shiftLogs
-      .filter(s => s.employeeId === employeeId && s.status === 'completed' && s.startTime.startsWith(todayStr))
+    const completedSeconds = (shiftLogs || [])
+      .filter(s => s && s.employeeId === employeeId && s.status === 'completed' && s.startTime && s.startTime.startsWith(todayStr))
       .reduce((sum, s) => sum + (s.duration || 0), 0);
     
     const activeSeconds = activeShift ? shiftElapsed : 0;
