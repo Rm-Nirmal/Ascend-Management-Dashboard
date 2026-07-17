@@ -31,11 +31,11 @@ const BreakTimer = () => {
 
   // Find active break and shift for the logged-in user
   const activeBreak = useMemo(() => {
-    return (breakLogs || []).find(b => b.employeeId === employeeId && b.status === 'active');
+    return (breakLogs || []).find(b => b && b.employeeId === employeeId && b.status === 'active');
   }, [breakLogs, employeeId]);
 
   const activeShift = useMemo(() => {
-    return (shiftLogs || []).find(s => s.employeeId === employeeId && s.status === 'active');
+    return (shiftLogs || []).find(s => s && s.employeeId === employeeId && s.status === 'active');
   }, [shiftLogs, employeeId]);
 
   const isOnLeaveToday = useMemo(() => {
@@ -228,7 +228,7 @@ const BreakTimer = () => {
 
   // My Leave Requests
   const myLeaveRequests = useMemo(() => {
-    return (leaveRequests || []).filter(r => r.employeeId === employeeId);
+    return (leaveRequests || []).filter(r => r && r.employeeId === employeeId);
   }, [leaveRequests, employeeId]);
 
   return (
@@ -569,7 +569,7 @@ const BreakTimer = () => {
 
                 for (let day = 1; day <= daysInMonth; day++) {
                   const dayStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                  const dayRequests = myLeaveRequests.filter(r => dayStr >= r.startDate && dayStr <= r.endDate);
+                  const dayRequests = myLeaveRequests.filter(r => r && dayStr >= r.startDate && dayStr <= r.endDate);
 
                   cells.push(
                     <div

@@ -71,7 +71,7 @@ const Employees = () => {
     return activeEmployees.filter(emp => {
       const nameStr = emp.full_name || '';
       const emailStr = emp.email || '';
-      const phoneStr = emp.phone || '';
+      const phoneStr = String(emp.phone || '');
       const matchSearch = nameStr.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           emailStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           phoneStr.includes(searchTerm);
@@ -113,20 +113,20 @@ const Employees = () => {
     const now = new Date();
     
     const empBreaks = (breakLogs || []).filter(
-      b => b.employeeId === empId && b.status === 'completed'
+      b => b && b.employeeId === empId && b.status === 'completed'
     );
     
     let filteredBreaks = [];
     const todayStr = now.toISOString().split('T')[0];
     
     if (breakFilter === 'daily') {
-      filteredBreaks = empBreaks.filter(b => b.startTime.startsWith(todayStr));
+      filteredBreaks = empBreaks.filter(b => b && b.startTime && b.startTime.startsWith(todayStr));
     } else if (breakFilter === 'weekly') {
       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      filteredBreaks = empBreaks.filter(b => new Date(b.startTime) >= oneWeekAgo);
+      filteredBreaks = empBreaks.filter(b => b && b.startTime && new Date(b.startTime) >= oneWeekAgo);
     } else if (breakFilter === 'monthly') {
       const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      filteredBreaks = empBreaks.filter(b => new Date(b.startTime) >= oneMonthAgo);
+      filteredBreaks = empBreaks.filter(b => b && b.startTime && new Date(b.startTime) >= oneMonthAgo);
     }
     
     const totalSeconds = filteredBreaks.reduce((sum, b) => sum + (b.duration || 0), 0);
@@ -135,9 +135,9 @@ const Employees = () => {
 
   const linkedAdminForProfile = useMemo(() => {
     if (!selectedProfileEmployee || !admins) return null;
-    return admins.find(
-      a => a.employeeId === selectedProfileEmployee.id || 
-      a.email?.toLowerCase() === selectedProfileEmployee.email?.toLowerCase()
+    return (admins || []).find(
+      a => a && (a.employeeId === selectedProfileEmployee.id || 
+      (a.email && a.email.toLowerCase() === selectedProfileEmployee.email?.toLowerCase()))
     );
   }, [selectedProfileEmployee, admins]);
 
