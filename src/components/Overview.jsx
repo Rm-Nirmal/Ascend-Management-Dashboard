@@ -437,8 +437,7 @@ const Overview = () => {
 
   const expiredMembersList = useMemo(() => {
     return uniqueMembers
-      .filter(m => m.status === 'active' && m.countdown_end && new Date(m.countdown_end).getTime() < now)
-      .slice(0, 5);
+      .filter(m => m && m.status !== 'frozen' && (m.status === 'expired' || (m.countdown_end && new Date(m.countdown_end).getTime() < now)));
   }, [uniqueMembers, now]);
 
   const frozenMembersList = useMemo(() => {
@@ -868,7 +867,7 @@ const Overview = () => {
           <h4 style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>
             Expired Memberships
           </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '250px', overflowY: 'auto' }}>
             {expiredMembersList.length === 0 ? (
               <span style={{ fontSize: '0.85rem', color: 'var(--text-dark)' }}>No expired memberships.</span>
             ) : (
