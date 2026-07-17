@@ -591,7 +591,7 @@ const Overview = () => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           
-          {/* Specific Date / Month Picker Inputs */}
+          {/* Specific Date / Month / Year Picker Inputs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             {timeframe === 'daily' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
@@ -606,29 +606,29 @@ const Overview = () => {
               </div>
             )}
             {timeframe === 'monthly' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Select Month:</span>
                 <input 
                   type="month" 
                   value={selectedMonth} 
                   onChange={(e) => setSelectedMonth(e.target.value)} 
-                  className="glass-input" 
-                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', width: '130px' }} 
+                  style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', color: '#fff', outline: 'none', cursor: 'pointer', width: '130px' }} 
                 />
               </div>
             )}
             {timeframe === 'yearly' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Select Year:</span>
                 <select 
                   value={selectedYear} 
                   onChange={(e) => setSelectedYear(e.target.value)} 
-                  className="glass-select" 
-                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', width: '90px' }}
+                  style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', border: 'none', background: 'transparent', color: '#fff', outline: 'none', cursor: 'pointer', width: '90px' }}
                 >
-                  <option value="2026">2026</option>
-                  <option value="2025">2025</option>
-                  <option value="2027">2027</option>
+                  <option value="2026" style={{ background: 'var(--bg-secondary)', color: '#fff' }}>2026</option>
+                  <option value="2025" style={{ background: 'var(--bg-secondary)', color: '#fff' }}>2025</option>
+                  <option value="2027" style={{ background: 'var(--bg-secondary)', color: '#fff' }}>2027</option>
                 </select>
               </div>
             )}
