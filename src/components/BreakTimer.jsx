@@ -237,7 +237,7 @@ const BreakTimer = () => {
       {/* Page Header */}
       <div className="page-header">
         <div className="page-info">
-          <h1>Employee Desk</h1>
+          <h1>Shift & Break</h1>
           <p>Track your shifts, break times, and manage leave planners in one place.</p>
         </div>
       </div>

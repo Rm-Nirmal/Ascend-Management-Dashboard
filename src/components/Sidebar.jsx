@@ -71,7 +71,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
     { id: 'access', name: 'Access Control', icon: QrCode },
-    { id: 'break_timer', name: 'Break Timer', icon: Clock },
+    { id: 'break_timer', name: 'Shift & Break', icon: Clock },
     { id: 'console', name: 'Console', icon: CreditCard },
     { id: 'finance', name: 'Finance', icon: DollarSign },
     { id: 'log_income', name: 'Log Income', icon: DollarSign },
