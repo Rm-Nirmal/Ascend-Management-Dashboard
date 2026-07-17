@@ -310,7 +310,7 @@ const InventoryReports = () => {
 
       <div className="printable-show" style={{ display: 'none', flexDirection: 'column', gap: '0.5rem', borderBottom: '2px solid #000', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
-          {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'FITGENCORE'} - INVENTORY REPORT
+          {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'GYM'} - INVENTORY REPORT
         </h2>
         <div style={{ fontSize: '0.85rem' }}>
           <strong>Report Type:</strong> {activeReportTab.toUpperCase().replace('_', ' ')} Report<br />

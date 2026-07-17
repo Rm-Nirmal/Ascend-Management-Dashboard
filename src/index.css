@@ -1797,6 +1797,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
+/* Hide browser default header (title/date) and footer (URL) on print layout */
+@media print {
+  @page {
+    margin: 0mm;
+  }
+  body {
+    padding: 1.5cm;
+  }
+}
+
 
 
 

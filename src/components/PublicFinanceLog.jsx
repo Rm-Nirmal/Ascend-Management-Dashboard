@@ -435,7 +435,7 @@ const PublicFinanceLog = () => {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', fontSize: '0.65rem', color: 'var(--text-dark)', marginTop: '2.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.25rem' }}>
-          Ascend Gym Management System • Powered by Fitgencore
+          Ascend Gym Management System • Powered by Fitgen Core
         </div>
       </div>
     </div>

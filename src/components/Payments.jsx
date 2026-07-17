@@ -981,7 +981,7 @@ const Payments = () => {
                 </div>
               </div>
               <div style={{ textAlign: 'center', fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: '1.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                Powered by Fitgencore
+                Powered by Fitgen Core
               </div>
             </div>
 
