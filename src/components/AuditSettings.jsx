@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   History, Key, User, Search,
-  DollarSign, ShieldAlert, ClipboardCheck
+  DollarSign, ShieldAlert, ClipboardCheck, Calendar
 } from 'lucide-react';
 
 const AuditSettings = () => {
@@ -71,8 +71,6 @@ const AuditSettings = () => {
     return <History size={14} />;
   };
 
-
-
   return (
     <div className="page-container">
       {/* Header */}
@@ -97,6 +95,7 @@ const AuditSettings = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               {/* Date Filter */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Date:</span>
                 <input
                   type="date"
