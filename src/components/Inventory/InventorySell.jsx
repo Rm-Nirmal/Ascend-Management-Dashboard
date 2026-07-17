@@ -49,6 +49,47 @@ const BarcodeSVG = ({ code }) => {
   );
 };
 
+// Utility to convert numbers to words (e.g. for receipt pricing descriptions)
+const numberToWords = (num) => {
+  const a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+  const b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  
+  if ((num = Math.round(num)) === 0) return 'Zero';
+  
+  let n = ('000000000' + num).substr(-9);
+  let str = '';
+  
+  let millions = parseInt(n.substr(0, 3));
+  if (millions !== 0) {
+    str += (millions < 20 ? a[millions] : b[Math.floor(millions/10)] + ' ' + a[millions%10]) + 'Million ';
+  }
+  
+  let thousands = parseInt(n.substr(3, 3));
+  if (thousands !== 0) {
+    if (thousands < 20) {
+      str += a[thousands] + 'Thousand ';
+    } else {
+      str += b[Math.floor(thousands/10)] + ' ' + a[thousands%10] + 'Thousand ';
+    }
+  }
+  
+  let hundreds = parseInt(n.substr(6, 1));
+  if (hundreds !== 0) {
+    str += a[hundreds] + 'Hundred ';
+  }
+  
+  let tens = parseInt(n.substr(7, 2));
+  if (tens !== 0) {
+    if (tens < 20) {
+      str += a[tens];
+    } else {
+      str += b[Math.floor(tens/10)] + ' ' + a[tens%10];
+    }
+  }
+  
+  return str.trim() + ' LKR Only';
+};
+
 const InventorySell = () => {
   const { 
     currentUser, 
@@ -474,31 +515,9 @@ const InventorySell = () => {
                                 border: '1px solid var(--border-color)',
                                 cursor: 'pointer'
                               }}
-                              title="Watch Receipt"
                             >
-                              <Eye size={12} /> Watch Receipt
+                              <Eye size={12} /> View Receipt
                             </button>
-                            <a
-                              href={`${window.location.origin}${window.location.pathname}?view=receipt&type=income&id=${item.id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="btn btn-secondary"
-                              style={{ 
-                                padding: '0.35rem 0.65rem', 
-                                fontSize: '0.75rem', 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
-                                gap: '0.25rem', 
-                                background: 'rgba(255,255,255,0.03)', 
-                                border: '1px solid var(--border-color)',
-                                cursor: 'pointer',
-                                textDecoration: 'none',
-                                color: 'var(--text-primary)'
-                              }}
-                              title="Print PDF Receipt"
-                            >
-                              <FileText size={12} /> Print PDF Receipt
-                            </a>
                           </div>
                         </td>
                       </tr>
@@ -1318,242 +1337,173 @@ const InventorySell = () => {
 
       {/* Selected Receipt Modal */}
       {selectedReceipt && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(5px)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 9999,
-          padding: '1.5rem',
-          boxSizing: 'border-box'
-        }} className="no-print-overlay">
+        <div className="print-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
           
-          <div style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: '460px',
-            animation: 'scaleIn 0.3s ease-out',
-            boxSizing: 'border-box'
-          }}>
-            {/* The actual printable POS receipt area */}
-            <div className="pos-receipt-print-area modal-receipt-print" style={{ 
-              background: '#ffffff', 
-              color: '#18181b', 
-              borderRadius: '12px', 
-              boxShadow: '0 20px 40px rgba(0,0,0,0.7)',
-              padding: '2.5rem 2rem',
-              fontFamily: '"Montserrat", "Inter", sans-serif',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Dotted top edge */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '4px',
-                backgroundImage: 'linear-gradient(-45deg, #12131a 2px, transparent 0), linear-gradient(45deg, #12131a 2px, transparent 0)',
-                backgroundSize: '4px 4px',
-                backgroundRepeat: 'repeat-x'
-              }} />
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              .print-modal-overlay {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                backdrop-filter: none !important;
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+              }
+              .print-modal-content {
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                background: white !important;
+                color: black !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 10px !important;
+                margin: 0 !important;
+              }
+              .print-modal-content * {
+                visibility: visible !important;
+                color: black !important;
+                border-color: #ccc !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
 
-              {/* Print CSS specific to this modal viewer */}
-              <style>{`
-                @media print {
-                  @page {
-                    size: auto;
-                    margin: 0mm;
-                  }
-                  body {
-                    margin: 0px;
-                    padding: 1.5cm;
-                  }
-                  body * {
-                    visibility: hidden !important;
-                  }
-                  .modal-receipt-print, .modal-receipt-print * {
-                    visibility: visible !important;
-                  }
-                  .modal-receipt-print {
-                    position: absolute !important;
-                    left: 50% !important;
-                    top: 0 !important;
-                    transform: translateX(-50%) !important;
-                    width: 100% !important;
-                    max-width: 440px !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    background: #ffffff !important;
-                    color: #000000 !important;
-                    box-shadow: none !important;
-                    border: none !important;
-                  }
-                  .no-print-btn {
-                    display: none !important;
-                  }
-                }
-              `}</style>
-
-              {/* SUCCESS HEADER */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '0.35rem', marginBottom: '1.75rem' }}>
-                <div style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  <CheckCircle2 size={16} style={{ fill: '#10b981', color: '#fff' }} /> Transaction Billed
-                </div>
-                <h2 style={{ fontFamily: '"Oswald", sans-serif', fontSize: '1.45rem', fontWeight: 700, margin: '0.25rem 0 0 0', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#000' }}>
-                  {gymSettings?.gymName ? gymSettings.gymName : 'ASCEND FITNESS HQ'}
+          <div className="glass-card print-modal-content" style={{ width: '100%', maxWidth: '650px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', padding: '2rem' }}>
+            
+            {/* Header: Gym Info */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>
+                  {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}
                 </h2>
-                <span style={{ fontSize: '0.7rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {gymSettings?.address || '123 Main Street, Colombo'}
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                  {gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}
                 </span>
-                <span style={{ fontSize: '0.7rem', color: '#71717a', marginTop: '-0.15rem' }}>
-                  {gymSettings?.phone ? `Tel: ${gymSettings.phone}` : 'Tel: +94 77 111 2222'}
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                  Email: {gymSettings?.email || 'billing@ascend.lk'} | Tel: {gymSettings?.phone || '+94 11 234 5678'}
                 </span>
               </div>
-
-              {/* Dotted Separator */}
-              <div style={{ borderTop: '2px dashed #e4e4e7', margin: '1rem 0' }} />
-
-              {/* REFERENCE INFO */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.75rem', color: '#3f3f46' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>REFERENCE:</span>
-                  <strong style={{ color: '#000', fontFamily: 'monospace' }}>{selectedReceipt.payment_reference}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>CHECKOUT DATE:</span>
-                  <span style={{ fontWeight: 600 }}>{selectedReceipt.date}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>CUSTOMER:</span>
-                  <strong style={{ color: '#000' }}>{selectedReceipt.member_name?.toUpperCase()}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>OPERATOR:</span>
-                  <span style={{ fontWeight: 600 }}>{currentUser?.name || 'System POS'}</span>
-                </div>
+              <div style={{ textAlign: 'right' }}>
+                <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', letterSpacing: '0.05em', color: '#fff' }}>RETAIL SALES INVOICE</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Customer Copy</span>
               </div>
+            </div>
 
-              {/* Dotted Separator */}
-              <div style={{ borderTop: '2px dashed #e4e4e7', margin: '1.25rem 0' }} />
+            {/* Member/Customer & Invoice details grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+              <div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Customer Name:</span> <span style={{ fontWeight: 600 }}>{selectedReceipt.member_name || 'Walk-in Customer'}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Billed By:</span> <span style={{ fontWeight: 600 }}>{currentUser?.name || 'System POS'}</span></div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Invoice Number:</span> <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{selectedReceipt.payment_reference}</span></div>
+                <div style={{ marginBottom: '0.35rem' }}><span style={{ color: 'var(--text-muted)' }}>Date:</span> <span style={{ fontWeight: 600 }}>{selectedReceipt.date}</span></div>
+                <div><span style={{ color: 'var(--text-muted)' }}>Payment Mode:</span> <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{selectedReceipt.payment_method?.replace('_', ' ') || 'Cash'}</span></div>
+              </div>
+            </div>
 
-              {/* ITEMS LIST */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <span style={{ fontSize: '0.675rem', fontWeight: 700, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Billed Items</span>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.8rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', maxWidth: '75%' }}>
-                    <strong style={{ color: '#000' }}>{selectedReceipt.productName || 'Product Unit'}</strong>
-                    <span style={{ fontSize: '0.725rem', color: '#71717a' }}>
-                      Qty: {selectedReceipt.quantity || 1} × LKR {(parseFloat(selectedReceipt.amount || 0) / (selectedReceipt.quantity || 1)).toLocaleString()}
-                    </span>
+            {/* Product details table */}
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.5rem', color: 'var(--text-muted)' }}>Product Description</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Qty</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--text-muted)' }}>Unit Price</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', color: 'var(--text-muted)' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                    <td style={{ padding: '0.5rem' }}>
+                      <strong style={{ color: '#fff' }}>
+                        {selectedReceipt.productName || 'Inventory Product'}
+                      </strong>
+                    </td>
+                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>{selectedReceipt.quantity || 1}</td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                      LKR {(parseFloat(selectedReceipt.amount || 0) / (selectedReceipt.quantity || 1)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                      LKR {parseFloat(selectedReceipt.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Calculations Totals Block */}
+            {(() => {
+              const totalAmount = parseFloat(selectedReceipt.amount || 0);
+              const subtotal = totalAmount / 1.10;
+              const taxAmount = totalAmount - subtotal;
+
+              return (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', fontSize: '0.8rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', borderBottom: '2px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                        <span>Subtotal (Excl. Tax):</span>
+                        <span style={{ fontWeight: 600 }}>LKR {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>VAT / Sales Tax (10%):</span>
+                        <span style={{ fontWeight: 600 }}>LKR {taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>NET TOTAL PAID</span>
+                      <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-success)' }}>
+                        LKR {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
-                  <strong style={{ fontFamily: 'monospace', color: '#000' }}>LKR {parseFloat(selectedReceipt.amount || 0).toLocaleString()}</strong>
-                </div>
-              </div>
 
-              {/* Dotted Separator */}
-              <div style={{ borderTop: '2px dashed #e4e4e7', margin: '1.25rem 0' }} />
+                  {/* Net Amount in Words */}
+                  <div style={{ fontSize: '0.75rem', fontStyle: 'italic', background: 'rgba(255,255,255,0.01)', padding: '0.5rem', borderRadius: '4px', border: '1px dashed rgba(255,255,255,0.05)' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Amount in Words:</span> <span style={{ fontWeight: 600 }}>{numberToWords(totalAmount)}</span>
+                  </div>
+                </>
+              );
+            })()}
+            
+            <div style={{ textAlign: 'center', fontSize: '0.55rem', color: 'var(--text-muted)', marginTop: '1rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Thank you for your purchase!
+            </div>
+            <div style={{ textAlign: 'center', fontSize: '0.5rem', color: 'var(--text-muted)', marginTop: '0.25rem', letterSpacing: '0.05em' }}>
+              POWERED BY FITGENCORE
+            </div>
 
-              {/* FINANCIAL SUMMARY */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.8rem', color: '#3f3f46' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.15rem', color: '#000' }}>
-                  <span>NET TOTAL PAID:</span>
-                  <span style={{ fontFamily: 'monospace' }}>LKR {parseFloat(selectedReceipt.amount || 0).toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Dotted Separator */}
-              <div style={{ borderTop: '2px dashed #e4e4e7', margin: '1.25rem 0' }} />
-
-              {/* PAYMENT METADATA */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: '#71717a' }}>
-                <span>Method: <strong style={{ color: '#000' }}>{selectedReceipt.payment_method?.toUpperCase()}</strong></span>
-                <span>Status: <strong style={{ color: '#10b981' }}>COMPLETED</strong></span>
-              </div>
-
-              {/* BARCODE */}
-              <div style={{ margin: '1.75rem 0 1rem 0' }}>
-                <BarcodeSVG code={selectedReceipt.payment_reference || 'REF-0000'} />
-              </div>
-
-              <div style={{ textAlign: 'center', fontSize: '0.725rem', color: '#71717a', marginTop: '1.5rem', fontStyle: 'italic' }}>
-                Thank you for shopping with us!
-              </div>
-              <div style={{ textAlign: 'center', fontSize: '0.55rem', color: '#a1a1aa', marginTop: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                Powered by Fitgencore
-              </div>
-
-              {/* Modal footer controls (hidden when printing) */}
-              <div className="no-print-btn" style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem', borderTop: '1px solid #e4e4e7', paddingTop: '1rem' }}>
-                <button
-                  onClick={() => window.print()}
-                  className="btn"
-                  style={{
-                    flex: 1,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                    background: '#e4e4e7',
-                    color: '#000',
-                    fontWeight: 700,
-                    padding: '0.5rem 1rem',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Printer size={14} /> Print Slip
-                </button>
-                <a
-                  href={`${window.location.origin}${window.location.pathname}?view=receipt&type=income&id=${selectedReceipt.id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn"
-                  style={{
-                    flex: 1,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                    background: 'var(--color-primary-glow)',
-                    border: '1px solid var(--color-primary)',
-                    color: '#fff',
-                    fontWeight: 700,
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <FileText size={14} /> PDF Receipt Page
-                </a>
-                <button
-                  onClick={() => setSelectedReceipt(null)}
-                  className="btn"
-                  style={{
-                    flex: 1,
-                    background: '#ef4444',
-                    color: '#fff',
-                    fontWeight: 700,
-                    padding: '0.5rem 1rem',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Close
-                </button>
-              </div>
-
+            {/* Actions for Modal */}
+            <div className="no-print" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                style={{ background: 'rgba(255, 255, 255, 0.04)', color: '#fff', border: '1px solid var(--border-color)' }}
+                onClick={() => setSelectedReceipt(null)}
+              >
+                Close
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary"
+                onClick={() => window.print()}
+              >
+                <Printer size={16} /> Print Receipt
+              </button>
             </div>
           </div>
         </div>

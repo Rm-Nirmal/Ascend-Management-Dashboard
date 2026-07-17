@@ -54,7 +54,7 @@ const incomeSources = ['Registration Fees', 'Personal Training Sessions', 'Produ
 
 // ─── Component ──────────────────────────────────────────────────────
 
-const Finance = ({ activeTabOverride }) => {
+const Finance = ({ activeTabOverride, setActiveTab }) => {
   const {
     invoices: rawInvoices,
     expenses: rawExpenses,
@@ -107,9 +107,9 @@ const Finance = ({ activeTabOverride }) => {
 
   useEffect(() => {
     const viewParam = activeTabOverride;
-    if (viewParam === 'log_income' || viewParam === 'log_expense') {
-      setActiveFinanceTab(viewParam);
-      if (viewParam === 'log_expense') {
+    if (viewParam && (viewParam.startsWith('log_income') || viewParam.startsWith('log_expense'))) {
+      if (viewParam.startsWith('log_expense')) {
+        setActiveFinanceTab('expenses');
         setExpenseModalMode('add');
         setExpenseForm({
           title: '',
@@ -118,12 +118,39 @@ const Finance = ({ activeTabOverride }) => {
           amount: '',
           date: new Date().toISOString().split('T')[0],
           payment_method: 'card',
-          remarks: '',
           receipt_url: '',
+          notes: ''
         });
+        setIsExpenseModalOpen(true);
+        if (setActiveTab) {
+          setActiveTab('finance');
+        }
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'finance');
+        url.searchParams.set('tab', 'expenses');
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      } else if (viewParam.startsWith('log_income')) {
+        setActiveFinanceTab('income');
+        setNewIncomeForm({
+          source: 'Registration Fees',
+          member_name: '',
+          amount: '',
+          date: new Date().toISOString().split('T')[0],
+          payment_method: 'card',
+          payment_reference: '',
+          notes: ''
+        });
+        setIsAddIncomeModalOpen(true);
+        if (setActiveTab) {
+          setActiveTab('finance');
+        }
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'finance');
+        url.searchParams.set('tab', 'income');
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
       }
     }
-  }, [activeTabOverride]);
+  }, [activeTabOverride, setActiveTab]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -2569,252 +2596,12 @@ const Finance = ({ activeTabOverride }) => {
         </div>
       )}
 
-      {/* ─── TAB CONTENT: INLINE LOG INCOME (FOR STAFF) ───────────────── */}
-      {activeFinanceTab === 'log_income' && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '540px', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '2rem' }}>
-            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.5rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0, fontSize: '1.35rem', color: '#fff' }}>Log Income Payment</h2>
-            </div>
-            
-            <form onSubmit={handleAddIncomeSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Income Source *</label>
-                <select
-                  className="glass-select"
-                  style={{ width: '100%' }}
-                  value={newIncomeForm.source}
-                  onChange={(e) => setNewIncomeForm(prev => ({ ...prev, source: e.target.value }))}
-                >
-                  {incomeSources.map(src => (
-                    <option key={src} value={src}>{src}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Member Name (Optional)</label>
-                <select
-                  className="glass-select"
-                  style={{ width: '100%' }}
-                  value={newIncomeForm.member_name}
-                  onChange={(e) => setNewIncomeForm(prev => ({ ...prev, member_name: e.target.value }))}
-                >
-                  <option value="">-- Walk-in / Unlinked --</option>
-                  {members.map(m => (
-                    <option key={m.id} value={m.full_name}>{m.full_name} ({m.member_code})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Amount (LKR) *</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="e.g. 5000"
-                    className="glass-input"
-                    value={newIncomeForm.amount}
-                    onChange={(e) => setNewIncomeForm(prev => ({ ...prev, amount: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Payment Date *</label>
-                  <input
-                    type="date"
-                    required
-                    className="glass-input"
-                    value={newIncomeForm.date}
-                    onChange={(e) => setNewIncomeForm(prev => ({ ...prev, date: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Payment Method</label>
-                  <select
-                    className="glass-select"
-                    style={{ width: '100%' }}
-                    value={newIncomeForm.payment_method}
-                    onChange={(e) => setNewIncomeForm(prev => ({ ...prev, payment_method: e.target.value }))}
-                  >
-                    <option value="card">Card Payment</option>
-                    <option value="cash">Cash Payment</option>
-                    <option value="bank_transfer">Bank Wire</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Ref Reference (ID)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. TXN982"
-                    className="glass-input"
-                    value={newIncomeForm.payment_reference}
-                    onChange={(e) => setNewIncomeForm(prev => ({ ...prev, payment_reference: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Notes</label>
-                <textarea
-                  className="glass-input"
-                  style={{ height: '60px', resize: 'none' }}
-                  value={newIncomeForm.notes}
-                  onChange={(e) => setNewIncomeForm(prev => ({ ...prev, notes: e.target.value }))}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flexGrow: 1 }}>Save Record</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB CONTENT: INLINE RECORD EXPENSE (FOR STAFF) ────────────── */}
-      {activeFinanceTab === 'log_expense' && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '540px', display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '2rem' }}>
-            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '0.5rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0, fontSize: '1.35rem', color: '#fff' }}>Record Gym Expense</h2>
-            </div>
-            
-            <form onSubmit={handleExpenseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Expense Title *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Electricity Bill June"
-                  className="glass-input"
-                  value={expenseForm.title}
-                  onChange={(e) => setExpenseForm(prev => ({ ...prev, title: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Description</label>
-                <textarea
-                  className="glass-input"
-                  style={{ height: '50px', resize: 'none' }}
-                  value={expenseForm.description}
-                  onChange={(e) => setExpenseForm(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Category *</label>
-                  <select
-                    className="glass-select"
-                    style={{ width: '100%' }}
-                    value={expenseForm.category}
-                    onChange={(e) => setExpenseForm(prev => ({ ...prev, category: e.target.value }))}
-                  >
-                    {userExpenseCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Amount (LKR) *</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="e.g. 150000"
-                    className="glass-input"
-                    value={expenseForm.amount}
-                    onChange={(e) => setExpenseForm(prev => ({ ...prev, amount: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Date *</label>
-                  <input
-                    type="date"
-                    required
-                    className="glass-input"
-                    value={expenseForm.date}
-                    onChange={(e) => setExpenseForm(prev => ({ ...prev, date: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Payment Method</label>
-                  <select
-                    className="glass-select"
-                    style={{ width: '100%' }}
-                    value={expenseForm.payment_method}
-                    onChange={(e) => setExpenseForm(prev => ({ ...prev, payment_method: e.target.value }))}
-                  >
-                    <option value="card">Card</option>
-                    <option value="cash">Cash</option>
-                    <option value="bank_transfer">Bank Wire</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Notes</label>
-                <textarea
-                  className="glass-input"
-                  style={{ height: '50px', resize: 'none' }}
-                  value={expenseForm.notes}
-                  onChange={(e) => setExpenseForm(prev => ({ ...prev, notes: e.target.value }))}
-                />
-              </div>
-
-              {/* Receipt upload section */}
-              <div style={{ border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <UploadCloud size={24} style={{ color: 'var(--text-muted)' }} />
-                <div style={{ flexGrow: 1 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block' }}>Receipt Attachment</span>
-                  {expenseForm.receipt_url ? (
-                    <a href={expenseForm.receipt_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: '#fff', textDecoration: 'underline' }}>
-                      View uploaded receipt file
-                    </a>
-                  ) : (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No file attached.</span>
-                  )}
-                </div>
-                
-                <div>
-                  <input
-                    type="file"
-                    id="expense-inline-file-upload"
-                    style={{ display: 'none' }}
-                    accept="image/*"
-                    onChange={handleReceiptUpload}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}
-                    disabled={receiptUploading}
-                    onClick={() => document.getElementById('expense-inline-file-upload').click()}
-                  >
-                    {receiptUploading ? 'Uploading...' : 'Choose File'}
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flexGrow: 1 }}>Save Record</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Inline forms removed: workflows redirected to modular popups */}
 
       {/* ─── ADD INCOME MODAL ────────────────────────────────────────── */}
       {isAddIncomeModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '480px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: '480px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', borderRadius: '16px', padding: '1.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>Log Income Payment</h3>
               <X size={18} style={{ cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setIsAddIncomeModalOpen(false)} />
@@ -2911,8 +2698,8 @@ const Finance = ({ activeTabOverride }) => {
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flexGrow: 1 }}>Save Record</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setIsAddIncomeModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flexGrow: 1, height: '42px', borderRadius: '10px' }}>Save Record</button>
+                <button type="button" className="btn btn-secondary" style={{ flexGrow: 1, height: '42px', borderRadius: '10px' }} onClick={() => setIsAddIncomeModalOpen(false)}>Cancel</button>
               </div>
             </form>
           </div>
@@ -2922,7 +2709,7 @@ const Finance = ({ activeTabOverride }) => {
       {/* ─── ADD/EDIT/VIEW EXPENSE MODAL ─────────────────────────────── */}
       {isExpenseModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(4px)' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '500px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: '500px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', borderRadius: '16px', padding: '1.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}>
                 {expenseModalMode === 'add' ? 'Record Gym Expense' : expenseModalMode === 'edit' ? 'Edit Expense Record' : 'View Expense Details'}
@@ -2946,10 +2733,10 @@ const Finance = ({ activeTabOverride }) => {
 
               <div>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' }}>Description</label>
-                <input
-                  type="text"
+                <textarea
                   disabled={expenseModalMode === 'view'}
                   className="glass-input"
+                  style={{ height: '60px', resize: 'none' }}
                   value={expenseForm.description}
                   onChange={(e) => setExpenseForm(prev => ({ ...prev, description: e.target.value }))}
                 />
@@ -3024,17 +2811,40 @@ const Finance = ({ activeTabOverride }) => {
               </div>
 
               {/* Receipt upload section */}
-              <div style={{ border: '1px dashed var(--border-color)', borderRadius: '8px', padding: '0.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <UploadCloud size={24} style={{ color: 'var(--text-muted)' }} />
-                <div style={{ flexGrow: 1 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, display: 'block' }}>Receipt Attachment</span>
-                  {expenseForm.receipt_url ? (
-                    <a href={expenseForm.receipt_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: '#fff', textDecoration: 'underline' }}>
-                      View uploaded receipt file
-                    </a>
-                  ) : (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No file attached.</span>
-                  )}
+              <div style={{ 
+                border: '1.5px dashed rgba(255, 255, 255, 0.12)', 
+                borderRadius: '10px', 
+                padding: '0.85rem 1.25rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                gap: '1rem',
+                background: 'rgba(255, 255, 255, 0.01)',
+                transition: 'border-color var(--transition-fast)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                  }}>
+                    <UploadCloud size={18} style={{ color: 'var(--text-muted)' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)' }}>Receipt Attachment</span>
+                    {expenseForm.receipt_url ? (
+                      <a href={expenseForm.receipt_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.7rem', color: 'var(--color-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.15rem' }}>
+                        <Link size={10} /> View receipt file
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>No file attached</span>
+                    )}
+                  </div>
                 </div>
                 
                 {expenseModalMode !== 'view' && (
@@ -3049,7 +2859,14 @@ const Finance = ({ activeTabOverride }) => {
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}
+                      style={{ 
+                        height: '32px', 
+                        padding: '0 0.85rem', 
+                        fontSize: '0.75rem', 
+                        borderRadius: '6px', 
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)'
+                      }}
                       disabled={receiptUploading}
                       onClick={() => fileInputRef.current.click()}
                     >
@@ -3062,14 +2879,14 @@ const Finance = ({ activeTabOverride }) => {
               {/* Footer actions */}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                 {expenseModalMode !== 'view' ? (
-                  <button type="submit" className="btn btn-primary" style={{ flexGrow: 1 }}>
+                  <button type="submit" className="btn btn-primary" style={{ flexGrow: 1, height: '42px', borderRadius: '10px' }}>
                     {expenseModalMode === 'add' ? 'Save Record' : 'Apply Updates'}
                   </button>
                 ) : (
                   <button
                     type="button"
                     className="btn btn-primary"
-                    style={{ flexGrow: 1 }}
+                    style={{ flexGrow: 1, height: '42px', borderRadius: '10px' }}
                     onClick={() => openEditExpenseModal(selectedExpense)}
                   >
                     Edit Record
@@ -3079,15 +2896,15 @@ const Finance = ({ activeTabOverride }) => {
                 {expenseModalMode === 'edit' && (
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    style={{ color: '#f87171' }}
+                    className="btn btn-danger"
+                    style={{ height: '42px', borderRadius: '10px' }}
                     onClick={() => handleDeleteExpense(selectedExpense.id)}
                   >
                     Delete
                   </button>
                 )}
                 
-                <button type="button" className="btn btn-secondary" onClick={() => setIsExpenseModalOpen(false)}>
+                <button type="button" className="btn btn-secondary" style={{ height: '42px', borderRadius: '10px' }} onClick={() => setIsExpenseModalOpen(false)}>
                   Close
                 </button>
               </div>

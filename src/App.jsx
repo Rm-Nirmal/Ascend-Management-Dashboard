@@ -178,10 +178,10 @@ const DashboardContentShell = () => {
       return [
         'members', 'registrations', 'access',
         'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_reports',
-        'break_timer', 'log_income', 'log_expense'
-      ].includes(tab);
+        'break_timer', 'finance'
+      ].includes(tab) || tab.startsWith('log_income') || tab.startsWith('log_expense');
     }
-    return ['members', 'registrations', 'access', 'break_timer', 'log_income', 'log_expense'].includes(tab);
+    return ['members', 'registrations', 'access', 'break_timer', 'finance'].includes(tab) || tab.startsWith('log_income') || tab.startsWith('log_expense');
   };
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -312,6 +312,9 @@ const DashboardContentShell = () => {
       );
 
   const renderView = (tab) => {
+    if (tab.startsWith('log_income') || tab.startsWith('log_expense') || tab === 'finance') {
+      return <Finance activeTabOverride={tab} setActiveTab={setActiveTab} />;
+    }
     switch (tab) {
       case 'overview':
         return <Overview />;
@@ -327,11 +330,6 @@ const DashboardContentShell = () => {
         return <AccessConsole />;
       case 'console':
         return <SubscriptionConsole />;
-
-      case 'finance':
-      case 'log_income':
-      case 'log_expense':
-        return <Finance activeTabOverride={activeTab} />;
       case 'ai':
         return <AIInsights />;
       case 'audit':

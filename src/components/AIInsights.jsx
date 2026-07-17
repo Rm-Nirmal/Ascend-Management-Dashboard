@@ -8,57 +8,138 @@ import {
 } from 'lucide-react';
 
 const AIInsights = () => {
-  const { members } = useDashboard();
+  const { members, trainers, plans, invoices } = useDashboard();
   const [selectedRiskMember, setSelectedRiskMember] = useState(null);
 
   // Scoped members
   const activeMembers = useMemo(() => {
-    return members.filter(m => m.status === 'active');
+    return (members || []).filter(m => m.status === 'active');
   }, [members]);
 
   // Generate Churn risk score details for active members
   const churnRiskList = useMemo(() => {
-    // Generate simulated churn scores
-    const seedScores = {
-      'm1': { score: 14, factors: ['Regular check-ins (3x/week)', 'Active trainer plan', 'Auto-renew enabled'] },
-      'm2': { score: 8, factors: ['Highly active check-ins', 'Enrolled in VIP program', 'Participates in events'] },
-      'm5': { score: 68, factors: ['Zero check-ins in last 12 days', 'Back stiffness notes (physical hurdle)', 'Declined custom trainer session'] },
-      'm6': { score: 28, factors: ['Low trainer interaction', 'Check-ins drop-off (1x/week)', 'Auto-renew active'] },
-      'm7': { score: 45, factors: ['Payment delay 3 days', 'Check-ins down by 25% vs last month', 'Main branch user'] }
-    };
-
-    const getDeterministicRiskScore = (memberId) => {
-      let hash = 0;
-      for (let i = 0; i < memberId.length; i++) {
-        hash = memberId.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      return 15 + Math.abs(hash % 45); // deterministic score between 15 and 59
-    };
-
     return activeMembers.map(m => {
-      const riskData = seedScores[m.id] || { 
-        score: getDeterministicRiskScore(m.id), 
-        factors: ['Average check-in frequency', 'General health subscriber', 'No immediate warnings'] 
-      };
+      let score = 15; // base score
+      const factors = [];
+      
+      // 1. Plan Expiration Timeline
+      const expiryStr = m.next_payment_date || m.countdown_end;
+      if (expiryStr) {
+        const expiryDate = new Date(expiryStr);
+        const today = new Date('2026-07-17'); // current date from context metadata
+        const diffTime = expiryDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) {
+          score += 35;
+          factors.push('Membership plan has expired');
+        } else if (diffDays <= 7) {
+          score += 25;
+          factors.push(`Membership expiring soon (${diffDays} days left)`);
+        } else if (diffDays <= 30) {
+          score += 15;
+          factors.push(`Membership renewal in ${diffDays} days`);
+        }
+      } else {
+        score += 20;
+        factors.push('No plan expiration date set');
+      }
+      
+      // Plan Assignment
+      if (!m.plan_id) {
+        score += 15;
+        factors.push('No active gym plan assigned');
+      }
+
+      // 2. Trainer Assignment
+      if (!m.trainer_id) {
+        score += 15;
+        factors.push('No trainer assignment (self-guided)');
+      } else {
+        const trainer = trainers && trainers.find(t => t.id === m.trainer_id);
+        if (trainer) {
+          factors.push(`Assigned to trainer: ${trainer.name || trainer.full_name}`);
+        } else {
+          factors.push('Assigned trainer details missing');
+        }
+      }
+
+      // 3. Complete Profile Contact Details
+      const missingDetails = [];
+      if (!m.email) missingDetails.push('email');
+      if (!m.phone) missingDetails.push('phone');
+      if (!m.emergency_contact_phone) missingDetails.push('emergency contact');
+      
+      if (missingDetails.length > 0) {
+        score += 10;
+        factors.push(`Incomplete profile details (missing ${missingDetails.join(', ')})`);
+      }
+
+      // 4. Medical Notes / Remarks
+      if (m.medical_notes && m.medical_notes.trim() !== '') {
+        score += 20;
+        factors.push(`Medical alert: ${m.medical_notes}`);
+      }
+      
+      // Default factor if list is empty
+      if (factors.length === 0) {
+        factors.push('Profile complete, active trainer, regular plan');
+      }
+      
+      // Determine final capped risk score
+      const riskScore = Math.min(Math.max(score, 5), 95);
       
       return {
         ...m,
-        riskScore: riskData.score,
-        factors: riskData.factors
+        riskScore,
+        factors
       };
-    }).sort((a, b) => b.riskScore - a.riskScore); // Highest risk first
-  }, [activeMembers]);
+    }).sort((a, b) => b.riskScore - a.riskScore);
+  }, [activeMembers, trainers]);
 
   // Forecast Revenue (next 90 days) - (FR-AI-03)
   const revenueForecastData = useMemo(() => {
+    // Filter paid invoices
+    const paidInvs = (invoices || []).filter(inv => inv.status === 'paid' && inv.total_amount);
+    
+    // Sum total paid revenue
+    const totalPaid = paidInvs.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+    
+    // Find monthly run rate
+    let monthlyRate = 250000; // default baseline LKR
+    
+    if (paidInvs.length > 0) {
+      const dates = paidInvs.map(inv => new Date(inv.paid_at || inv.created_at || '2026-07-17'));
+      const minDate = new Date(Math.min(...dates));
+      const maxDate = new Date(Math.max(...dates));
+      const diffMs = Math.max(maxDate - minDate, 24 * 60 * 60 * 1000);
+      const diffMonths = diffMs / (1000 * 60 * 60 * 24 * 30);
+      
+      const calculatedRate = totalPaid / Math.max(1, Math.ceil(diffMonths));
+      if (calculatedRate > 0) {
+        monthlyRate = calculatedRate;
+      }
+    }
+    
+    // Generate predictions for next 90 days (15-day intervals)
     const days = ['Day +15', 'Day +30', 'Day +45', 'Day +60', 'Day +75', 'Day +90'];
-    const scale = 1.0;
-    return days.map((day, idx) => ({
-      name: day,
-      baseline: Math.round((1500 + idx * 80) * scale),
-      predicted: Math.round((1500 + idx * 140 + Math.sin(idx) * 50) * scale)
-    }));
-  }, []);
+    
+    const avgRisk = churnRiskList.length > 0
+      ? churnRiskList.reduce((sum, m) => sum + m.riskScore, 0) / churnRiskList.length
+      : 30; // default 30% risk
+      
+    return days.map((day, idx) => {
+      const monthsFraction = (idx + 1) * 0.5;
+      const baseline = Math.round(monthlyRate * monthsFraction);
+      const growthFactor = 1.0 + (0.20 - (avgRisk / 100) * 0.15);
+      const predicted = Math.round(baseline * (1.0 + (idx * 0.04) * growthFactor));
+      
+      return {
+        name: day,
+        baseline,
+        predicted
+      };
+    });
+  }, [invoices, churnRiskList]);
 
   // Occupancy forecast comparison: Typical vs Predicted (FR-AI-02)
   const occupancyForecastData = useMemo(() => {
@@ -87,7 +168,7 @@ const AIInsights = () => {
         <div className="page-info">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={24} style={{ color: 'var(--color-ai)' }} />
-            <h1 style={{ margin: 0 }}>FitCore AI Predictive Engine</h1>
+            <h1 style={{ margin: 0 }}>Fitgencore AI Predictive Engine</h1>
           </div>
           <p>Machine learning predictions for member churn, peak occupancy, and revenue forecast.</p>
         </div>

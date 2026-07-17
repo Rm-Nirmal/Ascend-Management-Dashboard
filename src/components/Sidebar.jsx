@@ -115,12 +115,24 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         <nav className="sidebar-nav" style={{ overflowY: 'auto', flex: 1, minHeight: 0, paddingRight: '4px' }}>
           {navItems.map(item => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const params = new URLSearchParams(window.location.search);
+            const subTab = params.get('tab');
+            const isActive = activeTab === item.id || 
+              (item.id === 'log_income' && (activeTab.startsWith('log_income') || (activeTab === 'finance' && subTab === 'income'))) ||
+              (item.id === 'log_expense' && (activeTab.startsWith('log_expense') || (activeTab === 'finance' && subTab === 'expenses')));
             return (
               <a 
                 key={item.id} 
                 className={`nav-link ${isActive ? 'active' : ''}`}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  if (item.id === 'log_income') {
+                    setActiveTab(`log_income_${Date.now()}`);
+                  } else if (item.id === 'log_expense') {
+                    setActiveTab(`log_expense_${Date.now()}`);
+                  } else {
+                    setActiveTab(item.id);
+                  }
+                }}
               >
                 <Icon size={18} />
                 <span>{item.name}</span>
