@@ -53,7 +53,7 @@ const Employees = () => {
   const getResolvedEmployeeStatus = useCallback((emp) => {
     if (!emp) return 'active';
     if (emp.status === 'terminated') return 'terminated';
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date(nowTime).toISOString().split('T')[0];
     const isOnLeaveToday = (Array.isArray(leaveRequests) ? leaveRequests : []).some(r => 
       r && 
       r.employeeId === emp.id && 
@@ -62,7 +62,7 @@ const Employees = () => {
       todayStr <= r.endDate
     );
     return isOnLeaveToday ? 'on_leave' : emp.status;
-  }, [leaveRequests]);
+  }, [leaveRequests, nowTime]);
 
   // Filter lists
   const activeEmployees = useMemo(() => {

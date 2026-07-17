@@ -2767,8 +2767,7 @@ export const DashboardProvider = ({ children }) => {
         
         const empRef = doc(db, COLLECTIONS.EMPLOYEES, req.employeeId);
         await updateDoc(empRef, {
-          monthly_leaves: newMonthlyLeaves,
-          status: 'on_leave'
+          monthly_leaves: newMonthlyLeaves
         });
 
         await logAudit('leave.approve', 'employee', req.employeeId, `Approved leave request for ${req.employeeName} (${days} day(s)). Decremented monthly leaves to ${newMonthlyLeaves}`);
