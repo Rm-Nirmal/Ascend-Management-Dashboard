@@ -48,6 +48,19 @@ const Employees = () => {
   const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'leaves'
   const [calendarDate, setCalendarDate] = useState(() => new Date());
 
+  const getResolvedEmployeeStatus = useCallback((emp) => {
+    if (!emp) return 'active';
+    if (emp.status === 'terminated') return 'terminated';
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isOnLeaveToday = leaveRequests.some(r => 
+      r.employeeId === emp.id && 
+      r.status === 'approved' && 
+      todayStr >= r.startDate && 
+      todayStr <= r.endDate
+    );
+    return isOnLeaveToday ? 'on_leave' : emp.status;
+  }, [leaveRequests]);
+
   // Filter lists
   const activeEmployees = useMemo(() => {
     return employees.filter(e => e.status !== 'terminated');
@@ -416,8 +429,8 @@ const Employees = () => {
                           </span>
                         </td>
                         <td>
-                          <span className={`badge badge-${emp.status === 'active' ? 'active' : emp.status === 'on_leave' ? 'on_leave' : 'frozen'}`} style={{ fontSize: '0.65rem', textTransform: 'capitalize' }}>
-                            {emp.status === 'on_leave' ? 'on leave' : emp.status}
+                          <span className={`badge badge-${getResolvedEmployeeStatus(emp) === 'active' ? 'active' : getResolvedEmployeeStatus(emp) === 'on_leave' ? 'on_leave' : 'frozen'}`} style={{ fontSize: '0.65rem', textTransform: 'capitalize' }}>
+                            {getResolvedEmployeeStatus(emp) === 'on_leave' ? 'on leave' : getResolvedEmployeeStatus(emp)}
                           </span>
                         </td>
                         <td style={{ textAlign: 'right' }}>
@@ -1133,8 +1146,8 @@ const Employees = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Status:</span>
-                      <span className={`badge badge-${selectedProfileEmployee.status === 'active' ? 'active' : selectedProfileEmployee.status === 'on_leave' ? 'on_leave' : 'frozen'}`} style={{ fontSize: '0.65rem', textTransform: 'capitalize' }}>
-                        {selectedProfileEmployee.status === 'on_leave' ? 'on leave' : selectedProfileEmployee.status}
+                      <span className={`badge badge-${getResolvedEmployeeStatus(selectedProfileEmployee) === 'active' ? 'active' : getResolvedEmployeeStatus(selectedProfileEmployee) === 'on_leave' ? 'on_leave' : 'frozen'}`} style={{ fontSize: '0.65rem', textTransform: 'capitalize' }}>
+                        {getResolvedEmployeeStatus(selectedProfileEmployee) === 'on_leave' ? 'on leave' : getResolvedEmployeeStatus(selectedProfileEmployee)}
                       </span>
                     </div>
                   </div>

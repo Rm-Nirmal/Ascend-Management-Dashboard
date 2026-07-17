@@ -38,6 +38,17 @@ const BreakTimer = () => {
     return shiftLogs.find(s => s.employeeId === employeeId && s.status === 'active');
   }, [shiftLogs, employeeId]);
 
+  const isOnLeaveToday = useMemo(() => {
+    if (!leaveRequests) return false;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return leaveRequests.some(r => 
+      r.employeeId === employeeId && 
+      r.status === 'approved' && 
+      todayStr >= r.startDate && 
+      todayStr <= r.endDate
+    );
+  }, [leaveRequests, employeeId]);
+
   // Elapsed time states (seconds)
   const [elapsed, setElapsed] = useState(0);
   const [shiftElapsed, setShiftElapsed] = useState(0);
@@ -320,6 +331,27 @@ const BreakTimer = () => {
                 )
               }
             </p>
+
+            {isOnLeaveToday && (
+              <div style={{
+                background: 'rgba(245, 158, 11, 0.08)',
+                border: '1px solid rgba(245, 158, 11, 0.2)',
+                padding: '0.85rem 1rem',
+                borderRadius: '8px',
+                color: '#f59e0b',
+                fontSize: '0.825rem',
+                fontWeight: 600,
+                marginBottom: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                justifyContent: 'center',
+                width: '100%'
+              }}>
+                <span>🏝️</span>
+                <span>You are currently on approved leave today. Enjoy your rest!</span>
+              </div>
+            )}
 
             {/* Timer Displays */}
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
