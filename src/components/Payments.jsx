@@ -801,7 +801,11 @@ const Payments = () => {
                   </div>
                   {selectedInvoice.discount_amount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', color: 'var(--color-success)' }}>
-                      <span>Discount code:</span>
+                      <span>
+                        {selectedInvoice.discount_type === 'percentage' 
+                          ? `Discount (${selectedInvoice.discount_rate}%):` 
+                          : 'Discount:'}
+                      </span>
                       <span>-LKR {selectedInvoice.discount_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
@@ -971,7 +975,11 @@ const Payments = () => {
                 </div>
                 {viewingInvoice.discount_amount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-success)' }}>
-                    <span>Discounts:</span>
+                    <span>
+                      {viewingInvoice.discount_type === 'percentage' 
+                        ? `Discounts (${viewingInvoice.discount_rate}%):` 
+                        : 'Discounts:'}
+                    </span>
                     <span>-LKR {viewingInvoice.discount_amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
                 )}

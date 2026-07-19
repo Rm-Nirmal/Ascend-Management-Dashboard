@@ -120,6 +120,8 @@ const PublicReceipt = () => {
     : receiptData.source;
   const subtotal = isInvoice ? receiptData.subtotal : amount;
   const discount = isInvoice ? (receiptData.discount_amount || 0) : 0;
+  const discountType = isInvoice ? (receiptData.discount_type || 'none') : 'none';
+  const discountRate = isInvoice ? (receiptData.discount_rate || 0) : 0;
 
   return (
     <div className="receipt-page-container" style={{
@@ -305,7 +307,11 @@ const PublicReceipt = () => {
           </div>
           {discount > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff' }} className="value-text">
-              <span>Discounts:</span>
+              <span>
+                {discountType === 'percentage' 
+                  ? `Discounts (${discountRate}%):` 
+                  : 'Discounts:'}
+              </span>
               <span>-LKR {discount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
             </div>
           )}

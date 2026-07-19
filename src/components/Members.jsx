@@ -135,7 +135,9 @@ const Members = () => {
         renewPaymentMethod, 
         renewPrice, 
         renewPeriod, 
-        discountAmountCalculated
+        discountAmountCalculated,
+        discountType,
+        discountVal
       );
       if (res.success) {
         if (showToast) {
@@ -1826,12 +1828,12 @@ const Members = () => {
                         style={{
                           padding: '0.2rem 0.5rem',
                           fontSize: '0.7rem',
-                          background: discountType === 'none' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
-                          border: 'none',
-                          color: '#fff',
+                          background: discountType === 'none' ? 'var(--color-primary)' : 'rgba(255,255,255,0.04)',
+                          border: '1px solid ' + (discountType === 'none' ? 'var(--color-primary)' : 'var(--border-color)'),
+                          color: discountType === 'none' ? '#000000' : 'var(--text-main)',
                           borderRadius: '4px',
                           cursor: 'pointer',
-                          fontWeight: 600
+                          fontWeight: 700
                         }}
                       >
                         None
@@ -1842,12 +1844,12 @@ const Members = () => {
                         style={{
                           padding: '0.2rem 0.5rem',
                           fontSize: '0.7rem',
-                          background: discountType === 'amount' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
-                          border: 'none',
-                          color: '#fff',
+                          background: discountType === 'amount' ? 'var(--color-primary)' : 'rgba(255,255,255,0.04)',
+                          border: '1px solid ' + (discountType === 'amount' ? 'var(--color-primary)' : 'var(--border-color)'),
+                          color: discountType === 'amount' ? '#000000' : 'var(--text-main)',
                           borderRadius: '4px',
                           cursor: 'pointer',
-                          fontWeight: 600
+                          fontWeight: 700
                         }}
                       >
                         LKR Value
@@ -1858,12 +1860,12 @@ const Members = () => {
                         style={{
                           padding: '0.2rem 0.5rem',
                           fontSize: '0.7rem',
-                          background: discountType === 'percentage' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
-                          border: 'none',
-                          color: '#fff',
+                          background: discountType === 'percentage' ? 'var(--color-primary)' : 'rgba(255,255,255,0.04)',
+                          border: '1px solid ' + (discountType === 'percentage' ? 'var(--color-primary)' : 'var(--border-color)'),
+                          color: discountType === 'percentage' ? '#000000' : 'var(--text-main)',
                           borderRadius: '4px',
                           cursor: 'pointer',
-                          fontWeight: 600
+                          fontWeight: 700
                         }}
                       >
                         % Percent
@@ -2292,7 +2294,11 @@ const Members = () => {
                 </div>
                 {viewingReceipt.discount_amount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', color: 'var(--color-danger)' }}>
-                    <span>Discount:</span>
+                    <span>
+                      {viewingReceipt.discount_type === 'percentage' 
+                        ? `Discount (${viewingReceipt.discount_rate}%):` 
+                        : 'Discount:'}
+                    </span>
                     <span style={{ fontWeight: 600 }}>-LKR {viewingReceipt.discount_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
                   </div>
                 )}

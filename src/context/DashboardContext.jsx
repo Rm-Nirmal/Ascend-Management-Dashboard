@@ -4002,7 +4002,7 @@ export const DashboardProvider = ({ children }) => {
   // MEMBERSHIP RENEWAL
   // ═══════════════════════════════════════════════════════════════════
 
-  const renewMemberMembership = useCallback(async (memberId, paymentMethod, customPrice = null, periodMonths = 1, discountAmount = 0.0) => {
+  const renewMemberMembership = useCallback(async (memberId, paymentMethod, customPrice = null, periodMonths = 1, discountAmount = 0.0, discountType = 'none', discountRate = 0) => {
     try {
       const member = members.find(m => m.id === memberId);
       if (!member) return { success: false, message: 'Member not found.' };
@@ -4045,6 +4045,8 @@ export const DashboardProvider = ({ children }) => {
           total_amount: total,
           subtotal: priceToCharge,
           discount_amount: discount,
+          discount_type: discountType,
+          discount_rate: parseFloat(discountRate || 0),
           plan_id: plan.id,
           billing_period: `${periodMonths} Month${parseInt(periodMonths) > 1 ? 's' : ''}`
         };
@@ -4056,6 +4058,8 @@ export const DashboardProvider = ({ children }) => {
           total_amount: finalInvoiceData.total_amount,
           subtotal: finalInvoiceData.subtotal,
           discount_amount: finalInvoiceData.discount_amount,
+          discount_type: finalInvoiceData.discount_type,
+          discount_rate: finalInvoiceData.discount_rate,
           plan_id: finalInvoiceData.plan_id,
           billing_period: finalInvoiceData.billing_period
         });
@@ -4069,6 +4073,8 @@ export const DashboardProvider = ({ children }) => {
           subtotal: priceToCharge,
           tax_amount: tax,
           discount_amount: discount,
+          discount_type: discountType,
+          discount_rate: parseFloat(discountRate || 0),
           total_amount: total,
           status: 'paid',
           due_date: new Date().toISOString().split('T')[0],
