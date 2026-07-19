@@ -2,7 +2,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 // ─── Firebase Imports ────────────────────────────────────────────────
-import { db, auth, COLLECTIONS, DEFAULT_ORG_ID } from '../lib/firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import firebaseApp, { db, auth, COLLECTIONS, DEFAULT_ORG_ID } from '../lib/firebase';
 import {
   collection,
   doc,
@@ -15,11 +16,13 @@ import {
   getDocs,
 } from 'firebase/firestore';
 import {
+  getAuth,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   updatePassword,
+  deleteUser,
 } from 'firebase/auth';
 
 const DashboardContext = createContext();
@@ -4323,6 +4326,28 @@ export const DashboardProvider = ({ children }) => {
     try {
       const admin = admins.find(a => a.id === adminId);
       if (!admin) return { success: false, message: 'Admin not found.' };
+
+      // Attempt to delete credentials from Firebase Authentication
+      if (admin.email && admin.password) {
+        try {
+          const tempAppName = `TempAppToDelete_${adminId}_${Date.now()}`;
+          const tempApp = initializeApp(firebaseApp.options, tempAppName);
+          const tempAuth = getAuth(tempApp);
+          
+          try {
+            const userCred = await signInWithEmailAndPassword(tempAuth, admin.email, admin.password);
+            if (userCred.user) {
+              await deleteUser(userCred.user);
+            }
+          } catch (authErr) {
+            console.warn('Could not delete user from Firebase Auth (might not exist or password changed):', authErr);
+          } finally {
+            await deleteApp(tempApp);
+          }
+        } catch (setupErr) {
+          console.error('Error during temp firebase app initialization:', setupErr);
+        }
+      }
 
       // Delete from Firestore
       const adminRef = doc(db, COLLECTIONS.ADMINS, adminId);
