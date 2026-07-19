@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Search, Plus, Edit2, Trash2, Mail, Phone, Briefcase, 
-  DollarSign, Calendar, X, Eye, Clock, Coffee, ClipboardList
+  DollarSign, Calendar, X, Eye, Clock, Coffee, ClipboardList, Printer
 } from 'lucide-react';
 
 const getLocalDateStr = (dateInput) => {
@@ -357,6 +357,87 @@ const Employees = () => {
         showToast('Termination failed.', 'error');
       }
     }
+  };
+
+  const downloadEmployeeActivitiesPDF = (employee, activities) => {
+    if (!activities || activities.length === 0) return;
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      alert('Pop-up blocked! Please allow pop-ups to print/save the PDF.');
+      return;
+    }
+    
+    const logsHtml = activities.map(log => {
+      const dateStr = new Date(log.occurred_at || log.created_at || Date.now()).toLocaleString();
+      return `
+        <tr style="border-bottom: 1px solid #e4e4e7;">
+          <td style="padding: 10px; font-size: 0.8rem; font-family: monospace; color: #3f3f46;">${dateStr}</td>
+          <td style="padding: 10px; font-size: 0.8rem; font-weight: bold; color: #18181b;">${log.action || ''}</td>
+          <td style="padding: 10px; font-size: 0.8rem; color: #71717a; text-transform: uppercase;">${log.category || ''}</td>
+          <td style="padding: 10px; font-size: 0.8rem; color: #27272a;">${log.description || ''}</td>
+        </tr>
+      `;
+    }).join('');
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${employee.full_name} - Activity Audit Log</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 30px; color: #18181b; background: #ffffff; }
+            .header-container { border-bottom: 2px solid #e4e4e7; padding-bottom: 15px; margin-bottom: 25px; }
+            h1 { font-size: 1.6rem; margin: 0 0 5px 0; color: #09090b; letter-spacing: -0.02em; }
+            h2 { font-size: 0.85rem; color: #71717a; margin: 0; font-weight: normal; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th { text-align: left; background: #f4f4f5; padding: 10px; font-size: 0.8rem; font-weight: 700; color: #71717a; border-bottom: 2px solid #e4e4e7; text-transform: uppercase; letter-spacing: 0.05em; }
+            .no-print-btn { padding: 8px 16px; background: #18181b; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: background 0.15s; }
+            .no-print-btn:hover { background: #27272a; }
+            @media print {
+              .no-print { display: none !important; }
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="no-print-btn" onclick="window.print();">
+              Print / Save as PDF
+            </button>
+            <button class="no-print-btn" onclick="window.close();" style="background: #f4f4f5; color: #18181b; border: 1px solid #e4e4e7;">
+              Close
+            </button>
+          </div>
+          <div class="header-container">
+            <h1>Staff Activity Audit Report</h1>
+            <h2>Employee: <strong>${employee.full_name}</strong> | Email: <strong>${employee.email || 'N/A'}</strong> | Role: <strong>${employee.role || 'N/A'}</strong></h2>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 25%;">Timestamp</th>
+                <th style="width: 20%;">Action</th>
+                <th style="width: 15%;">Category</th>
+                <th style="width: 40%;">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${logsHtml}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.focus();
+              setTimeout(function() {
+                window.print();
+              }, 250);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -1468,9 +1549,31 @@ const Employees = () => {
 
                 {/* Audit Logs / Activity */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <ClipboardList size={14} style={{ color: 'var(--color-primary)' }} /> Recent Panel Activities (Audit)
-                  </h4>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <ClipboardList size={14} style={{ color: 'var(--color-primary)' }} /> Recent Panel Activities (Audit)
+                    </h4>
+                    {employeeActivities.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => downloadEmployeeActivitiesPDF(selectedProfileEmployee, employeeActivities)}
+                        className="btn btn-secondary"
+                        style={{
+                          padding: '0.2rem 0.6rem',
+                          fontSize: '0.7rem',
+                          borderRadius: '4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          height: '24px',
+                          cursor: 'pointer'
+                        }}
+                        title="Download Activity Audit Log as PDF"
+                      >
+                        <Printer size={12} /> Download PDF
+                      </button>
+                    )}
+                  </div>
 
                   <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '4px' }}>
                     {employeeActivities.length === 0 ? (
