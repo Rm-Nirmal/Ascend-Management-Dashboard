@@ -40,6 +40,7 @@ const Employees = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [selectedProfileEmployee, setSelectedProfileEmployee] = useState(null);
   const [breakFilter, setBreakFilter] = useState('daily'); // 'daily', 'weekly', 'monthly'
+  const [auditTimeframe, setAuditTimeframe] = useState('all'); // 'day', 'week', 'month', 'all'
 
   // Form states (Add/Edit employee)
   const [empForm, setEmpForm] = useState({
@@ -160,14 +161,30 @@ const Employees = () => {
   const employeeActivities = useMemo(() => {
     if (!selectedProfileEmployee || !auditLogs) return [];
     
-    return (Array.isArray(auditLogs) ? auditLogs : []).filter(log => {
+    const filtered = (Array.isArray(auditLogs) ? auditLogs : []).filter(log => {
       if (!log) return false;
       const matchesAdminId = linkedAdminForProfile && (log.user_id === linkedAdminForProfile.id || log.user_id === linkedAdminForProfile.uid);
       const empName = selectedProfileEmployee.full_name || '';
       const matchesName = log.user_name?.toLowerCase() === empName.toLowerCase();
       return matchesAdminId || matchesName;
     });
-  }, [selectedProfileEmployee, auditLogs, linkedAdminForProfile]);
+
+    if (auditTimeframe === 'all') return filtered;
+
+    const limitDate = new Date();
+    if (auditTimeframe === 'day') {
+      limitDate.setDate(limitDate.getDate() - 1);
+    } else if (auditTimeframe === 'week') {
+      limitDate.setDate(limitDate.getDate() - 7);
+    } else if (auditTimeframe === 'month') {
+      limitDate.setMonth(limitDate.getMonth() - 1);
+    }
+
+    return filtered.filter(log => {
+      const occurredDate = new Date(log.occurred_at || log.created_at || Date.now());
+      return occurredDate >= limitDate;
+    });
+  }, [selectedProfileEmployee, auditLogs, linkedAdminForProfile, auditTimeframe]);
 
   const upcomingLeavesForProfile = useMemo(() => {
     if (!selectedProfileEmployee || !leaveRequests) return [];
@@ -1282,7 +1299,7 @@ const Employees = () => {
                 <Eye size={20} style={{ color: 'var(--color-primary)' }} />
                 Staff Member Profile: {selectedProfileEmployee.full_name}
               </h2>
-              <button onClick={() => { setSelectedProfileEmployee(null); setBreakFilter('daily'); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <button onClick={() => { setSelectedProfileEmployee(null); setBreakFilter('daily'); setAuditTimeframe('all'); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
@@ -1553,26 +1570,51 @@ const Employees = () => {
                     <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <ClipboardList size={14} style={{ color: 'var(--color-primary)' }} /> Recent Panel Activities (Audit)
                     </h4>
-                    {employeeActivities.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => downloadEmployeeActivitiesPDF(selectedProfileEmployee, employeeActivities)}
-                        className="btn btn-secondary"
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <select
+                        value={auditTimeframe}
+                        onChange={(e) => setAuditTimeframe(e.target.value)}
+                        className="glass-select"
                         style={{
-                          padding: '0.2rem 0.6rem',
+                          padding: '0.1rem 0.5rem',
                           fontSize: '0.7rem',
-                          borderRadius: '4px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
                           height: '24px',
+                          borderRadius: '4px',
+                          border: '1px solid var(--border-color)',
+                          background: 'rgba(0,0,0,0.4)',
+                          color: 'var(--text-main)',
+                          width: 'auto',
+                          fontWeight: 600,
                           cursor: 'pointer'
                         }}
-                        title="Download Activity Audit Log as PDF"
                       >
-                        <Printer size={12} /> Download PDF
-                      </button>
-                    )}
+                        <option value="all">All Time</option>
+                        <option value="day">Today</option>
+                        <option value="week">Last 7 Days</option>
+                        <option value="month">Last 30 Days</option>
+                      </select>
+
+                      {employeeActivities.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => downloadEmployeeActivitiesPDF(selectedProfileEmployee, employeeActivities, auditTimeframe)}
+                          className="btn btn-secondary"
+                          style={{
+                            padding: '0.2rem 0.6rem',
+                            fontSize: '0.7rem',
+                            borderRadius: '4px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            height: '24px',
+                            cursor: 'pointer'
+                          }}
+                          title="Download Activity Audit Log as PDF"
+                        >
+                          <Printer size={12} /> Download PDF
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '4px' }}>
@@ -1625,7 +1667,7 @@ const Employees = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-              <button className="btn btn-secondary" onClick={() => { setSelectedProfileEmployee(null); setBreakFilter('daily'); }}>
+              <button className="btn btn-secondary" onClick={() => { setSelectedProfileEmployee(null); setBreakFilter('daily'); setAuditTimeframe('all'); }}>
                 Close Profile
               </button>
             </div>
