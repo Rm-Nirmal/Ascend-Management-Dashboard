@@ -67,7 +67,16 @@ const Members = () => {
   const [renewPrice, setRenewPrice] = useState('');
   const [renewPaymentMethod, setRenewPaymentMethod] = useState('card');
   const [renewPeriod, setRenewPeriod] = useState(1);
+  const [discountType, setDiscountType] = useState('none'); // 'none', 'amount', 'percentage'
+  const [discountVal, setDiscountVal] = useState(0);
   const [viewingReceipt, setViewingReceipt] = useState(null);
+
+  useEffect(() => {
+    if (selectedRenewMember) {
+      setDiscountType('none');
+      setDiscountVal(0);
+    }
+  }, [selectedRenewMember]);
 
   const numberToWords = (num) => {
     const a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
@@ -113,7 +122,21 @@ const Members = () => {
     e.preventDefault();
     if (!renewPrice || !selectedRenewMember) return;
     try {
-      const res = await renewMemberMembership(selectedRenewMember.id, renewPaymentMethod, renewPrice, renewPeriod);
+      const subtotal = parseFloat(renewPrice || 0);
+      let discountAmountCalculated = 0;
+      if (discountType === 'amount') {
+        discountAmountCalculated = parseFloat(discountVal || 0);
+      } else if (discountType === 'percentage') {
+        discountAmountCalculated = (subtotal * parseFloat(discountVal || 0)) / 100;
+      }
+      
+      const res = await renewMemberMembership(
+        selectedRenewMember.id, 
+        renewPaymentMethod, 
+        renewPrice, 
+        renewPeriod, 
+        discountAmountCalculated
+      );
       if (res.success) {
         if (showToast) {
           showToast(`Membership for ${selectedRenewMember.full_name} renewed successfully for ${renewPeriod} month(s)!`, 'success');
@@ -1699,7 +1722,13 @@ const Members = () => {
       {selectedRenewMember && (() => {
         const plan = plans.find(p => p.id === selectedRenewMember.plan_id) || plans[0];
         const subtotal = parseFloat(renewPrice || 0);
-        const total = subtotal;
+        let discountAmountCalculated = 0;
+        if (discountType === 'amount') {
+          discountAmountCalculated = parseFloat(discountVal || 0);
+        } else if (discountType === 'percentage') {
+          discountAmountCalculated = (subtotal * parseFloat(discountVal || 0)) / 100;
+        }
+        const total = Math.max(0, subtotal - discountAmountCalculated);
 
         // Calculate dynamic new expiry date
         const baseDate = selectedRenewMember.countdown_end && new Date(selectedRenewMember.countdown_end).getTime() > time
@@ -1786,12 +1815,92 @@ const Members = () => {
                   </div>
                 </div>
 
+                {/* Discount Section (Optional) */}
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Apply Discount (Optional)</span>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('none'); setDiscountVal(0); }}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          background: discountType === 'none' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                          border: 'none',
+                          color: '#fff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        None
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('amount'); setDiscountVal(0); }}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          background: discountType === 'amount' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                          border: 'none',
+                          color: '#fff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        LKR Value
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('percentage'); setDiscountVal(0); }}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          background: discountType === 'percentage' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                          border: 'none',
+                          color: '#fff',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        % Percent
+                      </button>
+                    </div>
+                  </div>
+
+                  {discountType !== 'none' && (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                        {discountType === 'amount' ? 'Discount Amount (LKR):' : 'Discount Percent (%):'}
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        max={discountType === 'percentage' ? "100" : undefined}
+                        className="glass-input"
+                        style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem', textAlign: 'right' }}
+                        value={discountVal}
+                        onChange={(e) => setDiscountVal(parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Professional Billing breakdown card */}
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Base Subtotal:</span>
                     <span>LKR {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
+                  {discountAmountCalculated > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', color: 'var(--color-danger)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Discount Applied:</span>
+                      <span>-LKR {discountAmountCalculated.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                   <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.6rem 0', paddingTop: '0.6rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.05rem', color: 'var(--color-success)' }}>
                       <span>Total Collection:</span>
@@ -2181,6 +2290,12 @@ const Members = () => {
                   <span>Subtotal:</span>
                   <span style={{ fontWeight: 600 }}>LKR {viewingReceipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
                 </div>
+                {viewingReceipt.discount_amount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', color: 'var(--color-danger)' }}>
+                    <span>Discount:</span>
+                    <span style={{ fontWeight: 600 }}>-LKR {viewingReceipt.discount_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                  </div>
+                )}
                 {viewingReceipt.tax_amount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>Tax & Fees:</span>

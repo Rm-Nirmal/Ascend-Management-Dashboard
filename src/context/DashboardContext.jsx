@@ -4002,7 +4002,7 @@ export const DashboardProvider = ({ children }) => {
   // MEMBERSHIP RENEWAL
   // ═══════════════════════════════════════════════════════════════════
 
-  const renewMemberMembership = useCallback(async (memberId, paymentMethod, customPrice = null, periodMonths = 1) => {
+  const renewMemberMembership = useCallback(async (memberId, paymentMethod, customPrice = null, periodMonths = 1, discountAmount = 0.0) => {
     try {
       const member = members.find(m => m.id === memberId);
       if (!member) return { success: false, message: 'Member not found.' };
@@ -4012,8 +4012,9 @@ export const DashboardProvider = ({ children }) => {
 
       const isCustom = customPrice !== null && parseFloat(customPrice) !== plan.price * parseInt(periodMonths);
       const priceToCharge = isCustom ? parseFloat(customPrice) : plan.price * parseInt(periodMonths);
+      const discount = parseFloat(discountAmount || 0);
       const tax = 0.0;
-      const total = priceToCharge;
+      const total = Math.max(0, priceToCharge - discount);
 
       const newCountdownEnd = helperCalculateRenewalCountdownEnd(member.countdown_end, periodMonths);
 
@@ -4043,6 +4044,7 @@ export const DashboardProvider = ({ children }) => {
           payment_method: paymentMethod,
           total_amount: total,
           subtotal: priceToCharge,
+          discount_amount: discount,
           plan_id: plan.id,
           billing_period: `${periodMonths} Month${parseInt(periodMonths) > 1 ? 's' : ''}`
         };
@@ -4053,6 +4055,7 @@ export const DashboardProvider = ({ children }) => {
           payment_method: finalInvoiceData.payment_method,
           total_amount: finalInvoiceData.total_amount,
           subtotal: finalInvoiceData.subtotal,
+          discount_amount: finalInvoiceData.discount_amount,
           plan_id: finalInvoiceData.plan_id,
           billing_period: finalInvoiceData.billing_period
         });
@@ -4065,7 +4068,7 @@ export const DashboardProvider = ({ children }) => {
           invoice_number: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
           subtotal: priceToCharge,
           tax_amount: tax,
-          discount_amount: 0.0,
+          discount_amount: discount,
           total_amount: total,
           status: 'paid',
           due_date: new Date().toISOString().split('T')[0],
