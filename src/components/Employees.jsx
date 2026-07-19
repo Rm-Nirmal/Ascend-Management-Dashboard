@@ -1780,6 +1780,19 @@ const Employees = () => {
           >
             <style>{`
               @media print {
+                .sidebar, .dashboard-sidebar, .topbar, .dashboard-header, .page-container, .modal-overlay:not(.print-modal-overlay), .profile-modal-content {
+                  display: none !important;
+                }
+                .dashboard-layout {
+                  display: block !important;
+                  height: auto !important;
+                  overflow: visible !important;
+                }
+                .main-content {
+                  display: block !important;
+                  height: auto !important;
+                  overflow: visible !important;
+                }
                 body * {
                   visibility: hidden !important;
                 }
@@ -1787,24 +1800,21 @@ const Employees = () => {
                   visibility: visible !important;
                 }
                 .print-modal-overlay {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
+                  position: static !important;
+                  display: block !important;
+                  background: white !important;
                   width: 100% !important;
                   height: auto !important;
-                  background: white !important;
-                  display: block !important;
                   padding: 0 !important;
                   margin: 0 !important;
                 }
                 .print-modal-content {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
-                  width: 100% !important;
-                  max-width: 100% !important;
+                  position: static !important;
+                  display: block !important;
                   background: white !important;
                   color: black !important;
+                  width: 100% !important;
+                  max-width: 100% !important;
                   border: none !important;
                   box-shadow: none !important;
                   padding: 0 !important;
@@ -1868,9 +1878,8 @@ const Employees = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                   <thead>
                     <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '25%' }}>Timestamp</th>
-                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '20%' }}>Action</th>
-                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '55%' }}>Description</th>
+                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '40%' }}>Timestamp</th>
+                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '60%' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1902,7 +1911,6 @@ const Employees = () => {
                               {log.action || 'system'}
                             </span>
                           </td>
-                          <td style={{ padding: '0.5rem', color: '#fff' }}>{log.description || ''}</td>
                         </tr>
                       );
                     })}

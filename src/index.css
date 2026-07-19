@@ -1786,15 +1786,20 @@ textarea.form-control {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Fix browser date input picker indicator visibility in dark dashboard theme */
+/* Fix browser date input picker indicator visibility */
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+  filter: invert(1); /* Default is inverted (white icon) for dark theme / public portal */
   cursor: pointer;
   opacity: 0.75;
   transition: opacity 0.2s ease;
 }
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+}
+
+/* Keep indicator icon dark for light theme inputs */
+:root[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none;
 }
 
 /* Hide browser default header (title/date) and footer (URL) on print layout */
