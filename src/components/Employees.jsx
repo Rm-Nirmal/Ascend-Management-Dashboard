@@ -42,7 +42,7 @@ const Employees = () => {
   const [selectedProfileEmployee, setSelectedProfileEmployee] = useState(null);
   const [breakFilter, setBreakFilter] = useState('daily'); // 'daily', 'weekly', 'monthly'
   const [auditTimeframe, setAuditTimeframe] = useState('all'); // 'day', 'week', 'month', 'all'
-  const [viewingAuditPrint, setViewingAuditPrint] = useState(null); // { employee, activities, timeframe }
+
 
   // Form states (Add/Edit employee)
   const [empForm, setEmpForm] = useState({
@@ -380,7 +380,311 @@ const Employees = () => {
 
   const downloadEmployeeActivitiesPDF = (employee, activities, timeframe) => {
     if (!activities || activities.length === 0) return;
-    setViewingAuditPrint({ employee, activities, timeframe });
+    
+    const timeframeLabels = {
+      day: 'Today (Last 24 Hours)',
+      week: 'Last 7 Days',
+      month: 'Last 30 Days',
+      all: 'All Time Activity'
+    };
+    const scopeLabel = timeframeLabels[timeframe] || 'All Time';
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Pop-up blocker is enabled. Please allow pop-ups to print the audit log.', 'error');
+      return;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Staff Activity Audit - ${employee.full_name}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Oswald:wght@500;700&display=swap');
+          body {
+            font-family: 'Montserrat', Arial, sans-serif;
+            color: #0b0f19;
+            background: #ffffff;
+            padding: 40px;
+            font-size: 12px;
+            line-height: 1.5;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0b0f19;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+          .gym-name {
+            font-family: 'Oswald', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 0;
+            color: #0b0f19;
+          }
+          .gym-info {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 3px;
+          }
+          .report-info {
+            text-align: right;
+          }
+          .report-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin: 0;
+            text-transform: uppercase;
+          }
+          .report-subtitle {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+          }
+          .summary-col {
+            display: flex;
+            flex-direction: column;
+          }
+          .summary-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6b7280;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+          }
+          .summary-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0b0f19;
+          }
+          .summary-subtext {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          th {
+            background: #f3f4f6;
+            color: #0b0f19;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 11px;
+            vertical-align: top;
+          }
+          .timestamp {
+            font-family: monospace;
+            font-size: 10.5px;
+            color: #4b5563;
+          }
+          .action-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 9px;
+            font-weight: 700;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .badge-create {
+            color: #15803d;
+            background: #dcfce7;
+            border: 1px solid #bbf7d0;
+          }
+          .badge-delete {
+            color: #b91c1c;
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+          }
+          .badge-pay {
+            color: #1d4ed8;
+            background: #dbeafe;
+            border: 1px solid #bfdbfe;
+          }
+          .badge-update {
+            color: #b45309;
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+          }
+          .badge-default {
+            color: #4b5563;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+          }
+          .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .sig-box {
+            width: 200px;
+            border-top: 1px solid #0b0f19;
+            text-align: center;
+            padding-top: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .footer {
+            margin-top: 60px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: #9ca3af;
+          }
+          @media print {
+            body {
+              padding: 0;
+            }
+            .no-print-btn {
+              display: none !important;
+            }
+          }
+          .no-print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0b0f19;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: 0.2s;
+          }
+          .no-print-btn:hover {
+            background: #1f2937;
+          }
+        </style>
+      </head>
+      <body>
+        <button class="no-print-btn" onclick="window.print()">Print / Export PDF</button>
+
+        <div class="header">
+          <div>
+            <h1 class="gym-name">${gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}</h1>
+            <div class="gym-info">${gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}</div>
+            <div class="gym-info">Email: ${gymSettings?.email || 'billing@ascend.lk'} | Tel: ${gymSettings?.phone || '+94 11 234 5678'}</div>
+          </div>
+          <div class="report-info">
+            <h2 class="report-title">STAFF ACTIVITY AUDIT</h2>
+            <div class="report-subtitle">Official Log Summary</div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-col">
+            <div class="summary-label">Staff Member</div>
+            <div class="summary-value">${employee.full_name}</div>
+            <div class="summary-subtext">${employee.role} &bull; ${employee.email || 'N/A'}</div>
+          </div>
+          <div class="summary-col">
+            <div class="summary-label">Audit Scope</div>
+            <div class="summary-value">${scopeLabel}</div>
+            <div class="summary-subtext">${activities.length} total events logged</div>
+          </div>
+          <div class="summary-col">
+            <div class="summary-label">Date Generated</div>
+            <div class="summary-value">${new Date().toLocaleDateString()}</div>
+            <div class="summary-subtext">${new Date().toLocaleTimeString()}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 25%;">Timestamp</th>
+              <th style="width: 25%;">Action</th>
+              <th style="width: 50%;">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${activities.map(log => {
+              const dateStr = new Date(log.occurred_at || log.created_at || Date.now()).toLocaleString();
+              const action = (log.action || '').toLowerCase();
+              let badgeClass = 'badge-default';
+              if (action.includes('create') || action.includes('add') || action.includes('register') || action.includes('hire')) {
+                badgeClass = 'badge-create';
+              } else if (action.includes('delete') || action.includes('remove') || action.includes('terminate')) {
+                badgeClass = 'badge-delete';
+              } else if (action.includes('pay') || action.includes('renew') || action.includes('receive') || action.includes('salary')) {
+                badgeClass = 'badge-pay';
+              } else if (action.includes('update') || action.includes('edit') || action.includes('reset')) {
+                badgeClass = 'badge-update';
+              }
+
+              return `
+                <tr>
+                  <td class="timestamp">${dateStr}</td>
+                  <td>
+                    <span class="action-badge ${badgeClass}">${log.action || 'system'}</span>
+                  </td>
+                  <td>${log.details || '-'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+
+        <div class="signature-section">
+          <div>
+            <div style="height: 40px;"></div>
+            <div class="sig-box">Audited By</div>
+          </div>
+          <div>
+            <div style="height: 40px;"></div>
+            <div class="sig-box">Management Sign-off</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div>Generated by ${gymSettings?.gymName || 'Gym'} Management Console</div>
+          <div>Confidential Audit Document &bull; Internal Use Only</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (
@@ -1751,208 +2055,7 @@ const Employees = () => {
           </div>
         </div>
       )}
-      {/* Modal 5: Employee Audit Print View */}
-      {viewingAuditPrint && (() => {
-        const { employee, activities, timeframe } = viewingAuditPrint;
-        const timeframeLabels = {
-          day: 'Today (Last 24 Hours)',
-          week: 'Last 7 Days',
-          month: 'Last 30 Days',
-          all: 'All Time Activity'
-        };
-        const scopeLabel = timeframeLabels[timeframe] || 'All Time';
 
-        return (
-          <div 
-            className="print-modal-overlay" 
-            style={{ 
-              position: 'fixed', 
-              inset: 0, 
-              background: 'rgba(0,0,0,0.85)', 
-              zIndex: 100, 
-              display: 'flex', 
-              alignItems: 'flex-start', 
-              justifyContent: 'center', 
-              padding: '2rem 1rem', 
-              backdropFilter: 'blur(4px)',
-              overflowY: 'auto' 
-            }}
-          >
-            <style>{`
-              @media print {
-                .sidebar, .dashboard-sidebar, .topbar, .dashboard-header, .modal-overlay:not(.print-modal-overlay), .profile-modal-content {
-                  display: none !important;
-                }
-                .page-container > *:not(.print-modal-overlay) {
-                  display: none !important;
-                }
-                .dashboard-layout, .main-content, .page-container {
-                  display: block !important;
-                  height: auto !important;
-                  overflow: visible !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                  border: none !important;
-                  box-shadow: none !important;
-                  background: transparent !important;
-                  backdrop-filter: none !important;
-                }
-                body * {
-                  visibility: hidden !important;
-                }
-                .print-modal-overlay, .print-modal-overlay * {
-                  visibility: visible !important;
-                }
-                .print-modal-overlay {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
-                  width: 100% !important;
-                  height: auto !important;
-                  padding: 0 !important;
-                  margin: 0 !important;
-                  background: white !important;
-                  display: block !important;
-                }
-                .print-modal-content {
-                  position: static !important;
-                  display: block !important;
-                  background: white !important;
-                  color: black !important;
-                  width: 100% !important;
-                  max-width: 100% !important;
-                  border: none !important;
-                  box-shadow: none !important;
-                  padding: 0 !important;
-                  margin: 0 !important;
-                }
-                .print-modal-content, .print-modal-content * {
-                  color: black !important;
-                }
-                .print-modal-content tr {
-                  border-bottom: 1px solid #ddd !important;
-                }
-                .print-modal-content th {
-                  background: #f1f5f9 !important;
-                  color: black !important;
-                  border-bottom: 2px solid black !important;
-                }
-                .no-print {
-                  display: none !important;
-                }
-              }
-            `}</style>
-            
-            <div className="glass-card print-modal-content" style={{ width: '100%', maxWidth: '800px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', padding: '2rem' }}>
-              
-              {/* Header: Gym & Report Info */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
-                <div>
-                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>
-                    {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}
-                  </h2>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
-                    {gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
-                    Email: {gymSettings?.email || 'billing@ascend.lk'} | Tel: {gymSettings?.phone || '+94 11 234 5678'}
-                  </span>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', letterSpacing: '0.05em', color: '#fff' }}>STAFF ACTIVITY AUDIT</h3>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Official Log Summary</span>
-                </div>
-              </div>
-
-              {/* Executive Summary Card */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                <div>
-                  <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Staff Member</div>
-                  <div style={{ fontWeight: 600, color: '#fff' }}>{employee.full_name}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{employee.role} &bull; {employee.email || 'N/A'}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Audit Scope</div>
-                  <div style={{ fontWeight: 600, color: '#fff' }}>{scopeLabel}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activities.length} total events logged</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Date Generated</div>
-                  <div style={{ fontWeight: 600, color: '#fff' }}>{new Date().toLocaleDateString()}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date().toLocaleTimeString()}</div>
-                </div>
-              </div>
-
-              {/* Audit Table */}
-              <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                  <thead>
-                    <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '25%' }}>Timestamp</th>
-                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '25%' }}>Action</th>
-                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '50%' }}>Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activities.map(log => {
-                      const dateStr = new Date(log.occurred_at || log.created_at || Date.now()).toLocaleString();
-                      
-                      let badgeColor = 'var(--text-muted)';
-                      let badgeBg = 'rgba(255,255,255,0.05)';
-                      const action = (log.action || '').toLowerCase();
-                      if (action.includes('create') || action.includes('add') || action.includes('register') || action.includes('hire')) {
-                        badgeColor = '#4ade80';
-                        badgeBg = 'rgba(74, 222, 128, 0.1)';
-                      } else if (action.includes('delete') || action.includes('remove') || action.includes('terminate')) {
-                        badgeColor = '#f87171';
-                        badgeBg = 'rgba(248, 113, 113, 0.1)';
-                      } else if (action.includes('pay') || action.includes('renew') || action.includes('receive') || action.includes('salary')) {
-                        badgeColor = '#60a5fa';
-                        badgeBg = 'rgba(96, 165, 250, 0.1)';
-                      } else if (action.includes('update') || action.includes('edit') || action.includes('reset')) {
-                        badgeColor = '#fb923c';
-                        badgeBg = 'rgba(251, 146, 60, 0.1)';
-                      }
-
-                      return (
-                        <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                          <td style={{ padding: '0.5rem', fontFamily: 'monospace', fontSize: '0.75rem' }}>{dateStr}</td>
-                          <td style={{ padding: '0.5rem' }}>
-                            <span style={{ display: 'inline-block', padding: '2px 6px', fontSize: '0.65rem', fontWeight: 700, borderRadius: '4px', textTransform: 'uppercase', color: badgeColor, background: badgeBg }}>
-                              {log.action || 'system'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
-                            {log.details || '-'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Actions Footer */}
-              <div className="no-print" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', justifyContent: 'flex-end' }}>
-                <button 
-                  onClick={() => window.print()} 
-                  className="btn btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                >
-                  <Printer size={16} /> Print / Export PDF
-                </button>
-                <button 
-                  onClick={() => setViewingAuditPrint(null)} 
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-              </div>
-
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 };
