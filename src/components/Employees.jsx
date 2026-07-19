@@ -1780,18 +1780,22 @@ const Employees = () => {
           >
             <style>{`
               @media print {
-                .sidebar, .dashboard-sidebar, .topbar, .dashboard-header, .page-container, .modal-overlay:not(.print-modal-overlay), .profile-modal-content {
+                .sidebar, .dashboard-sidebar, .topbar, .dashboard-header, .modal-overlay:not(.print-modal-overlay), .profile-modal-content {
                   display: none !important;
                 }
-                .dashboard-layout {
-                  display: block !important;
-                  height: auto !important;
-                  overflow: visible !important;
+                .page-container > *:not(.print-modal-overlay) {
+                  display: none !important;
                 }
-                .main-content {
+                .dashboard-layout, .main-content, .page-container {
                   display: block !important;
                   height: auto !important;
                   overflow: visible !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: transparent !important;
+                  backdrop-filter: none !important;
                 }
                 body * {
                   visibility: hidden !important;
@@ -1800,13 +1804,15 @@ const Employees = () => {
                   visibility: visible !important;
                 }
                 .print-modal-overlay {
-                  position: static !important;
-                  display: block !important;
-                  background: white !important;
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
                   width: 100% !important;
                   height: auto !important;
                   padding: 0 !important;
                   margin: 0 !important;
+                  background: white !important;
+                  display: block !important;
                 }
                 .print-modal-content {
                   position: static !important;
@@ -1820,12 +1826,16 @@ const Employees = () => {
                   padding: 0 !important;
                   margin: 0 !important;
                 }
+                .print-modal-content, .print-modal-content * {
+                  color: black !important;
+                }
                 .print-modal-content tr {
                   border-bottom: 1px solid #ddd !important;
                 }
                 .print-modal-content th {
-                  background: #111 !important;
-                  color: white !important;
+                  background: #f1f5f9 !important;
+                  color: black !important;
+                  border-bottom: 2px solid black !important;
                 }
                 .no-print {
                   display: none !important;
@@ -1878,8 +1888,9 @@ const Employees = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                   <thead>
                     <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '40%' }}>Timestamp</th>
-                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '60%' }}>Action</th>
+                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '25%' }}>Timestamp</th>
+                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '25%' }}>Action</th>
+                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '50%' }}>Details</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1910,6 +1921,9 @@ const Employees = () => {
                             <span style={{ display: 'inline-block', padding: '2px 6px', fontSize: '0.65rem', fontWeight: 700, borderRadius: '4px', textTransform: 'uppercase', color: badgeColor, background: badgeBg }}>
                               {log.action || 'system'}
                             </span>
+                          </td>
+                          <td style={{ padding: '0.5rem', fontSize: '0.8rem' }}>
+                            {log.details || '-'}
                           </td>
                         </tr>
                       );
