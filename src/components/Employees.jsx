@@ -26,7 +26,8 @@ const Employees = () => {
     leaveRequests = [],
     approveLeaveRequest,
     rejectLeaveRequest,
-    shiftLogs = []
+    shiftLogs = [],
+    gymSettings
   } = useDashboard();
 
   const [nowTime] = useState(() => Date.now());
@@ -41,6 +42,7 @@ const Employees = () => {
   const [selectedProfileEmployee, setSelectedProfileEmployee] = useState(null);
   const [breakFilter, setBreakFilter] = useState('daily'); // 'daily', 'weekly', 'monthly'
   const [auditTimeframe, setAuditTimeframe] = useState('all'); // 'day', 'week', 'month', 'all'
+  const [viewingAuditPrint, setViewingAuditPrint] = useState(null); // { employee, activities, timeframe }
 
   // Form states (Add/Edit employee)
   const [empForm, setEmpForm] = useState({
@@ -376,85 +378,9 @@ const Employees = () => {
     }
   };
 
-  const downloadEmployeeActivitiesPDF = (employee, activities) => {
+  const downloadEmployeeActivitiesPDF = (employee, activities, timeframe) => {
     if (!activities || activities.length === 0) return;
-    
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      alert('Pop-up blocked! Please allow pop-ups to print/save the PDF.');
-      return;
-    }
-    
-    const logsHtml = activities.map(log => {
-      const dateStr = new Date(log.occurred_at || log.created_at || Date.now()).toLocaleString();
-      return `
-        <tr style="border-bottom: 1px solid #e4e4e7;">
-          <td style="padding: 10px; font-size: 0.8rem; font-family: monospace; color: #3f3f46;">${dateStr}</td>
-          <td style="padding: 10px; font-size: 0.8rem; font-weight: bold; color: #18181b;">${log.action || ''}</td>
-          <td style="padding: 10px; font-size: 0.8rem; color: #71717a; text-transform: uppercase;">${log.category || ''}</td>
-          <td style="padding: 10px; font-size: 0.8rem; color: #27272a;">${log.description || ''}</td>
-        </tr>
-      `;
-    }).join('');
-    
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${employee.full_name} - Activity Audit Log</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 30px; color: #18181b; background: #ffffff; }
-            .header-container { border-bottom: 2px solid #e4e4e7; padding-bottom: 15px; margin-bottom: 25px; }
-            h1 { font-size: 1.6rem; margin: 0 0 5px 0; color: #09090b; letter-spacing: -0.02em; }
-            h2 { font-size: 0.85rem; color: #71717a; margin: 0; font-weight: normal; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th { text-align: left; background: #f4f4f5; padding: 10px; font-size: 0.8rem; font-weight: 700; color: #71717a; border-bottom: 2px solid #e4e4e7; text-transform: uppercase; letter-spacing: 0.05em; }
-            .no-print-btn { padding: 8px 16px; background: #18181b; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: background 0.15s; }
-            .no-print-btn:hover { background: #27272a; }
-            @media print {
-              .no-print { display: none !important; }
-              body { padding: 0; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-            <button class="no-print-btn" onclick="window.print();">
-              Print / Save as PDF
-            </button>
-            <button class="no-print-btn" onclick="window.close();" style="background: #f4f4f5; color: #18181b; border: 1px solid #e4e4e7;">
-              Close
-            </button>
-          </div>
-          <div class="header-container">
-            <h1>Staff Activity Audit Report</h1>
-            <h2>Employee: <strong>${employee.full_name}</strong> | Email: <strong>${employee.email || 'N/A'}</strong> | Role: <strong>${employee.role || 'N/A'}</strong></h2>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 25%;">Timestamp</th>
-                <th style="width: 20%;">Action</th>
-                <th style="width: 15%;">Category</th>
-                <th style="width: 40%;">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${logsHtml}
-            </tbody>
-          </table>
-          <script>
-            window.onload = function() {
-              window.focus();
-              setTimeout(function() {
-                window.print();
-              }, 250);
-            }
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    setViewingAuditPrint({ employee, activities, timeframe });
   };
 
   return (
@@ -1821,6 +1747,161 @@ const Employees = () => {
           </div>
         </div>
       )}
+      {/* Modal 5: Employee Audit Print View */}
+      {viewingAuditPrint && (() => {
+        const { employee, activities, timeframe } = viewingAuditPrint;
+        const timeframeLabels = {
+          day: 'Today (Last 24 Hours)',
+          week: 'Last 7 Days',
+          month: 'Last 30 Days',
+          all: 'All Time Activity'
+        };
+        const scopeLabel = timeframeLabels[timeframe] || 'All Time';
+
+        return (
+          <div className="modal-overlay">
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                .print-modal-content, .print-modal-content * {
+                  visibility: visible !important;
+                  color: black !important;
+                }
+                .print-modal-content {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  background: white !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .print-modal-content tr {
+                  border-bottom: 1px solid #ddd !important;
+                }
+                .print-modal-content th {
+                  background: #111 !important;
+                  color: white !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+            `}</style>
+            
+            <div className="glass-card print-modal-content" style={{ width: '100%', maxWidth: '800px', margin: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', padding: '2rem' }}>
+              
+              {/* Header: Gym & Report Info */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid var(--border-color)', paddingBottom: '1rem' }}>
+                <div>
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'var(--color-primary)' }}>
+                    {gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}
+                  </h2>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                    {gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                    Email: {gymSettings?.email || 'billing@ascend.lk'} | Tel: {gymSettings?.phone || '+94 11 234 5678'}
+                  </span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', letterSpacing: '0.05em', color: '#fff' }}>STAFF ACTIVITY AUDIT</h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Official Log Summary</span>
+                </div>
+              </div>
+
+              {/* Executive Summary Card */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                <div>
+                  <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Staff Member</div>
+                  <div style={{ fontWeight: 600, color: '#fff' }}>{employee.full_name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{employee.role} &bull; {employee.email || 'N/A'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Audit Scope</div>
+                  <div style={{ fontWeight: 600, color: '#fff' }}>{scopeLabel}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activities.length} total events logged</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Date Generated</div>
+                  <div style={{ fontWeight: 600, color: '#fff' }}>{new Date().toLocaleDateString()}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date().toLocaleTimeString()}</div>
+                </div>
+              </div>
+
+              {/* Audit Table */}
+              <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', background: 'rgba(0,0,0,0.2)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '25%' }}>Timestamp</th>
+                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '20%' }}>Action</th>
+                      <th style={{ padding: '0.5rem', color: 'var(--text-muted)', width: '55%' }}>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activities.map(log => {
+                      const dateStr = new Date(log.occurred_at || log.created_at || Date.now()).toLocaleString();
+                      
+                      let badgeColor = 'var(--text-muted)';
+                      let badgeBg = 'rgba(255,255,255,0.05)';
+                      const action = (log.action || '').toLowerCase();
+                      if (action.includes('create') || action.includes('add') || action.includes('register') || action.includes('hire')) {
+                        badgeColor = '#4ade80';
+                        badgeBg = 'rgba(74, 222, 128, 0.1)';
+                      } else if (action.includes('delete') || action.includes('remove') || action.includes('terminate')) {
+                        badgeColor = '#f87171';
+                        badgeBg = 'rgba(248, 113, 113, 0.1)';
+                      } else if (action.includes('pay') || action.includes('renew') || action.includes('receive') || action.includes('salary')) {
+                        badgeColor = '#60a5fa';
+                        badgeBg = 'rgba(96, 165, 250, 0.1)';
+                      } else if (action.includes('update') || action.includes('edit') || action.includes('reset')) {
+                        badgeColor = '#fb923c';
+                        badgeBg = 'rgba(251, 146, 60, 0.1)';
+                      }
+
+                      return (
+                        <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                          <td style={{ padding: '0.5rem', fontFamily: 'monospace', fontSize: '0.75rem' }}>{dateStr}</td>
+                          <td style={{ padding: '0.5rem' }}>
+                            <span style={{ display: 'inline-block', padding: '2px 6px', fontSize: '0.65rem', fontWeight: 700, borderRadius: '4px', textTransform: 'uppercase', color: badgeColor, background: badgeBg }}>
+                              {log.action || 'system'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.5rem', color: '#fff' }}>{log.description || ''}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Actions Footer */}
+              <div className="no-print" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem', justifyContent: 'flex-end' }}>
+                <button 
+                  onClick={() => window.print()} 
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Printer size={16} /> Print / Export PDF
+                </button>
+                <button 
+                  onClick={() => setViewingAuditPrint(null)} 
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
