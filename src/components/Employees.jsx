@@ -1492,11 +1492,11 @@ const Employees = () => {
 
                 {/* Audit Logs / Activity */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <h4 style={{ fontSize: '0.85rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>
                       <ClipboardList size={14} style={{ color: 'var(--color-primary)' }} /> Recent Panel Activities (Audit)
                     </h4>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                       <select
                         value={auditTimeframe}
                         onChange={(e) => setAuditTimeframe(e.target.value)}
@@ -1511,7 +1511,8 @@ const Employees = () => {
                           color: 'var(--text-main)',
                           width: 'auto',
                           fontWeight: 600,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          flexShrink: 0
                         }}
                       >
                         <option value="all">All Time</option>
@@ -1533,7 +1534,10 @@ const Employees = () => {
                             alignItems: 'center',
                             gap: '0.25rem',
                             height: '24px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            width: 'auto',
+                            flexShrink: 0
                           }}
                           title="Download Activity Audit Log as PDF"
                         >
@@ -1759,25 +1763,50 @@ const Employees = () => {
         const scopeLabel = timeframeLabels[timeframe] || 'All Time';
 
         return (
-          <div className="modal-overlay">
+          <div 
+            className="print-modal-overlay" 
+            style={{ 
+              position: 'fixed', 
+              inset: 0, 
+              background: 'rgba(0,0,0,0.85)', 
+              zIndex: 100, 
+              display: 'flex', 
+              alignItems: 'flex-start', 
+              justifyContent: 'center', 
+              padding: '2rem 1rem', 
+              backdropFilter: 'blur(4px)',
+              overflowY: 'auto' 
+            }}
+          >
             <style>{`
               @media print {
                 body * {
                   visibility: hidden !important;
                 }
-                .print-modal-content, .print-modal-content * {
+                .print-modal-overlay, .print-modal-overlay * {
                   visibility: visible !important;
-                  color: black !important;
+                }
+                .print-modal-overlay {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  background: white !important;
+                  display: block !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
                 }
                 .print-modal-content {
-                  position: absolute;
-                  left: 0;
-                  top: 0;
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
                   width: 100% !important;
                   max-width: 100% !important;
                   background: white !important;
-                  box-shadow: none !important;
+                  color: black !important;
                   border: none !important;
+                  box-shadow: none !important;
                   padding: 0 !important;
                   margin: 0 !important;
                 }
