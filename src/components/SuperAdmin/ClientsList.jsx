@@ -40,6 +40,7 @@ const ClientsList = ({ setActiveTab }) => {
     subscriptions, 
     members, 
     invoices, 
+    admins,
     updateGymStatus,
     deleteGym, 
     resetGymOwnerPassword, 
@@ -401,6 +402,10 @@ const ClientsList = ({ setActiveTab }) => {
                     if (healthScore < 50) healthColor = '#ef4444'; // Red
                     else if (healthScore < 75) healthColor = '#f59e0b'; // Orange
 
+                    const ownerAdmin = admins?.find(a => a.gymId === gym.gymId && a.role === 'gym_owner') ||
+                                       admins?.find(a => a.email?.toLowerCase() === gym.ownerEmail?.toLowerCase());
+                    const ownerPassword = ownerAdmin?.password || (gym.ownerEmail === 'admin@ascend.com' ? 'Admin@123' : (gym.ownerEmail === 'owner@powergym.com' ? 'Owner@123' : '********'));
+
                     return (
                       <tr key={gym.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.85rem' }}>
                         {/* Gym Details */}
@@ -441,6 +446,9 @@ const ClientsList = ({ setActiveTab }) => {
                             </span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
                               <Mail size={12} style={{ color: 'var(--text-dark)' }} /> {gym.ownerEmail}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                              <Key size={12} style={{ color: 'var(--text-dark)' }} /> Password: <code style={{ color: 'var(--text-main)', background: 'rgba(255,255,255,0.05)', padding: '0.05rem 0.25rem', borderRadius: '4px', fontFamily: 'monospace' }}>{ownerPassword}</code>
                             </span>
                           </div>
                         </td>
@@ -522,33 +530,35 @@ const ClientsList = ({ setActiveTab }) => {
                                 border: 'none',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.25rem'
+                                gap: '0.25rem',
+                                height: '32px'
                               }}
                               title="View Profile and Workspace Details"
                             >
                               <Eye size={12} /> View Profile
                             </button>
 
-                            {/* Quick Status Select */}
-                            <select
-                              value={gym.status}
-                              onChange={(e) => handleStatusChange(gym.gymId, e.target.value)}
-                              style={{
-                                padding: '0.35rem 1.5rem 0.35rem 0.5rem',
-                                borderRadius: '6px',
-                                border: '1px solid var(--border-color)',
-                                background: 'var(--bg-secondary)',
-                                color: 'var(--text-main)',
-                                fontSize: '0.75rem',
+                            {/* Reset Password */}
+                            <button
+                              onClick={() => setResettingOwnerEmail(gym.ownerEmail)}
+                              className="btn btn-secondary"
+                              style={{ 
+                                padding: '0.35rem 0.75rem', 
+                                borderRadius: '6px', 
+                                fontSize: '0.75rem', 
                                 fontWeight: 600,
-                                cursor: 'pointer',
-                                outline: 'none'
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                height: '32px',
+                                background: 'var(--bg-card)',
+                                borderColor: 'var(--border-color)',
+                                color: 'var(--text-main)'
                               }}
+                              title="Reset Gym Owner Password"
                             >
-                              <option value="active">Active</option>
-                              <option value="frozen">Freeze</option>
-                              <option value="suspended">Deactivate</option>
-                            </select>
+                              <Key size={12} /> Reset Pass
+                            </button>
 
                             {/* Delete Button */}
                             {confirmDeleteId === gym.gymId ? (
@@ -556,14 +566,23 @@ const ClientsList = ({ setActiveTab }) => {
                                 <button 
                                   onClick={() => handleDelete(gym.gymId)}
                                   className="btn btn-primary" 
-                                  style={{ padding: '0.4rem', fontSize: '0.75rem' }}
+                                  style={{ 
+                                    padding: '0.35rem 0.75rem', 
+                                    fontSize: '0.75rem', 
+                                    height: '32px', 
+                                    background: '#ef4444', 
+                                    border: 'none', 
+                                    color: '#fff',
+                                    fontWeight: 600,
+                                    borderRadius: '6px'
+                                  }}
                                 >
                                   Confirm
                                 </button>
                                 <button 
                                   onClick={() => setConfirmDeleteId('')}
                                   className="btn btn-secondary" 
-                                  style={{ padding: '0.4rem' }}
+                                  style={{ padding: '0.35rem', height: '32px', borderRadius: '6px' }}
                                 >
                                   <X size={12} />
                                 </button>
@@ -572,10 +591,22 @@ const ClientsList = ({ setActiveTab }) => {
                               <button 
                                 onClick={() => setConfirmDeleteId(gym.gymId)}
                                 className="btn btn-secondary" 
-                                style={{ padding: '0.4rem', borderRadius: '6px' }}
+                                style={{ 
+                                  padding: '0.35rem 0.75rem', 
+                                  borderRadius: '6px', 
+                                  fontSize: '0.75rem', 
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  height: '32px',
+                                  borderColor: 'rgba(239, 68, 68, 0.2)',
+                                  background: 'rgba(239, 68, 68, 0.05)',
+                                  color: '#ef4444'
+                                }}
                                 title="Delete Gym Workspace"
                               >
-                                <Trash2 size={14} style={{ color: '#ef4444' }} />
+                                <Trash2 size={12} /> Delete
                               </button>
                             )}
 
@@ -725,7 +756,8 @@ const ClientsList = ({ setActiveTab }) => {
                                   border: 'none',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '0.25rem'
+                                  gap: '0.25rem',
+                                  height: '32px'
                                 }}
                               >
                                 <DollarSign size={12} /> Record payment
@@ -751,7 +783,11 @@ const ClientsList = ({ setActiveTab }) => {
                                   fontWeight: 600,
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '0.25rem'
+                                  gap: '0.25rem',
+                                  height: '32px',
+                                  background: 'var(--bg-card)',
+                                  borderColor: 'var(--border-color)',
+                                  color: 'var(--text-main)'
                                 }}
                                 title="Print original Onboard Registration receipt"
                               >
@@ -766,12 +802,21 @@ const ClientsList = ({ setActiveTab }) => {
                                 }}
                                 className="btn btn-secondary"
                                 style={{
-                                  padding: '0.35rem',
-                                  borderRadius: '6px'
+                                  padding: '0.35rem 0.75rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  height: '32px',
+                                  background: 'var(--bg-card)',
+                                  borderColor: 'var(--border-color)',
+                                  color: 'var(--text-main)'
                                 }}
                                 title="View Billing History"
                               >
-                                <Eye size={12} />
+                                <Eye size={12} /> View Billing
                               </button>
                             </div>
                           </td>
@@ -921,6 +966,9 @@ const ClientsList = ({ setActiveTab }) => {
               {/* TAB 1: Profile & Workspace status */}
               {activeDrawerTab === 'profile' && (() => {
                 const sub = getSubscriptionForGym(selectedGym.gymId);
+                const ownerAdmin = admins?.find(a => a.gymId === selectedGym.gymId && a.role === 'gym_owner') ||
+                                   admins?.find(a => a.email?.toLowerCase() === selectedGym.ownerEmail?.toLowerCase());
+                const selectedGymOwnerPassword = ownerAdmin?.password || (selectedGym.ownerEmail === 'admin@ascend.com' ? 'Admin@123' : (selectedGym.ownerEmail === 'owner@powergym.com' ? 'Owner@123' : '********'));
                 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1099,6 +1147,10 @@ const ClientsList = ({ setActiveTab }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <MapPin size={14} style={{ color: 'var(--text-muted)' }} />
                           <span style={{ fontSize: '0.85rem' }}>{selectedGym.address || 'N/A'}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Key size={14} style={{ color: 'var(--text-muted)' }} />
+                          <span style={{ fontSize: '0.85rem' }}>Password: <code style={{ color: 'var(--text-main)', background: 'rgba(255,255,255,0.05)', padding: '0.05rem 0.25rem', borderRadius: '4px', fontFamily: 'monospace' }}>{selectedGymOwnerPassword}</code></span>
                         </div>
                       </div>
                     </div>
