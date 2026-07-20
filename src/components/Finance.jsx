@@ -1390,8 +1390,335 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
   };
 
   const handlePrintPayslip = (payslip) => {
-    const url = `${window.location.origin}${window.location.pathname}?view=payslip&id=${payslip.id}&print=true`;
-    window.open(url, '_blank');
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Pop-up blocker is enabled. Please allow pop-ups to print the payslip.', 'error');
+      return;
+    }
+
+    const basicSalary = parseFloat(payslip.basic_salary || payslip.amount || 0);
+    const bonusPay = parseFloat(payslip.bonus_pay || 0);
+    const overtimePay = parseFloat(payslip.overtime_pay || 0);
+    const allowancePay = parseFloat(payslip.allowance_pay || 0);
+    const epfDeduction = parseFloat(payslip.epf_deduction || 0);
+    const taxDeduction = parseFloat(payslip.tax_deduction || 0);
+    const otherDeductions = parseFloat(payslip.other_deductions || 0);
+
+    const totalEarnings = basicSalary + bonusPay + overtimePay + allowancePay;
+    const totalDeductions = epfDeduction + taxDeduction + otherDeductions;
+    const netSalary = parseFloat(payslip.amount || 0);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Payslip - ${payslip.employee_name || 'Staff'}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Oswald:wght@500;700&display=swap');
+          body {
+            font-family: 'Montserrat', Arial, sans-serif;
+            color: #0b0f19;
+            background: #ffffff;
+            padding: 40px;
+            font-size: 12px;
+            line-height: 1.5;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0b0f19;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+          .gym-name {
+            font-family: 'Oswald', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 0;
+            color: #0b0f19;
+          }
+          .gym-info {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 3px;
+          }
+          .report-info {
+            text-align: right;
+          }
+          .report-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin: 0;
+            text-transform: uppercase;
+          }
+          .report-subtitle {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+          }
+          .summary-col {
+            display: flex;
+            flex-direction: column;
+          }
+          .summary-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6b7280;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+          }
+          .summary-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0b0f19;
+          }
+          .summary-subtext {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          th {
+            background: #f3f4f6;
+            color: #0b0f19;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 11px;
+            vertical-align: top;
+          }
+          .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+          }
+          .totals-table {
+            width: 300px;
+            margin-bottom: 0;
+          }
+          .totals-table td {
+            padding: 6px 0;
+            border-bottom: none;
+          }
+          .total-row {
+            font-weight: bold;
+            font-size: 14px;
+            border-top: 2px solid #0b0f19;
+          }
+          .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .sig-box {
+            width: 200px;
+            border-top: 1px solid #0b0f19;
+            text-align: center;
+            padding-top: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          @media print {
+            @page {
+              margin: 0;
+            }
+            body {
+              padding: 1.5cm;
+            }
+            .no-print-btn {
+              display: none !important;
+            }
+          }
+          .no-print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0b0f19;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: 0.2s;
+          }
+          .no-print-btn:hover {
+            background: #1f2937;
+          }
+        </style>
+      </head>
+      <body>
+        <button class="no-print-btn" onclick="window.print()">Print / Export PDF</button>
+
+        <div class="header">
+          <div>
+            <h1 class="gym-name">${gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'FITGENCORE'}</h1>
+            <div class="gym-info">${gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}</div>
+            <div class="gym-info">Email: ${gymSettings?.email || 'finance@fitgencore.com'} | Tel: ${gymSettings?.phone || '+94 11 234 5678'}</div>
+          </div>
+          <div class="report-info">
+            <h2 class="report-title">SALARY PAYSLIP</h2>
+            <div class="report-subtitle">Official Payroll Record</div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-col">
+            <div class="summary-label">Employee Details</div>
+            <div class="summary-value">${payslip.employee_name || 'Staff Member'}</div>
+            <div class="summary-subtext">ID: ${payslip.employee_id?.substring(0, 12) || 'N/A'} &bull; Designation: ${payslip.employee_role || 'Staff'}</div>
+          </div>
+          <div class="summary-col">
+            <div class="summary-label">Payroll details</div>
+            <div class="summary-value">${payslip.period || 'Monthly'}</div>
+            <div class="summary-subtext">Disbursed: ${payslip.date} &bull; Mode: ${payslip.payment_method?.replace('_', ' ').toUpperCase() || 'BANK TRANSFER'}</div>
+          </div>
+          <div class="summary-col">
+            <div class="summary-label">Date Generated</div>
+            <div class="summary-value">${new Date().toLocaleDateString()}</div>
+            <div class="summary-subtext">${new Date().toLocaleTimeString()}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50%;">Compensation / Deduction Breakdown</th>
+              <th style="width: 25%; text-align: right;">Earnings (LKR)</th>
+              <th style="width: 25%; text-align: right;">Deductions (LKR)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Basic Salary</td>
+              <td style="text-align: right;">LKR ${basicSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              <td style="text-align: right;">-</td>
+            </tr>
+            ${bonusPay > 0 ? `
+              <tr>
+                <td>Performance Bonus / Incentives</td>
+                <td style="text-align: right;">LKR ${bonusPay.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: right;">-</td>
+              </tr>
+            ` : ''}
+            ${overtimePay > 0 ? `
+              <tr>
+                <td>Overtime / Commission</td>
+                <td style="text-align: right;">LKR ${overtimePay.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: right;">-</td>
+              </tr>
+            ` : ''}
+            ${allowancePay > 0 ? `
+              <tr>
+                <td>Transport & Allowances</td>
+                <td style="text-align: right;">LKR ${allowancePay.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align: right;">-</td>
+              </tr>
+            ` : ''}
+            ${epfDeduction > 0 ? `
+              <tr>
+                <td>EPF Employee Contribution (8%)</td>
+                <td style="text-align: right;">-</td>
+                <td style="text-align: right; color: #ef4444;">LKR ${epfDeduction.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            ` : ''}
+            ${taxDeduction > 0 ? `
+              <tr>
+                <td>PAYE Income Tax</td>
+                <td style="text-align: right;">-</td>
+                <td style="text-align: right; color: #ef4444;">LKR ${taxDeduction.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            ` : ''}
+            ${otherDeductions > 0 ? `
+              <tr>
+                <td>Unpaid Leave & Penalties</td>
+                <td style="text-align: right;">-</td>
+                <td style="text-align: right; color: #ef4444;">LKR ${otherDeductions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            ` : ''}
+          </tbody>
+        </table>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="font-size: 10px; max-width: 50%; color: #4b5563;">
+            <strong>Amount in Words:</strong><br/>
+            ${numberToWords(netSalary).toUpperCase()}<br/><br/>
+            ${payslip.notes ? `<strong>Remarks:</strong> ${payslip.notes}` : ''}
+          </div>
+          <div class="totals-section">
+            <table class="totals-table">
+              <tr>
+                <td>Gross Earnings:</td>
+                <td style="text-align: right;">LKR ${totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+              ${totalDeductions > 0 ? `
+                <tr style="color: #ef4444;">
+                  <td>Total Deductions:</td>
+                  <td style="text-align: right;">-LKR ${totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                </tr>
+              ` : ''}
+              <tr class="total-row">
+                <td>NET DISBURSED:</td>
+                <td style="text-align: right;">LKR ${netSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="signature-section">
+          <div>
+            <div style="height: 40px;"></div>
+            <div class="sig-box">HR / Management Authorization</div>
+          </div>
+          <div>
+            <div style="height: 40px;"></div>
+            <div class="sig-box">Employee Signature</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; font-size: 9px; color: #94a3b8; margin-top: 50px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
+          Thank you for your service! &bull; Powered by Fitgencore
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (
