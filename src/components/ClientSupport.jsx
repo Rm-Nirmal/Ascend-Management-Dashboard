@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 const ClientSupport = () => {
-  const { supportTickets, createSupportTicket, replySupportTicket, closeSupportTicket, showToast, currentGym } = useDashboard();
+  const { supportTickets, createSupportTicket, replySupportTicket, closeSupportTicket, showToast, currentGym, markTicketAsRead } = useDashboard();
   
   // Selection/Form states
   const [selectedTicketId, setSelectedTicketId] = useState('');
@@ -32,12 +32,15 @@ const ClientSupport = () => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
-  // Scroll to bottom when selecting a ticket
+  // Scroll to bottom and mark as read when selecting a ticket
   useEffect(() => {
     if (activeTicket) {
       scrollToBottom('auto');
+      if (activeTicket.readByClient !== true) {
+        markTicketAsRead(activeTicket.id, 'gym_owner');
+      }
     }
-  }, [selectedTicketId]);
+  }, [selectedTicketId, activeTicket?.readByClient]);
 
   // Scroll to bottom when new replies are added
   useEffect(() => {

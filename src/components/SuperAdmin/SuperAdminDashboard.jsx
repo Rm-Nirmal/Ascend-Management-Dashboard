@@ -33,8 +33,12 @@ import NotificationTemplates from './NotificationTemplates';
 import logoWhite from '../../assets/logo_white.webp';
 
 const SuperAdminDashboard = () => {
-  const { currentUser, logout, showToast } = useDashboard();
+  const { currentUser, logout, showToast, supportTickets } = useDashboard();
   const [activeTab, setActiveTab] = useState('overview');
+  
+  const hasUnreadSupport = supportTickets && supportTickets.some(ticket => {
+    return ticket.status !== 'resolved' && ticket.readByAdmin === false;
+  });
   const [darkMode] = useState(true);
 
   useEffect(() => {
@@ -110,15 +114,32 @@ const SuperAdminDashboard = () => {
             {navItems.map(item => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              const showDot = item.id === 'support' && hasUnreadSupport;
               return (
                 <a 
                   key={item.id} 
                   className={`nav-link ${isActive ? 'active' : ''}`}
                   onClick={() => setActiveTab(item.id)}
-                  style={isActive ? { borderLeftColor: '#ffffff', background: 'rgba(255, 255, 255, 0.05)', color: '#ffffff' } : {}}
+                  style={{
+                    position: 'relative',
+                    ...(isActive ? { borderLeftColor: '#ffffff', background: 'rgba(255, 255, 255, 0.05)', color: '#ffffff' } : {})
+                  }}
                 >
                   <Icon size={18} />
                   <span>{item.name}</span>
+                  {showDot && (
+                    <span style={{
+                      position: 'absolute',
+                      right: '1rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: '#ef4444',
+                      boxShadow: '0 0 8px #ef4444'
+                    }} />
+                  )}
                 </a>
               );
             })}

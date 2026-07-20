@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 const SupportCenter = () => {
-  const { supportTickets, replySupportTicket, closeSupportTicket, showToast } = useDashboard();
+  const { supportTickets, replySupportTicket, closeSupportTicket, showToast, markTicketAsRead } = useDashboard();
   
   // Selection/Input states
   const [selectedTicketId, setSelectedTicketId] = useState('');
@@ -34,12 +34,15 @@ const SupportCenter = () => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
-  // Scroll to bottom when selecting a ticket
+  // Scroll to bottom and mark as read when selecting a ticket
   useEffect(() => {
     if (activeTicket) {
       scrollToBottom('auto');
+      if (activeTicket.readByAdmin !== true) {
+        markTicketAsRead(activeTicket.id, 'super_admin');
+      }
     }
-  }, [selectedTicketId]);
+  }, [selectedTicketId, activeTicket?.readByAdmin]);
 
   // Scroll to bottom when new replies are added
   useEffect(() => {

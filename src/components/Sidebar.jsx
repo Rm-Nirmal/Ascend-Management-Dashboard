@@ -34,10 +34,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
   const { currentUser, logout, gymSettings, supportTickets } = useDashboard();
   
   const hasUnreadSupport = supportTickets && supportTickets.some(ticket => {
-    if (ticket.status === 'resolved') return false;
-    const replies = ticket.replies || [];
-    if (replies.length === 0) return false;
-    return replies[replies.length - 1].senderRole === 'super_admin';
+    return ticket.status !== 'resolved' && ticket.readByClient === false;
   });
 
   const [inventoryExpanded, setInventoryExpanded] = useState(() => {

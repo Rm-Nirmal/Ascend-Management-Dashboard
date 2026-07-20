@@ -249,9 +249,10 @@ const RestrictedGymScreen = ({ status, message, hotline, setActiveTab }) => {
             fontWeight: 700,
             borderRadius: '10px',
             fontSize: '0.9rem',
-            background: 'linear-gradient(135deg, var(--color-primary), #3b82f6)',
-            border: 'none',
-            boxShadow: '0 4px 12px var(--color-primary-glow)',
+            background: '#ffffff',
+            color: '#000000',
+            border: '1px solid #ffffff',
+            boxShadow: '0 4px 12px rgba(255, 255, 255, 0.15)',
             cursor: 'pointer'
           }}
         >

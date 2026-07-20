@@ -2095,7 +2095,9 @@ export const DashboardProvider = ({ children }) => {
         priority: ticketData.priority || 'low',
         status: 'open',
         createdAt: new Date().toISOString(),
-        replies: []
+        replies: [],
+        readByClient: true,
+        readByAdmin: false
       };
 
       const docRef = await addDoc(collection(db, COLLECTIONS.SUPPORT_TICKETS), newTicket);
@@ -2124,7 +2126,9 @@ export const DashboardProvider = ({ children }) => {
 
       await updateDoc(ticketRef, {
         replies: [...existingReplies, newReply],
-        status: senderRole === 'super_admin' ? 'in_progress' : 'open'
+        status: senderRole === 'super_admin' ? 'in_progress' : 'open',
+        readByAdmin: senderRole === 'super_admin',
+        readByClient: senderRole !== 'super_admin'
       });
 
       await logAudit(
@@ -2152,6 +2156,20 @@ export const DashboardProvider = ({ children }) => {
       return { success: false, message: err.message };
     }
   }, [logAudit, showToast]);
+
+  // Mark Support Ticket As Read
+  const markTicketAsRead = useCallback(async (ticketId, role) => {
+    try {
+      const ticketRef = doc(db, COLLECTIONS.SUPPORT_TICKETS, ticketId);
+      if (role === 'super_admin') {
+        await updateDoc(ticketRef, { readByAdmin: true });
+      } else {
+        await updateDoc(ticketRef, { readByClient: true });
+      }
+    } catch (err) {
+      console.error('markTicketAsRead error:', err);
+    }
+  }, []);
 
   // Publish SaaS Announcement
   const publishAnnouncement = useCallback(async (annData) => {
@@ -5117,6 +5135,7 @@ export const DashboardProvider = ({ children }) => {
       createSupportTicket,
       replySupportTicket,
       closeSupportTicket,
+      markTicketAsRead,
       publishAnnouncement,
       updateGymSettings,
       getGymHealthScore,
