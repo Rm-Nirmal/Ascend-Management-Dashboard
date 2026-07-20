@@ -95,7 +95,6 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
     e.preventDefault();
     const errors = {};
     if (!publicForm.full_name) errors.full_name = 'Name is required';
-    if (!publicForm.email) errors.email = 'Email is required';
     if (!publicForm.phone) errors.phone = 'Phone number is required';
     if (!publicForm.date_of_birth) errors.date_of_birth = 'Date of birth is required';
     if (!publicForm.plan_id) errors.plan_id = 'Membership plan is required';
@@ -267,10 +266,9 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
               {formErrors.full_name && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.full_name}</span>}
             </div>
             <div>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address *</label>
+              <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address</label>
               <input 
                 type="email" 
-                required
                 placeholder="amara.silva@gmail.com"
                 value={publicForm.email}
                 onChange={(e) => setPublicForm({...publicForm, email: e.target.value})}

@@ -190,7 +190,7 @@ const Members = () => {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!editMemberForm.full_name || !editMemberForm.email || !editMemberForm.plan_id) {
+    if (!editMemberForm.full_name || !editMemberForm.plan_id) {
       alert('Please fill out all required fields.');
       return;
     }
@@ -453,7 +453,7 @@ const Members = () => {
   // Handle Add Member submit
   const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!newMemberForm.full_name || !newMemberForm.email || !newMemberForm.plan_id) {
+    if (!newMemberForm.full_name || !newMemberForm.plan_id) {
       alert('Please fill out all required fields.');
       return;
     }
@@ -541,6 +541,198 @@ const Members = () => {
       frozen_until: null,
       freeze_reason: null
     }));
+  };
+
+  const handlePrintReceipt = (receipt) => {
+    const plan = plans.find(p => p.id === receipt.plan_id);
+    const member = uniqueMembers.find(m => m.id === receipt.member_id) || {};
+    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Membership Receipt - ${receipt.invoice_number}</title>
+          <style>
+            @page { size: auto; margin: 15mm 10mm 15mm 10mm; }
+            body {
+              font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              color: #1e293b;
+              margin: 0;
+              padding: 0;
+              background: #fff;
+              line-height: 1.5;
+            }
+            .receipt {
+              max-width: 650px;
+              margin: 0 auto;
+              padding: 10px;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 15px;
+              margin-bottom: 20px;
+            }
+            .header h2 { margin: 0; font-size: 1.5rem; font-weight: 800; color: #0f172a; }
+            .header p { margin: 2px 0; font-size: 0.8rem; color: #64748b; }
+            .header-right { text-align: right; }
+            .header-right h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a; letter-spacing: 0.05em; }
+            .details-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 15px;
+              background: #f8fafc;
+              padding: 12px;
+              border-radius: 8px;
+              font-size: 0.8rem;
+              margin-bottom: 20px;
+              border: 1px solid #edf2f7;
+            }
+            .details-grid div p { margin: 4px 0; }
+            .details-grid strong { color: #0f172a; }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+              font-size: 0.8rem;
+            }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+            th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 0.75rem; }
+            .totals {
+              display: grid;
+              grid-template-columns: 1.2fr 0.8fr;
+              gap: 20px;
+              font-size: 0.8rem;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 12px;
+              margin-top: 15px;
+            }
+            .totals-left {
+              font-style: italic;
+              color: #64748b;
+            }
+            .totals-right {
+              text-align: right;
+            }
+            .totals-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 6px;
+            }
+            .total-due {
+              border-top: 2px solid #0f172a;
+              padding-top: 8px;
+              margin-top: 8px;
+              font-size: 1.25rem;
+              font-weight: 800;
+              color: #0f172a;
+            }
+            .footer {
+              text-align: center;
+              font-size: 0.7rem;
+              color: #94a3b8;
+              margin-top: 40px;
+              border-top: 1px dashed #e2e8f0;
+              padding-top: 15px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="receipt">
+            <div class="header">
+              <div>
+                <h2>${gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}</h2>
+                <p>${gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}</p>
+                <p>Email: ${gymSettings?.email || 'billing@ascend.lk'} | Tel: ${gymSettings?.phone || '+94 11 234 5678'}</p>
+              </div>
+              <div class="header-right">
+                <h3>MEMBERSHIP RECEIPT</h3>
+                <p style="font-size: 0.75rem; color: #64748b;">Original Copy</p>
+              </div>
+            </div>
+
+            <div class="details-grid">
+              <div>
+                <p><strong>Member Code:</strong> ${member.member_code || 'N/A'}</p>
+                <p><strong>Member Name:</strong> ${receipt.member_name}</p>
+                <p><strong>Email:</strong> ${member.email || 'N/A'}</p>
+              </div>
+              <div class="header-right">
+                <p><strong>Invoice Number:</strong> ${receipt.invoice_number}</p>
+                <p><strong>Payment Date:</strong> ${new Date(receipt.paid_at || receipt.issued_at).toLocaleDateString()}</p>
+                <p><strong>Payment Mode:</strong> <span style="text-transform: capitalize;">${receipt.payment_method?.replace('_', ' ') || 'Card'}</span></p>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th style="text-align: center;">Qty</th>
+                  <th style="text-align: right;">Rate</th>
+                  <th style="text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <strong>${plan?.name || 'Gym Membership Plan'}</strong>
+                    <div style="font-size: 0.7rem; color: #64748b; margin-top: 3px;">
+                      30-day recurring gym facility access & trainer guidance
+                    </div>
+                  </td>
+                  <td style="text-align: center;">1</td>
+                  <td style="text-align: right;">LKR ${receipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</td>
+                  <td style="text-align: right;">LKR ${receipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="totals">
+              <div class="totals-left">
+                <p><strong>Amount in Words:</strong><br/>${numberToWords(receipt.total_amount || 0)}</p>
+              </div>
+              <div class="totals-right">
+                <div class="totals-row">
+                  <span>Subtotal:</span>
+                  <span>LKR ${receipt.subtotal?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                </div>
+                ${receipt.discount_amount > 0 ? `
+                  <div class="totals-row" style="color: #ef4444;">
+                    <span>Discount ${receipt.discount_type === 'percentage' ? `(${receipt.discount_rate}%)` : ''}:</span>
+                    <span>-LKR ${receipt.discount_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                  </div>
+                ` : ''}
+                ${receipt.tax_amount > 0 ? `
+                  <div class="totals-row">
+                    <span>Tax & Fees:</span>
+                    <span>LKR ${receipt.tax_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                  </div>
+                ` : ''}
+                <div class="totals-row total-due">
+                  <span>TOTAL PAID:</span>
+                  <span>LKR ${receipt.total_amount?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>Thank you for your payment!</p>
+              <p style="font-size: 0.6rem; color: #cbd5e1; margin-top: 5px;">Powered by Fitgen Core</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   return (
@@ -1488,10 +1680,9 @@ const Members = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address *</label>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address</label>
                     <input 
                       type="email" 
-                      required
                       placeholder="nimal@gmail.com"
                       value={newMemberForm.email}
                       onChange={(e) => setNewMemberForm({...newMemberForm, email: e.target.value})}
@@ -1982,10 +2173,9 @@ const Members = () => {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address *</label>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email Address</label>
                     <input 
                       type="email" 
-                      required
                       placeholder="nimal@gmail.com"
                       value={editMemberForm.email}
                       onChange={(e) => setEditMemberForm({...editMemberForm, email: e.target.value})}
@@ -2333,7 +2523,7 @@ const Members = () => {
                 type="button" 
                 className="btn btn-primary" 
                 style={{ flexGrow: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
-                onClick={() => window.print()}
+                onClick={() => handlePrintReceipt(viewingReceipt)}
               >
                 <Printer size={14} /> Print Receipt
               </button>

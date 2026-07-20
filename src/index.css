@@ -1787,6 +1787,9 @@ textarea.form-control {
 }
 
 /* Fix browser date input picker indicator visibility */
+input[type="date"] {
+  padding-right: 0.5rem !important;
+}
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1); /* Default fallback */
   cursor: pointer;
