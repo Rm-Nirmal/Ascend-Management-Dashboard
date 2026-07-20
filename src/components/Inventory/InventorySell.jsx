@@ -422,7 +422,7 @@ const InventorySell = () => {
   };
 
   const handlePrintProductReceipt = (receipt) => {
-    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
     const totalAmount = parseFloat(receipt.amount || receipt.total || 0);
@@ -448,11 +448,10 @@ const InventorySell = () => {
         <head>
           <title>Sales Receipt - ${receiptNo}</title>
           <style>
-            @page { size: auto; margin: 15mm 10mm 15mm 10mm; }
             body {
               font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
               color: #1e293b;
-              margin: 0;
+              margin: 1.5cm;
               padding: 0;
               background: #fff;
               line-height: 1.5;
@@ -538,6 +537,15 @@ const InventorySell = () => {
               letter-spacing: 4px;
               font-size: 0.85rem;
               color: #475569;
+            }
+            @media print {
+              @page {
+                margin: 0;
+              }
+              body {
+                margin: 1.6cm;
+                background: #fff;
+              }
             }
           </style>
         </head>
@@ -629,16 +637,24 @@ const InventorySell = () => {
               <p style="font-size: 0.6rem; color: #cbd5e1; margin-top: 5px;">Powered by Fitgencore</p>
             </div>
           </div>
+          <script>
+            function triggerPrint() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 300);
+            }
+            if (document.readyState === 'complete') {
+              triggerPrint();
+            } else {
+              window.onload = triggerPrint;
+            }
+          </script>
         </body>
       </html>
     `);
 
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
   };
 
   return (

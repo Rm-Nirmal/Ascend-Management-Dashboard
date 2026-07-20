@@ -546,7 +546,7 @@ const Members = () => {
   const handlePrintReceipt = (receipt) => {
     const plan = plans.find(p => p.id === receipt.plan_id);
     const member = uniqueMembers.find(m => m.id === receipt.member_id) || {};
-    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
     printWindow.document.write(`
@@ -554,11 +554,10 @@ const Members = () => {
         <head>
           <title>Membership Receipt - ${receipt.invoice_number}</title>
           <style>
-            @page { size: auto; margin: 15mm 10mm 15mm 10mm; }
             body {
               font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
               color: #1e293b;
-              margin: 0;
+              margin: 1.5cm;
               padding: 0;
               background: #fff;
               line-height: 1.5;
@@ -636,6 +635,15 @@ const Members = () => {
               margin-top: 40px;
               border-top: 1px dashed #e2e8f0;
               padding-top: 15px;
+            }
+            @media print {
+              @page {
+                margin: 0;
+              }
+              body {
+                margin: 1.6cm;
+                background: #fff;
+              }
             }
           </style>
         </head>
@@ -723,16 +731,24 @@ const Members = () => {
               <p style="font-size: 0.6rem; color: #cbd5e1; margin-top: 5px;">Powered by Fitgen Core</p>
             </div>
           </div>
+          <script>
+            function triggerPrint() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 300);
+            }
+            if (document.readyState === 'complete') {
+              triggerPrint();
+            } else {
+              window.onload = triggerPrint;
+            }
+          </script>
         </body>
       </html>
     `);
 
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
   };
 
   return (
