@@ -121,6 +121,8 @@ const InventorySell = () => {
   // Search terms
   const [productSearch, setProductSearch] = useState('');
   const [memberSearch, setMemberSearch] = useState('');
+  const [discountType, setDiscountType] = useState('none'); // 'none', 'amount', 'percentage'
+  const [discountVal, setDiscountVal] = useState(0);
 
   // Dropdown visibility
   const [showProductDropdown, setShowProductDropdown] = useState(false);
@@ -209,16 +211,26 @@ const InventorySell = () => {
 
   // Calculations
   const calculations = useMemo(() => {
-    if (!selectedProduct) return { unitPrice: 0, subtotal: 0, tax: 0, total: 0 };
+    if (!selectedProduct) return { unitPrice: 0, subtotal: 0, tax: 0, discount: 0, total: 0 };
     const qty = formData.quantity || 0;
     const unitPrice = selectedProduct.sellPrice || 0;
     const subtotal = unitPrice * qty;
-    const taxRate = parseFloat(selectedProduct.tax) || 0;
-    const tax = subtotal * (taxRate / 100);
-    const total = subtotal + tax;
 
-    return { unitPrice, subtotal, tax, total };
-  }, [selectedProduct, formData.quantity]);
+    let discount = 0;
+    if (discountType === 'amount') {
+      discount = parseFloat(discountVal || 0);
+    } else if (discountType === 'percentage') {
+      discount = (subtotal * parseFloat(discountVal || 0)) / 100;
+    }
+    discount = Math.min(discount, subtotal);
+
+    const taxableAmount = Math.max(0, subtotal - discount);
+    const taxRate = parseFloat(selectedProduct.tax) || 0;
+    const tax = taxableAmount * (taxRate / 100);
+    const total = taxableAmount + tax;
+
+    return { unitPrice, subtotal, tax, discount, total };
+  }, [selectedProduct, formData.quantity, discountType, discountVal]);
 
   // Handle Select actions
   const selectProduct = (p) => {
@@ -243,6 +255,8 @@ const InventorySell = () => {
   const clearSelectedProduct = () => {
     setFormData(prev => ({ ...prev, productId: '', quantity: 1 }));
     setProductSearch('');
+    setDiscountType('none');
+    setDiscountVal(0);
   };
 
   const clearSelectedMember = () => {
@@ -336,7 +350,7 @@ const InventorySell = () => {
       }
 
       // 4. Log income to Finance (Product Sales source)
-      const incomeRemarks = `Sold ${qty}x ${selectedProduct.name} (${selectedProduct.sku || 'N/A'}) to ${customerName}.`;
+      const incomeRemarks = `Sold ${qty}x ${selectedProduct.name} (${selectedProduct.sku || 'N/A'}) to ${customerName}.${calculations.discount > 0 ? ` Discount: LKR ${calculations.discount.toLocaleString()}` : ''}`;
       const incomeRes = await addIncome({
         amount: calculations.total,
         source: 'Product Sales',
@@ -346,7 +360,12 @@ const InventorySell = () => {
         payment_reference: receiptNo,
         notes: incomeRemarks,
         productName: selectedProduct.name,
-        quantity: qty
+        quantity: qty,
+        subtotal: calculations.subtotal,
+        tax_amount: calculations.tax,
+        discount_amount: calculations.discount,
+        discount_type: discountType,
+        discount_val: discountVal
       });
 
       if (!incomeRes.success) {
@@ -372,6 +391,7 @@ const InventorySell = () => {
         unitPrice: calculations.unitPrice,
         subtotal: calculations.subtotal,
         tax: calculations.tax,
+        discount: calculations.discount,
         total: calculations.total,
         paymentMethod: formData.paymentMethod
       });
@@ -388,6 +408,8 @@ const InventorySell = () => {
     setSaleResult(null);
     setProductSearch('');
     setMemberSearch('');
+    setDiscountType('none');
+    setDiscountVal(0);
     setFormData({
       productId: '',
       isWalkIn: true,
@@ -1035,6 +1057,79 @@ const InventorySell = () => {
                     <strong style={{ fontSize: '0.9rem', fontFamily: 'monospace' }}>LKR {calculations.subtotal.toLocaleString()}</strong>
                   </div>
                 </div>
+                {/* Discount Section (Optional) */}
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.75rem', background: 'rgba(255,255,255,0.01)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Apply Discount (Optional)</span>
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('none'); setDiscountVal(0); }}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          background: discountType === 'none' ? 'var(--color-primary)' : 'rgba(255,255,255,0.04)',
+                          border: '1px solid ' + (discountType === 'none' ? 'var(--color-primary)' : 'var(--border-color)'),
+                          color: discountType === 'none' ? '#000000' : 'var(--text-main)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 700
+                        }}
+                      >
+                        None
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('amount'); setDiscountVal(0); }}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          background: discountType === 'amount' ? 'var(--color-primary)' : 'rgba(255,255,255,0.04)',
+                          border: '1px solid ' + (discountType === 'amount' ? 'var(--color-primary)' : 'var(--border-color)'),
+                          color: discountType === 'amount' ? '#000000' : 'var(--text-main)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 700
+                        }}
+                      >
+                        LKR Value
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('percentage'); setDiscountVal(0); }}
+                        style={{
+                          padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem',
+                          background: discountType === 'percentage' ? 'var(--color-primary)' : 'rgba(255,255,255,0.04)',
+                          border: '1px solid ' + (discountType === 'percentage' ? 'var(--color-primary)' : 'var(--border-color)'),
+                          color: discountType === 'percentage' ? '#000000' : 'var(--text-main)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 700
+                        }}
+                      >
+                        % Percent
+                      </button>
+                    </div>
+                  </div>
+
+                  {discountType !== 'none' && (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>
+                        {discountType === 'amount' ? 'Discount Amount (LKR):' : 'Discount Percent (%):'}
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        max={discountType === 'percentage' ? "100" : undefined}
+                        className="glass-input"
+                        style={{ flex: 1, padding: '0.35rem 0.5rem', fontSize: '0.8rem', textAlign: 'right' }}
+                        value={discountVal}
+                        onChange={(e) => setDiscountVal(parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                  )}
+                </div>
 
                 {/* Cost Breakdown */}
                 <div style={{
@@ -1058,7 +1153,7 @@ const InventorySell = () => {
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Discounts</span>
-                    <span style={{ fontFamily: 'monospace', color: 'var(--color-success)' }}>-LKR 0</span>
+                    <span style={{ fontFamily: 'monospace', color: 'var(--color-success)' }}>-LKR {calculations.discount.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -1263,6 +1358,12 @@ const InventorySell = () => {
                   <span style={{ fontFamily: 'monospace' }}>LKR {saleResult.tax.toLocaleString()}</span>
                 </div>
               )}
+              {saleResult.discount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Discount:</span>
+                  <span style={{ fontFamily: 'monospace', color: '#10b981' }}>-LKR {saleResult.discount.toLocaleString()}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.15rem', color: '#000', borderTop: '1px solid #e4e4e7', paddingTop: '0.5rem', marginTop: '0.15rem' }}>
                 <span>NET TOTAL PAID:</span>
                 <span style={{ fontFamily: 'monospace' }}>LKR {saleResult.total.toLocaleString()}</span>
@@ -1448,8 +1549,13 @@ const InventorySell = () => {
             {/* Calculations Totals Block */}
             {(() => {
               const totalAmount = parseFloat(selectedReceipt.amount || 0);
-              const subtotal = totalAmount / 1.10;
-              const taxAmount = totalAmount - subtotal;
+              const discount = parseFloat(selectedReceipt.discount_amount || 0);
+              const subtotal = selectedReceipt.subtotal !== undefined 
+                ? parseFloat(selectedReceipt.subtotal) 
+                : (discount > 0 ? (totalAmount - parseFloat(selectedReceipt.tax_amount || 0) + discount) : (totalAmount / 1.10));
+              const taxAmount = selectedReceipt.tax_amount !== undefined
+                ? parseFloat(selectedReceipt.tax_amount)
+                : (totalAmount - subtotal);
 
               return (
                 <>
@@ -1459,8 +1565,14 @@ const InventorySell = () => {
                         <span>Subtotal (Excl. Tax):</span>
                         <span style={{ fontWeight: 600 }}>LKR {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
+                      {discount > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                          <span>Discount Applied:</span>
+                          <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>-LKR {discount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>VAT / Sales Tax (10%):</span>
+                        <span>VAT / Sales Tax:</span>
                         <span style={{ fontWeight: 600 }}>LKR {taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </div>

@@ -1788,7 +1788,7 @@ textarea.form-control {
 
 /* Fix browser date input picker indicator visibility */
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1); /* Default is inverted (white icon) for dark theme / public portal */
+  filter: invert(1); /* Default fallback */
   cursor: pointer;
   opacity: 0.75;
   transition: opacity 0.2s ease;
@@ -1797,8 +1797,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
+/* Avoid double-inverting on inputs that already have color-scheme configured */
+.glass-input[type="date"]::-webkit-calendar-picker-indicator,
+.form-control[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none;
+}
+
 /* Keep indicator icon dark for light theme inputs */
-:root[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator {
+:root[data-theme='light'] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme='light'] .glass-input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme='light'] .form-control[type="date"]::-webkit-calendar-picker-indicator {
   filter: none;
 }
 
