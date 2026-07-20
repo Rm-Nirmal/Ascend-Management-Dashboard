@@ -18,6 +18,7 @@ import BreakTimer from './components/BreakTimer';
 import { Bell, ShieldCheck, HelpCircle, Menu, Search, Sun, Moon } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
 import PublicReceipt from './components/PublicReceipt';
+import PublicPayslip from './components/PublicPayslip';
 import PublicFinanceLog from './components/PublicFinanceLog';
 import ToastContainer from './components/Toast';
 
@@ -342,6 +343,7 @@ const DashboardContentShell = () => {
     const isPublicView = 
       window.location.search.includes('view=register') || window.location.hash === '#register' ||
       window.location.search.includes('view=receipt') || window.location.hash.startsWith('#receipt') ||
+      window.location.search.includes('view=payslip') || window.location.hash.startsWith('#payslip') ||
       window.location.search.includes('view=income_log') || window.location.search.includes('view=expenses_log') ||
       window.location.hash.startsWith('#income_log') || window.location.hash.startsWith('#expenses_log');
 
@@ -427,6 +429,17 @@ const DashboardContentShell = () => {
     return (
       <>
         <PublicReceipt />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+      </>
+    );
+  }
+
+  const isPublicPayslip = window.location.search.includes('view=payslip') || window.location.hash.startsWith('#payslip');
+
+  if (isPublicPayslip) {
+    return (
+      <>
+        <PublicPayslip />
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </>
     );

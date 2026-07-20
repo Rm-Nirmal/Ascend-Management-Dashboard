@@ -57,7 +57,8 @@ const Employees = () => {
     working_hours: '8',
     daily_break_time: '60',
     monthly_leaves: '2',
-    holidays: '1'
+    holidays: '1',
+    employee_code: ''
   });
   const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'leaves'
   const [calendarDate, setCalendarDate] = useState(() => new Date());
@@ -336,7 +337,8 @@ const Employees = () => {
         working_hours: '8',
         daily_break_time: '60',
         monthly_leaves: '2',
-        holidays: '1'
+        holidays: '1',
+        employee_code: ''
       });
     } else {
       showToast(res.message || 'Hiring failed.', 'error');
@@ -697,7 +699,8 @@ const Employees = () => {
             working_hours: '8',
             daily_break_time: '60',
             monthly_leaves: '2',
-            holidays: '1'
+            holidays: '1',
+            employee_code: ''
           });
           setShowAddModal(true);
         }}>
@@ -855,7 +858,12 @@ const Employees = () => {
                             }}>
                               {(emp.full_name || '').charAt(0)}
                             </div>
-                            <div style={{ fontWeight: 600 }}>{emp.full_name || 'Unnamed Employee'}</div>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{emp.full_name || 'Unnamed Employee'}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontFamily: 'monospace', marginTop: '0.15rem' }}>
+                                Code: {emp.employee_code || 'N/A'}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td>
@@ -916,7 +924,7 @@ const Employees = () => {
                               style={{ padding: '0.4rem' }}
                             onClick={() => {
                               setEmpForm({
-                                full_name: emp.full_name,
+                               full_name: emp.full_name,
                                 email: emp.email,
                                 phone: emp.phone,
                                 role: emp.role,
@@ -927,7 +935,8 @@ const Employees = () => {
                                 working_hours: (emp.working_hours || 8).toString(),
                                 daily_break_time: (emp.daily_break_time || 60).toString(),
                                 monthly_leaves: (emp.monthly_leaves || 2).toString(),
-                                holidays: (emp.holidays || 1).toString()
+                                holidays: (emp.holidays || 1).toString(),
+                                employee_code: emp.employee_code || ''
                               });
                               setEditingEmployee(emp);
                             }}
@@ -1169,16 +1178,29 @@ const Employees = () => {
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
-                <input 
-                  type="text" 
-                  value={empForm.full_name} 
-                  onChange={(e) => setEmpForm({...empForm, full_name: e.target.value})} 
-                  className="glass-input" 
-                  style={{ marginTop: '0.25rem' }}
-                  required 
-                />
+              <div className="grid-2">
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
+                  <input 
+                    type="text" 
+                    value={empForm.full_name} 
+                    onChange={(e) => setEmpForm({...empForm, full_name: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                    required 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Employee Code (Specific Code)</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. EMP-001 (Optional)"
+                    value={empForm.employee_code || ''} 
+                    onChange={(e) => setEmpForm({...empForm, employee_code: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                  />
+                </div>
               </div>
 
               <div className="grid-2">
@@ -1338,16 +1360,29 @@ const Employees = () => {
             </div>
 
             <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
-                <input 
-                  type="text" 
-                  value={empForm.full_name} 
-                  onChange={(e) => setEmpForm({...empForm, full_name: e.target.value})} 
-                  className="glass-input" 
-                  style={{ marginTop: '0.25rem' }}
-                  required 
-                />
+              <div className="grid-2">
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Full Name *</label>
+                  <input 
+                    type="text" 
+                    value={empForm.full_name} 
+                    onChange={(e) => setEmpForm({...empForm, full_name: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                    required 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Employee Code (Specific Code)</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. EMP-001 (Optional)"
+                    value={empForm.employee_code || ''} 
+                    onChange={(e) => setEmpForm({...empForm, employee_code: e.target.value})} 
+                    className="glass-input" 
+                    style={{ marginTop: '0.25rem' }}
+                  />
+                </div>
               </div>
 
               <div className="grid-2">
