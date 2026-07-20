@@ -133,17 +133,28 @@ const SupportCenter = () => {
                   className={`support-ticket-item ${isSelected ? 'active-admin' : ''}`}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ 
-                      fontSize: '0.85rem', 
-                      fontWeight: 600, 
-                      color: isSelected ? 'var(--text-main)' : 'var(--text-muted)', 
-                      textOverflow: 'ellipsis', 
-                      overflow: 'hidden', 
-                      whiteSpace: 'nowrap', 
-                      maxWidth: '180px' 
-                    }}>
-                      {ticket.subject}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
+                      {ticket.readByAdmin === false && ticket.status !== 'resolved' && (
+                        <span style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          background: '#ef4444',
+                          flexShrink: 0
+                        }} />
+                      )}
+                      <span style={{ 
+                        fontSize: '0.85rem', 
+                        fontWeight: 600, 
+                        color: isSelected ? 'var(--text-main)' : 'var(--text-muted)', 
+                        textOverflow: 'ellipsis', 
+                        overflow: 'hidden', 
+                        whiteSpace: 'nowrap', 
+                        maxWidth: '160px' 
+                      }}>
+                        {ticket.subject}
+                      </span>
+                    </div>
                     <span className={`support-badge support-badge-priority-${ticket.priority}`}>
                       {ticket.priority}
                     </span>
