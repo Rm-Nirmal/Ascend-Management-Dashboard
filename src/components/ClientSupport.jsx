@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 const ClientSupport = () => {
-  const { supportTickets, createSupportTicket, replySupportTicket, closeSupportTicket, showToast } = useDashboard();
+  const { supportTickets, createSupportTicket, replySupportTicket, closeSupportTicket, showToast, currentGym } = useDashboard();
   
   // Selection/Form states
   const [selectedTicketId, setSelectedTicketId] = useState('');
@@ -168,6 +168,22 @@ const ClientSupport = () => {
               );
             })
           )}
+        </div>
+
+        {/* Fitgencore Hotline details banner */}
+        <div style={{
+          padding: '1rem',
+          borderTop: '1px solid var(--border-color)',
+          background: 'rgba(255, 255, 255, 0.01)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.35rem',
+          fontSize: '0.725rem'
+        }}>
+          <span style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Fitgencore Support Hotline</span>
+          <strong style={{ color: 'var(--color-primary)', fontSize: '0.8rem' }}>
+            {currentGym?.fitgencoreHotline || '+94 11 234 5678 / desk@fitgencore.com'}
+          </strong>
         </div>
       </div>
 

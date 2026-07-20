@@ -149,6 +149,136 @@ const DataLoadingOverlay = () => (
   </div>
 );
 
+const RestrictedGymScreen = ({ status, message, hotline, setActiveTab }) => {
+  const { logout } = useDashboard();
+  const isFrozen = status === 'frozen';
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '75vh',
+      width: '100%',
+      padding: '3rem 2rem',
+      boxSizing: 'border-box',
+      textAlign: 'center',
+      gap: '1.5rem',
+    }}>
+      <div style={{
+        width: '80px',
+        height: '80px',
+        borderRadius: '50%',
+        background: isFrozen ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+        border: `1px solid ${isFrozen ? '#f59e0b' : '#ef4444'}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: isFrozen ? '#f59e0b' : '#ef4444',
+        marginBottom: '1rem',
+        boxShadow: `0 0 24px ${isFrozen ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`,
+      }}>
+        <HelpCircle size={40} />
+      </div>
+
+      <h1 style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: '2rem',
+        fontWeight: 800,
+        margin: 0,
+        color: 'var(--text-main)',
+      }}>
+        {isFrozen ? 'Your Workspace is Frozen' : 'Your Workspace is Deactivated'}
+      </h1>
+
+      <p style={{
+        maxWidth: '500px',
+        color: 'var(--text-muted)',
+        fontSize: '1.05rem',
+        lineHeight: 1.6,
+        margin: '0 auto',
+      }}>
+        {message || (isFrozen 
+          ? 'This workspace has been temporarily frozen by Fitgencore administration due to billing reviews or account policies.' 
+          : 'This workspace has been deactivated. Please contact Fitgencore client relationship desk to reactivate your console.')}
+      </p>
+
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.02)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '12px',
+        padding: '1.5rem 2rem',
+        maxWidth: '480px',
+        width: '100%',
+        boxSizing: 'border-box',
+        marginTop: '0.5rem',
+      }}>
+        <span style={{
+          display: 'block',
+          fontSize: '0.7rem',
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          letterSpacing: '0.05em',
+          marginBottom: '0.5rem'
+        }}>
+          Fitgencore Client Support Hotline
+        </span>
+        <strong style={{
+          fontSize: '1.15rem',
+          color: 'var(--color-primary)',
+          letterSpacing: '0.02em',
+        }}>
+          {hotline || '+94 11 234 5678 / desk@fitgencore.com'}
+        </strong>
+      </div>
+
+      <div style={{
+        display: 'flex',
+        gap: '1rem',
+        marginTop: '1.5rem',
+        justifyContent: 'center',
+        width: '100%',
+      }}>
+        <button
+          onClick={() => setActiveTab('support_tickets')}
+          className="btn btn-primary"
+          style={{
+            padding: '0.75rem 2rem',
+            fontWeight: 700,
+            borderRadius: '10px',
+            fontSize: '0.9rem',
+            background: 'linear-gradient(135deg, var(--color-primary), #3b82f6)',
+            border: 'none',
+            boxShadow: '0 4px 12px var(--color-primary-glow)',
+            cursor: 'pointer'
+          }}
+        >
+          Open Support Center
+        </button>
+        
+        <button
+          onClick={logout}
+          className="btn btn-secondary"
+          style={{
+            padding: '0.75rem 2rem',
+            fontWeight: 700,
+            borderRadius: '10px',
+            fontSize: '0.9rem',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-main)',
+            cursor: 'pointer'
+          }}
+        >
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const DashboardContentShell = () => {
   const { 
     currentUser, 
@@ -159,7 +289,8 @@ const DashboardContentShell = () => {
     showToast, 
     gymSettings, 
     announcements,
-    updateGymSettings
+    updateGymSettings,
+    currentGym
   } = useDashboard();
   const isAllowedTab = (tab) => {
     if (!currentUser) return false;
@@ -340,7 +471,20 @@ const DashboardContentShell = () => {
           : 'members'
       );
 
+  const isGymRestricted = currentGym && (currentGym.status === 'frozen' || currentGym.status === 'suspended');
+
   const renderView = (tab) => {
+    if (isGymRestricted && tab !== 'support_tickets') {
+      return (
+        <RestrictedGymScreen 
+          status={currentGym.status}
+          message={currentGym.status === 'frozen' ? currentGym.freezeMessage : currentGym.deactivateMessage}
+          hotline={currentGym.fitgencoreHotline}
+          setActiveTab={setActiveTab}
+        />
+      );
+    }
+
     if (tab.startsWith('log_income') || tab.startsWith('log_expense') || tab === 'finance') {
       return <Finance activeTabOverride={tab} setActiveTab={setActiveTab} />;
     }

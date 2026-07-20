@@ -316,6 +316,7 @@ export const DashboardProvider = ({ children }) => {
   const [announcements, setAnnouncements] = useState([]);
   const [gymSettings, setGymSettings] = useState(null);
   const [saasPlans, setSaasPlans] = useState([]);
+  const [currentGym, setCurrentGym] = useState(null);
 
   // Inventory Management Module States
   const [inventoryCategories, setInventoryCategories] = useState([]);
@@ -640,6 +641,7 @@ export const DashboardProvider = ({ children }) => {
         setSupportTickets([]);
         setAnnouncements([]);
         setGymSettings(null);
+        setCurrentGym(null);
         setInventoryCategories([]);
         setInventoryProducts([]);
         setInventorySuppliers([]);
@@ -764,7 +766,7 @@ export const DashboardProvider = ({ children }) => {
       // ─── GYM OWNER / STAFF REAL-TIME LISTENERS ───
       const orgId = currentUser.gymId || DEFAULT_ORG_ID;
       let loadedCount = 0;
-      const totalCollections = 22;
+      const totalCollections = 23;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -1080,6 +1082,22 @@ export const DashboardProvider = ({ children }) => {
           setShiftLogs(logs);
           markLoaded();
         }, (err) => { console.error('Shift logs error:', err); markLoaded(); })
+      );
+
+      // 23. Tenant Gym Document Listener
+      const tenantGymQ = query(
+        collection(db, COLLECTIONS.GYMS),
+        where('gymId', '==', orgId)
+      );
+      unsubscribers.push(
+        onSnapshot(tenantGymQ, (snap) => {
+          if (!snap.empty) {
+            setCurrentGym({ id: snap.docs[0].id, ...snap.docs[0].data() });
+          } else {
+            setCurrentGym(null);
+          }
+          markLoaded();
+        }, (err) => { console.error('Tenant gym info error:', err); markLoaded(); })
       );
     }
 
@@ -2007,6 +2025,9 @@ export const DashboardProvider = ({ children }) => {
         country: updatedFields.country,
         currency: updatedFields.currency,
         timezone: updatedFields.timezone,
+        freezeMessage: updatedFields.freezeMessage || '',
+        deactivateMessage: updatedFields.deactivateMessage || '',
+        fitgencoreHotline: updatedFields.fitgencoreHotline || '',
       };
       if (updatedFields.disabledFeatures !== undefined) {
         updateData.disabledFeatures = updatedFields.disabledFeatures;
@@ -4989,6 +5010,7 @@ export const DashboardProvider = ({ children }) => {
       supportTickets,
       announcements,
       gymSettings,
+      currentGym,
 
       // Loading / Error
       isLoading,

@@ -31,7 +31,15 @@ import {
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-  const { currentUser, logout, gymSettings } = useDashboard();
+  const { currentUser, logout, gymSettings, supportTickets } = useDashboard();
+  
+  const hasUnreadSupport = supportTickets && supportTickets.some(ticket => {
+    if (ticket.status === 'resolved') return false;
+    const replies = ticket.replies || [];
+    if (replies.length === 0) return false;
+    return replies[replies.length - 1].senderRole === 'super_admin';
+  });
+
   const [inventoryExpanded, setInventoryExpanded] = useState(() => {
     return activeTab.startsWith('inventory_');
   });
@@ -126,14 +134,29 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            const showDot = item.id === 'support_tickets' && hasUnreadSupport;
             return (
               <a 
                 key={item.id} 
                 className={`nav-link ${isActive ? 'active' : ''}`}
                 onClick={() => setActiveTab(item.id)}
+                style={{ position: 'relative' }}
               >
                 <Icon size={18} />
                 <span>{item.name}</span>
+                {showDot && (
+                  <span style={{
+                    position: 'absolute',
+                    right: '1rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#ef4444',
+                    boxShadow: '0 0 8px #ef4444'
+                  }} />
+                )}
               </a>
             );
           })}

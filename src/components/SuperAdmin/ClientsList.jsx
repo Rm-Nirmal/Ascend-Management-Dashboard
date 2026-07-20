@@ -96,7 +96,10 @@ const ClientsList = ({ setActiveTab }) => {
     address: '',
     country: 'Sri Lanka',
     currency: 'LKR',
-    timezone: 'Asia/Colombo'
+    timezone: 'Asia/Colombo',
+    freezeMessage: '',
+    deactivateMessage: '',
+    fitgencoreHotline: ''
   });
   const [isSavingDetails, setIsSavingDetails] = useState(false);
 
@@ -168,7 +171,10 @@ const ClientsList = ({ setActiveTab }) => {
       address: gym.address || '',
       country: gym.country || 'Sri Lanka',
       currency: gym.currency || 'LKR',
-      timezone: gym.timezone || 'Asia/Colombo'
+      timezone: gym.timezone || 'Asia/Colombo',
+      freezeMessage: gym.freezeMessage || '',
+      deactivateMessage: gym.deactivateMessage || '',
+      fitgencoreHotline: gym.fitgencoreHotline || ''
     });
   };
 
@@ -1547,6 +1553,43 @@ const ClientsList = ({ setActiveTab }) => {
                         <option value="America/New_York">America/New_York</option>
                         <option value="Europe/London">Europe/London</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid var(--border-color)', margin: '1.25rem 0', paddingTop: '1rem' }}>
+                    <h5 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#a855f7', fontWeight: 700, marginBottom: '0.75rem' }}>SaaS Freeze & Deactivation Details</h5>
+                    
+                    <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Fitgencore Support Hotline</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. +94 11 222 3333 / support@fitgencore.com"
+                        className="form-control"
+                        value={editForm.fitgencoreHotline || ''}
+                        onChange={e => setEditForm({ ...editForm, fitgencoreHotline: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Custom Freeze Message</label>
+                      <textarea 
+                        className="form-control"
+                        style={{ height: '60px', resize: 'none' }}
+                        placeholder="Message shown when account is frozen"
+                        value={editForm.freezeMessage || ''}
+                        onChange={e => setEditForm({ ...editForm, freezeMessage: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Custom Deactivation Message</label>
+                      <textarea 
+                        className="form-control"
+                        style={{ height: '60px', resize: 'none' }}
+                        placeholder="Message shown when account is deactivated"
+                        value={editForm.deactivateMessage || ''}
+                        onChange={e => setEditForm({ ...editForm, deactivateMessage: e.target.value })}
+                      />
                     </div>
                   </div>
 
