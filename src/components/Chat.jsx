@@ -113,8 +113,8 @@ const Chat = () => {
                 boxShadow: '0 0 8px var(--color-success, #10b981)'
               }} />
               <div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>#general-administration</h3>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>WhatsApp-style staff group channel</span>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Team Chat</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>General communication channel for administrative staff</span>
               </div>
             </div>
           </div>
