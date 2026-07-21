@@ -250,7 +250,11 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
   const payrollHistory = useMemo(() => {
     return expenses
       .filter(exp => exp.category === 'Salary')
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+      .sort((a, b) => {
+        const timeA = a.created_at || a.date;
+        const timeB = b.created_at || b.date;
+        return new Date(timeB) - new Date(timeA);
+      });
   }, [expenses]);
 
   const filteredPayrollStaff = useMemo(() => {
@@ -628,7 +632,8 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
             type: 'Income',
             description: `Membership - ${inv.member_name}`,
             category: 'Membership Payments',
-            amount: inv.total_amount
+            amount: inv.total_amount,
+            timestamp: inv.paid_at
           });
         }
       }
@@ -645,7 +650,8 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
           type: 'Income',
           description: inc.member_name ? `${inc.source} - ${inc.member_name}` : inc.source,
           category: inc.source,
-          amount: inc.amount
+          amount: inc.amount,
+          timestamp: inc.created_at || inc.date
         });
       }
     });
@@ -661,7 +667,8 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
           type: 'Expense',
           description: exp.title,
           category: exp.category,
-          amount: exp.amount
+          amount: exp.amount,
+          timestamp: exp.created_at || exp.date
         });
       }
     });
@@ -671,8 +678,8 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
       trans = trans.filter(tx => tx.date === txDateFilter);
     }
     
-    // Sort descending by date
-    trans.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sort descending by timestamp (recent)
+    trans.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
     // Show all matching when filtered, otherwise default to top 10
     return txDateFilter ? trans : trans.slice(0, 10);
@@ -693,7 +700,8 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
           source: 'Membership Payments',
           paymentMethod: inv.payment_method || 'card',
           amount: inv.total_amount,
-          reference: inv.invoice_number || ''
+          reference: inv.invoice_number || '',
+          timestamp: inv.paid_at
         });
       }
     });
@@ -707,7 +715,8 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
         source: inc.source,
         paymentMethod: inc.payment_method || 'cash',
         amount: inc.amount,
-        reference: inc.payment_reference || ''
+        reference: inc.payment_reference || '',
+        timestamp: inc.created_at || inc.date
       });
     });
     
@@ -725,7 +734,7 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
       );
     }
     
-    list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     return list;
   }, [invoices, income, incomeTimeframe, incomeCustomRange, incomeSearch]);
 
@@ -733,13 +742,17 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
 
   const filteredExpensesList = useMemo(() => {
     const { start, end } = getStartAndEndOfTimeframe(expenseTimeframe, expenseCustomRange);
-    let list = expenses.filter(exp => exp.date && isWithinRange(exp.date, start, end) && exp.category !== 'Salary');
+    let list = expenses.filter(exp => exp.date && isWithinRange(exp.date, start, end));
     
     if (expenseCategoryFilter !== 'All') {
       list = list.filter(exp => exp.category === expenseCategoryFilter);
     }
     
-    list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    list.sort((a, b) => {
+      const timeA = a.created_at || a.date;
+      const timeB = b.created_at || b.date;
+      return new Date(timeB) - new Date(timeA);
+    });
     return list;
   }, [expenses, expenseTimeframe, expenseCustomRange, expenseCategoryFilter]);
 
@@ -2197,6 +2210,7 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
                   onChange={(e) => setExpenseCategoryFilter(e.target.value)}
                 >
                   <option value="All">All Categories</option>
+                  <option value="Salary">Salary (Payslips)</option>
                   {userExpenseCategories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
@@ -2249,7 +2263,19 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
                         LKR {exp.amount.toLocaleString()}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        {exp.receipt_url ? (
+                        {exp.category === 'Salary' ? (
+                          <button
+                            className="btn btn-secondary"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                            onClick={() => {
+                              setSelectedPayslip(exp);
+                              setIsPayslipModalOpen(true);
+                            }}
+                            title="Print / View Payslip"
+                          >
+                            <FileText size={12} /> Payslip
+                          </button>
+                        ) : exp.receipt_url ? (
                           <a href={exp.receipt_url} target="_blank" rel="noreferrer" title="View Receipt file">
                             <Eye size={16} style={{ color: '#fff', cursor: 'pointer' }} />
                           </a>
@@ -3001,10 +3027,13 @@ const Finance = ({ activeTabOverride, setActiveTab }) => {
                   <select
                     className="glass-select"
                     style={{ width: '100%' }}
-                    disabled={expenseModalMode === 'view'}
+                    disabled={expenseModalMode === 'view' || expenseForm.category === 'Salary'}
                     value={expenseForm.category}
                     onChange={(e) => setExpenseForm(prev => ({ ...prev, category: e.target.value }))}
                   >
+                    {expenseForm.category === 'Salary' && (
+                      <option value="Salary">Salary</option>
+                    )}
                     {userExpenseCategories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
