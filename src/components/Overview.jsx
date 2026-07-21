@@ -757,7 +757,7 @@ const Overview = () => {
           </h3>
           <div style={{ width: '100%', height: 260 }}>
             <ResponsiveContainer>
-              <ComposedChart data={chartData.revenue} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={chartData.revenue} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
                 <YAxis 
@@ -774,8 +774,7 @@ const Overview = () => {
                 <Legend fontSize={10} wrapperStyle={{ paddingTop: 10 }} />
                 <Bar dataKey="Income" fill="#ffffff" radius={[4, 4, 0, 0]} name="Income" />
                 <Bar dataKey="Expenses" fill="#404040" radius={[4, 4, 0, 0]} name="Expenses" />
-                <Line type="monotone" dataKey="Profit" stroke="#a3a3a3" strokeWidth={2} dot={{ fill: '#a3a3a3', r: 4 }} name="Net Profit" />
-              </ComposedChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
