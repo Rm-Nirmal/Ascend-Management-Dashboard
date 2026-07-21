@@ -137,7 +137,8 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
-            const showDot = (item.id === 'support_tickets' && hasUnreadSupport) || (item.id === 'chat' && hasUnreadChat);
+            const showDot = (item.id === 'support_tickets' && hasUnreadSupport) || (item.id === 'chat' && hasUnreadChat && activeTab !== 'chat');
+
             return (
               <a 
                 key={item.id} 
