@@ -27,11 +27,12 @@ import {
   TrendingUp,
   ShoppingBag,
   Clock,
-  UserCheck
+  UserCheck,
+  MessageSquare
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-  const { currentUser, logout, gymSettings, supportTickets } = useDashboard();
+  const { currentUser, logout, gymSettings, supportTickets, hasUnreadChat } = useDashboard();
   
   const hasUnreadSupport = supportTickets && supportTickets.some(ticket => {
     return ticket.status !== 'resolved' && ticket.readByClient === false;
@@ -75,6 +76,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'trainers', name: 'Personal Trainers', icon: UserCheck },
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
+    { id: 'chat', name: 'Team Chat', icon: MessageSquare },
     { id: 'access', name: 'Access Control', icon: QrCode },
     { id: 'break_timer', name: 'Shift & Break', icon: Clock },
     { id: 'console', name: 'Console', icon: CreditCard },
@@ -94,6 +96,10 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
 
     // Check if the feature is explicitly disabled for the tenant
     if (disabledFeatures.includes(item.id)) return false;
+
+    if (item.id === 'chat') {
+      return ['gym_owner', 'owner', 'admin', 'standard_admin'].includes(currentUser.role);
+    }
 
     // Gym owners and Gym Admins can access everything except Console
     if (
@@ -131,7 +137,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           {navItems.map(item => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
-            const showDot = item.id === 'support_tickets' && hasUnreadSupport;
+            const showDot = (item.id === 'support_tickets' && hasUnreadSupport) || (item.id === 'chat' && hasUnreadChat);
             return (
               <a 
                 key={item.id} 

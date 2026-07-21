@@ -317,6 +317,10 @@ export const DashboardProvider = ({ children }) => {
   const [gymSettings, setGymSettings] = useState(null);
   const [saasPlans, setSaasPlans] = useState([]);
   const [currentGym, setCurrentGym] = useState(null);
+  
+  // Group Chat States
+  const [groupChatMessages, setGroupChatMessages] = useState([]);
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
 
   // Inventory Management Module States
   const [inventoryCategories, setInventoryCategories] = useState([]);
@@ -766,7 +770,7 @@ export const DashboardProvider = ({ children }) => {
       // ─── GYM OWNER / STAFF REAL-TIME LISTENERS ───
       const orgId = currentUser.gymId || DEFAULT_ORG_ID;
       let loadedCount = 0;
-      const totalCollections = 23;
+      const totalCollections = 24;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -1098,6 +1102,32 @@ export const DashboardProvider = ({ children }) => {
           }
           markLoaded();
         }, (err) => { console.error('Tenant gym info error:', err); markLoaded(); })
+      );
+
+      // 24. Group Chat Listener (scoped)
+      const groupChatQ = query(
+        collection(db, COLLECTIONS.GROUP_CHAT),
+        where('gymId', '==', orgId)
+      );
+      unsubscribers.push(
+        onSnapshot(groupChatQ, (snap) => {
+          const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          msgs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          setGroupChatMessages(msgs);
+          
+          // Check for unread messages if user is not currently on the chat page
+          if (msgs.length > 0) {
+            const lastMsg = msgs[msgs.length - 1];
+            const currentUserId = currentUser?.id || currentUser?.uid;
+            if (lastMsg.senderId !== currentUserId) {
+              const lastRead = localStorage.getItem('lastReadChatTime_' + currentUserId);
+              if (!lastRead || new Date(lastMsg.created_at) > new Date(lastRead)) {
+                setHasUnreadChat(true);
+              }
+            }
+          }
+          markLoaded();
+        }, (err) => { console.error('Group chat error:', err); markLoaded(); })
       );
     }
 
@@ -4997,6 +5027,26 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [currentUser, inventoryProducts, logAudit]);
 
+  const sendGroupChatMessage = useCallback(async (text) => {
+    if (!currentUser || !text.trim()) return { success: false };
+    try {
+      const chatMsg = {
+        gymId: currentUser.gymId || DEFAULT_ORG_ID,
+        senderId: currentUser.id || currentUser.uid,
+        senderName: currentUser.name || 'Anonymous',
+        senderRole: currentUser.role || 'staff',
+        senderPhotoUrl: currentUser.photo_url || '',
+        text: text.trim(),
+        created_at: new Date().toISOString()
+      };
+      await addDoc(collection(db, COLLECTIONS.GROUP_CHAT), chatMsg);
+      return { success: true };
+    } catch (err) {
+      console.error('sendGroupChatMessage error:', err);
+      return { success: false, error: err.message };
+    }
+  }, [currentUser]);
+
   // ═══════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
   // ═══════════════════════════════════════════════════════════════════
@@ -5165,6 +5215,12 @@ export const DashboardProvider = ({ children }) => {
       updateSupplier,
       deleteSupplier,
       recordStockTransaction,
+
+      // Group Chat
+      groupChatMessages,
+      hasUnreadChat,
+      setHasUnreadChat,
+      sendGroupChatMessage,
     }}>
       {children}
     </DashboardContext.Provider>

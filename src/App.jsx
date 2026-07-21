@@ -15,6 +15,7 @@ import AdminManagement from './components/AdminManagement';
 import Employees from './components/Employees';
 import Finance from './components/Finance';
 import BreakTimer from './components/BreakTimer';
+import Chat from './components/Chat';
 import { Bell, ShieldCheck, HelpCircle, Menu, Search, Sun, Moon } from 'lucide-react';
 import PublicRegistrationForm from './components/PublicRegistrationForm';
 import PublicReceipt from './components/PublicReceipt';
@@ -312,21 +313,21 @@ const DashboardContentShell = () => {
       return [
         'overview', 'members', 'trainers', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
-        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports'
+        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports', 'chat'
       ].includes(tab);
     }
     if (currentUser.role === 'admin') {
       return [
         'overview', 'members', 'trainers', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
-        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers'
+        'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'chat'
       ].includes(tab);
     }
     if (currentUser.role === 'standard_admin' || currentUser.role === 'gym_assistant') {
       return [
         'members', 'trainers', 'registrations', 'access',
         'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock',
-        'break_timer', 'finance'
+        'break_timer', 'finance', 'chat'
       ].includes(tab) || tab.startsWith('log_income') || tab.startsWith('log_expense');
     }
     return ['members', 'trainers', 'registrations', 'access', 'break_timer', 'finance'].includes(tab) || tab.startsWith('log_income') || tab.startsWith('log_expense');
@@ -515,6 +516,8 @@ const DashboardContentShell = () => {
         return <Employees />;
       case 'break_timer':
         return <BreakTimer />;
+      case 'chat':
+        return <Chat />;
       case 'access':
         return <AccessConsole />;
       case 'console':

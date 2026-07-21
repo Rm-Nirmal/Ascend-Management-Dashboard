@@ -59,6 +59,7 @@ export const COLLECTIONS = {
   BREAK_LOGS: 'breakLogs',
   LEAVE_REQUESTS: 'leaveRequests',
   SHIFT_LOGS: 'shiftLogs',
+  GROUP_CHAT: 'groupChat',
 };
 
 // Default organization ID (single-tenant for now)
