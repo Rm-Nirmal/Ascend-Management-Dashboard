@@ -8,6 +8,15 @@ import {
   DollarSign, Calendar, UserCheck, AlertCircle, ArrowUpRight, ArrowDownRight, Download
 } from 'lucide-react';
 
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  const parts = dateStr.split('T')[0].split('-');
+  if (parts.length === 3) {
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  }
+  return new Date(dateStr);
+};
+
 const Overview = () => {
   const { 
     members, 
@@ -229,7 +238,7 @@ const Overview = () => {
         // Manual income (Other income)
         const hourlyManual = uniqueIncome.filter(inc => {
           if (!inc.date || !inc.date.startsWith(selectedDate)) return false;
-          const incHour = new Date(inc.date).getHours();
+          const incHour = parseLocalDate(inc.date).getHours();
           return incHour >= hr && incHour < hr + 2;
         });
         const otherInc = hourlyManual.reduce((sum, inc) => sum + inc.amount, 0);
@@ -238,7 +247,7 @@ const Overview = () => {
         // Expenses
         const hourlyExpenses = uniqueExpenses.filter(exp => {
           if (!exp.date || !exp.date.startsWith(selectedDate)) return false;
-          const expHour = new Date(exp.date).getHours();
+          const expHour = parseLocalDate(exp.date).getHours();
           return expHour >= hr && expHour < hr + 2;
         });
         const totalExp = hourlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -359,7 +368,7 @@ const Overview = () => {
         // Manual income
         const weeklyManual = uniqueIncome.filter(inc => {
           if (!inc.date || !inc.date.startsWith(selectedMonth)) return false;
-          const dateNum = new Date(inc.date).getDate();
+          const dateNum = parseLocalDate(inc.date).getDate();
           return dateNum >= startDay && dateNum <= endDay;
         });
         const otherInc = weeklyManual.reduce((sum, inc) => sum + inc.amount, 0);
@@ -368,7 +377,7 @@ const Overview = () => {
         // Expenses
         const weeklyExpenses = uniqueExpenses.filter(exp => {
           if (!exp.date || !exp.date.startsWith(selectedMonth)) return false;
-          const dateNum = new Date(exp.date).getDate();
+          const dateNum = parseLocalDate(exp.date).getDate();
           return dateNum >= startDay && dateNum <= endDay;
         });
         const totalExp = weeklyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -386,7 +395,7 @@ const Overview = () => {
         const endDay = idx === 3 ? 31 : (idx + 1) * 7;
         const newMembers = uniqueMembers.filter(m => {
           if (!m.joined_at || !m.joined_at.startsWith(selectedMonth)) return false;
-          const dateNum = new Date(m.joined_at).getDate();
+          const dateNum = parseLocalDate(m.joined_at).getDate();
           return dateNum >= startDay && dateNum <= endDay;
         }).length;
 

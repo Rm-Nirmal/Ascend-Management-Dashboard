@@ -43,7 +43,14 @@ const getStartAndEndOfTimeframe = (timeframe, customRange = null) => {
 };
 
 const isWithinRange = (dateStr, start, end) => {
-  const d = new Date(dateStr);
+  if (!dateStr) return false;
+  const parts = dateStr.split('T')[0].split('-');
+  let d;
+  if (parts.length === 3) {
+    d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  } else {
+    d = new Date(dateStr);
+  }
   return d >= start && d <= end;
 };
 

@@ -13,6 +13,16 @@ const getLocalDateStr = (dateInput) => {
   return `${year}-${month}-${day}`;
 };
 
+const resolveEmpRole = (emp) => {
+  if (!emp) return '';
+  if (emp.role) return emp.role;
+  if (emp.specialization) {
+    if (emp.specialization.toLowerCase().includes('yoga')) return 'Yoga Coach';
+    return 'Personal Trainer';
+  }
+  return 'Front Desk';
+};
+
 const Employees = () => {
   const {
     employees = [],
@@ -60,7 +70,7 @@ const Employees = () => {
     holidays: '1',
     employee_code: ''
   });
-  const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'leaves'
+  const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'leaves' | 'admins'
   const [calendarDate, setCalendarDate] = useState(() => new Date());
 
   // Performance Report States
@@ -95,7 +105,7 @@ const Employees = () => {
       const matchSearch = nameStr.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           emailStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           phoneStr.includes(searchTerm);
-      const matchRole = roleFilter === 'all' || emp.role === roleFilter;
+      const matchRole = roleFilter === 'all' || resolveEmpRole(emp) === roleFilter;
       return matchSearch && matchRole;
     });
   }, [activeEmployees, searchTerm, roleFilter]);
@@ -108,7 +118,7 @@ const Employees = () => {
   }, [activeEmployees]);
 
   const rolesList = useMemo(() => {
-    const roles = new Set((Array.isArray(activeEmployees) ? activeEmployees : []).filter(Boolean).map(e => e.role));
+    const roles = new Set((Array.isArray(activeEmployees) ? activeEmployees : []).filter(Boolean).map(e => resolveEmpRole(e)));
     return Array.from(roles);
   }, [activeEmployees]);
 
@@ -755,6 +765,21 @@ const Employees = () => {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveSubTab('admins')}
+          style={{
+            padding: '0.75rem 1rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeSubTab === 'admins' ? '2px solid var(--color-primary)' : '2px solid transparent',
+            color: activeSubTab === 'admins' ? 'var(--color-primary)' : 'var(--text-muted)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: '0.9rem'
+          }}
+        >
+          Admin Permissions
+        </button>
       </div>
 
       {activeSubTab === 'directory' && (
@@ -867,9 +892,49 @@ const Employees = () => {
                           </div>
                         </td>
                         <td>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                            <Briefcase size={12} style={{ color: 'var(--text-muted)' }} /> {emp.role}
-                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                              <Briefcase size={12} style={{ color: 'var(--text-muted)' }} /> {resolveEmpRole(emp)}
+                            </span>
+                            {(() => {
+                              const empAdmin = (Array.isArray(admins) ? admins : []).find(
+                                a => a && (a.employeeId === emp.id || 
+                                (a.email && a.email.toLowerCase() === emp.email?.toLowerCase()))
+                              );
+                              if (empAdmin) {
+                                if (empAdmin.role === 'standard_admin') {
+                                  return (
+                                    <span className="badge" style={{ fontSize: '0.65rem', alignSelf: 'flex-start', padding: '0.1rem 0.35rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--border-color)', marginTop: '0.15rem' }}>
+                                      Standard Admin
+                                    </span>
+                                  );
+                                } else if (empAdmin.role === 'admin') {
+                                  return (
+                                    <span className="badge" style={{ fontSize: '0.65rem', alignSelf: 'flex-start', padding: '0.1rem 0.35rem', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--color-success)', border: '1px solid rgba(16, 185, 129, 0.2)', marginTop: '0.15rem' }}>
+                                      Gym Admin
+                                    </span>
+                                  );
+                                } else if (empAdmin.role === 'super_admin') {
+                                  return (
+                                    <span className="badge badge-active" style={{ fontSize: '0.65rem', alignSelf: 'flex-start', padding: '0.1rem 0.35rem', marginTop: '0.15rem' }}>
+                                      Super Admin
+                                    </span>
+                                  );
+                                } else if (empAdmin.role === 'gym_owner' || empAdmin.role === 'owner') {
+                                  return (
+                                    <span className="badge badge-active" style={{ fontSize: '0.65rem', alignSelf: 'flex-start', padding: '0.1rem 0.35rem', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '0.15rem' }}>
+                                      Gym Owner
+                                    </span>
+                                  );
+                                }
+                              }
+                              return (
+                                <span className="badge" style={{ fontSize: '0.65rem', alignSelf: 'flex-start', padding: '0.1rem 0.35rem', background: 'rgba(255,255,255,0.01)', color: 'var(--text-dark)', border: '1px solid rgba(255,255,255,0.05)', marginTop: '0.15rem' }}>
+                                  No Admin Access
+                                </span>
+                              );
+                            })()}
+                          </div>
                         </td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
@@ -927,7 +992,7 @@ const Employees = () => {
                                full_name: emp.full_name,
                                 email: emp.email,
                                 phone: emp.phone,
-                                role: emp.role,
+                                role: resolveEmpRole(emp),
                                 salary: emp.salary.toString(),
                                 next_salary_date: emp.next_salary_date,
                                 status: emp.status,
@@ -1160,6 +1225,111 @@ const Employees = () => {
                 })
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Permissions Tab View */}
+      {activeSubTab === 'admins' && (
+        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700 }}>
+              System Access Control & Admin Privileges
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              Overview of employee accounts that have dashboard login credentials and administrative roles.
+            </p>
+          </div>
+          <div className="table-container">
+            <table className="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Employee Name</th>
+                  <th>Job Title (Role)</th>
+                  <th>Admin Privilege Status</th>
+                  <th>Dashboard Account Email</th>
+                  <th>Linked Role</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeEmployees.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                      No active employees found.
+                    </td>
+                  </tr>
+                ) : (
+                  activeEmployees.map(emp => {
+                    const empAdmin = (Array.isArray(admins) ? admins : []).find(
+                      a => a && (a.employeeId === emp.id || 
+                      (a.email && a.email.toLowerCase() === emp.email?.toLowerCase()))
+                    );
+                    const isStandardAdmin = empAdmin && empAdmin.role === 'standard_admin';
+                    const isGymAdmin = empAdmin && empAdmin.role === 'admin';
+                    const isSuperAdmin = empAdmin && empAdmin.role === 'super_admin';
+                    const isGymOwner = empAdmin && (empAdmin.role === 'gym_owner' || empAdmin.role === 'owner');
+
+                    return (
+                      <tr key={emp.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{
+                              width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)',
+                              border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontWeight: 700, color: 'var(--color-primary)'
+                            }}>
+                              {(emp.full_name || '').charAt(0)}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{emp.full_name || 'Unnamed Employee'}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontFamily: 'monospace', marginTop: '0.15rem' }}>
+                                Code: {emp.employee_code || 'N/A'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>{resolveEmpRole(emp)}</td>
+                        <td>
+                          {empAdmin ? (
+                            isStandardAdmin ? (
+                              <span className="badge badge-pending" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
+                                Standard Admin
+                              </span>
+                            ) : isGymAdmin ? (
+                              <span className="badge badge-pending" style={{ fontSize: '0.65rem', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--color-success)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                Gym Admin
+                              </span>
+                            ) : isSuperAdmin ? (
+                              <span className="badge badge-active" style={{ fontSize: '0.65rem' }}>
+                                Super Admin
+                              </span>
+                            ) : isGymOwner ? (
+                              <span className="badge badge-active" style={{ fontSize: '0.65rem', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                Gym Owner
+                              </span>
+                            ) : (
+                              <span className="badge badge-frozen" style={{ fontSize: '0.65rem' }}>
+                                Admin Access ({empAdmin.role})
+                              </span>
+                            )
+                          ) : (
+                            <span className="badge badge-frozen" style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.02)', color: 'var(--text-dark)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                              No Admin Access
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: empAdmin ? '#fff' : 'var(--text-dark)' }}>
+                          {empAdmin ? empAdmin.email : 'No linked account'}
+                        </td>
+                        <td style={{ textTransform: 'capitalize', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          {empAdmin ? empAdmin.role?.replace('_', ' ') : 'N/A'}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -1582,7 +1752,7 @@ const Employees = () => {
                   <div>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{selectedProfileEmployee.full_name || 'Unnamed Employee'}</h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <Briefcase size={12} /> {selectedProfileEmployee.role}
+                      <Briefcase size={12} /> {resolveEmpRole(selectedProfileEmployee)}
                     </p>
                   </div>
                 </div>
@@ -1951,7 +2121,7 @@ const Employees = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{reportEmployee.full_name}</h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{reportEmployee.role}</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{resolveEmpRole(reportEmployee)}</span>
               </div>
               
               <div style={{ display: 'flex', gap: '0.5rem' }}>
