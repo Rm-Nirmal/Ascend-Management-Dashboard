@@ -282,6 +282,291 @@ const ClientsList = ({ setActiveTab }) => {
     return invoices.filter(i => i.gymId === gymId && i.isSaaS === true);
   };
 
+  // Print SaaS Receipt in a new window with a professional theme
+  const handlePrintReceipt = (receipt) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Pop-up blocker is enabled. Please allow pop-ups to print the receipt.', 'error');
+      return;
+    }
+
+    const sub = getSubscriptionForGym(receipt.gymId);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>SaaS Invoice - ${receipt.invoice_number}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Oswald:wght@500;700&display=swap');
+          body {
+            font-family: 'Montserrat', Arial, sans-serif;
+            color: #0b0f19;
+            background: #ffffff;
+            padding: 40px;
+            font-size: 12px;
+            line-height: 1.5;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0b0f19;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+          .gym-name {
+            font-family: 'Oswald', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 0;
+            color: #0b0f19;
+          }
+          .gym-info {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 3px;
+          }
+          .report-info {
+            text-align: right;
+          }
+          .report-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin: 0;
+            text-transform: uppercase;
+          }
+          .report-subtitle {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+          }
+          .summary-col {
+            display: flex;
+            flex-direction: column;
+          }
+          .summary-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6b7280;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+          }
+          .summary-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0b0f19;
+          }
+          .summary-subtext {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          th {
+            background: #f3f4f6;
+            color: #0b0f19;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 11px;
+            vertical-align: top;
+          }
+          .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+          }
+          .totals-table {
+            width: 300px;
+            margin-bottom: 0;
+          }
+          .totals-table td {
+            padding: 6px 0;
+            border-bottom: none;
+          }
+          .total-row {
+            font-weight: bold;
+            font-size: 14px;
+            border-top: 2px solid #0b0f19;
+          }
+          .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .sig-box {
+            width: 200px;
+            border-top: 1px solid #0b0f19;
+            text-align: center;
+            padding-top: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          @media print {
+            @page {
+              margin: 0;
+            }
+            body {
+              padding: 1.5cm;
+            }
+            .no-print-btn {
+              display: none !important;
+            }
+          }
+          .no-print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0b0f19;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: 0.2s;
+          }
+          .no-print-btn:hover {
+            background: #1f2937;
+          }
+        </style>
+      </head>
+      <body>
+        <button class="no-print-btn" onclick="window.print()">Print / Export PDF</button>
+
+        <div class="header">
+          <div>
+            <h1 class="gym-name">FITGENCORE SAAS</h1>
+            <div class="gym-info">Antigravity Labs (Pvt) Ltd.</div>
+            <div class="gym-info">100 Elite Tower, Colombo 03, Sri Lanka | billing@fitgencore.com</div>
+          </div>
+          <div class="report-info">
+            <h2 class="report-title">MEMBERSHIP INVOICE</h2>
+            <div class="report-subtitle">Official Billing Statement</div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-col">
+            <div class="summary-label">Bill To</div>
+            <div class="summary-value">${receipt.gymName}</div>
+            <div class="summary-subtext">Owner: ${selectedGym?.ownerName || 'N/A'} &bull; Email: ${selectedGym?.ownerEmail || 'N/A'}</div>
+          </div>
+          <div class="summary-col">
+            <div class="summary-label">Invoice Details</div>
+            <div class="summary-value">${receipt.invoice_number}</div>
+            <div class="summary-subtext">Date: ${receipt.paid_at ? new Date(receipt.paid_at).toLocaleDateString() : new Date(receipt.created_at).toLocaleDateString()}</div>
+          </div>
+          <div class="summary-col">
+            <div class="summary-label">Billing Cycle</div>
+            <div class="summary-value" style="text-transform: capitalize;">
+              ${receipt.billingPeriod === 'one_time' ? '1 Time (Annual)' : (receipt.billingPeriod === 'installment_3mo' ? '3 Month Installment' : 'Monthly')}
+            </div>
+            <div class="summary-subtext">Currency: ${(receipt.currency || sub?.currency || 'LKR').toUpperCase()}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50%;">Description</th>
+              <th style="width: 25%; text-align: center;">Billing Term</th>
+              <th style="width: 25%; text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <strong>Fitgencore SaaS Platform - ${receipt.plan_id ? receipt.plan_id.charAt(0).toUpperCase() + receipt.plan_id.slice(1) : 'Starter'} Plan</strong>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 3px;">
+                  Automated directory isolation, cloud workspace access, member quota management, online support desk.
+                </div>
+              </td>
+              <td style="text-align: center; text-transform: capitalize;">
+                ${receipt.billingPeriod === 'one_time' ? '1 Year' : (receipt.billingPeriod === 'installment_3mo' ? '3 Months' : '1 Month')}
+              </td>
+              <td style="text-align: right; font-weight: 600;">
+                ${formatCurrency(receipt.subtotal, receipt.currency || sub?.currency)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-top: 20px;">
+          <div class="totals-section">
+            <table class="totals-table">
+              <tr>
+                <td>Subtotal:</td>
+                <td style="text-align: right;">${formatCurrency(receipt.subtotal, receipt.currency || sub?.currency)}</td>
+              </tr>
+              <tr>
+                <td>Taxes / VAT (0%):</td>
+                <td style="text-align: right;">LKR 0.00</td>
+              </tr>
+              <tr class="total-row">
+                <td>TOTAL PAID:</td>
+                <td style="text-align: right;">${formatCurrency(receipt.total_amount, receipt.currency || sub?.currency)}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="signature-section">
+          <div>
+            <div style="height: 40px;"></div>
+            <div class="sig-box">Authorized Signature</div>
+          </div>
+          <div>
+            <div style="height: 40px;"></div>
+            <div class="sig-box">Client Signature</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; font-size: 9px; color: #94a3b8; margin-top: 50px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
+          Thank you for your partnership! &bull; Powered by Fitgencore SaaS
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   // Format currency (no decimals needed for integer currencies if preferred, but keeping standard)
   const formatCurrency = (val, code = 'LKR') => {
     return `${val?.toLocaleString('en-US', { minimumFractionDigits: 2 })} ${code}`;
@@ -1974,7 +2259,7 @@ const ClientsList = ({ setActiveTab }) => {
               
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => handlePrintReceipt(viewingReceipt)}
                   style={{
                     background: '#ffffff',
                     border: '1px solid #cbd5e1',
