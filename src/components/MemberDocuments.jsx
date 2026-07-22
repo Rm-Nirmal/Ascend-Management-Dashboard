@@ -16,6 +16,7 @@ const MemberDocuments = () => {
     trainers, 
     currentUser, 
     plans,
+    gymSettings,
     saveMemberDocument,
     updateMemberDocument,
     getMemberDocumentSubItems,
@@ -440,7 +441,7 @@ const MemberDocuments = () => {
     showToast('Compiling document...', 'info');
 
     try {
-      const viewerUrl = `${window.location.origin}/?view=download_document&docId=${docObj.id}`;
+      const viewerUrl = `${window.location.origin}${window.location.pathname}?view=download_document&docId=${docObj.id}`;
       
       // Update in Firestore
       const { updateDoc, doc } = await import('firebase/firestore');
@@ -474,10 +475,10 @@ const MemberDocuments = () => {
     if (!memberObj) return;
 
     // Secure Link format
-    const link = `${window.location.origin}/?view=download_document&docId=${docObj.id}`;
+    const link = `${window.location.origin}${window.location.pathname}?view=download_document&docId=${docObj.id}`;
     
     // Construct SMS body template
-    const text = `Hello ${memberObj.full_name}\n\nYour ${docObj.type === 'workout' ? 'Workout Plan' : docObj.type === 'diet' ? 'Diet Plan' : 'General Document'} is ready.\n\nDownload it here:\n${link}\n\nRegards,\nAscend Fitness Club`;
+    const text = `Hello ${memberObj.full_name}\n\nYour ${docObj.type === 'workout' ? 'Workout Plan' : docObj.type === 'diet' ? 'Diet Plan' : 'General Document'} is ready.\n\nDownload it here:\n${link}\n\nRegards,\n${gymSettings?.gymName || 'Ascend Fitness Club'}`;
 
     setSmsTargetDoc(docObj);
     setSmsPreviewText(text);
