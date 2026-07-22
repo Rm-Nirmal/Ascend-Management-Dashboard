@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { db, COLLECTIONS } from '../lib/firebase';
 import { doc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
-import { Folder, Printer, Dumbbell, Apple, FileText, Check, User, Calendar, MapPin, Phone, Mail } from 'lucide-react';
+import { Folder, Printer, Dumbbell, Apple, Check, User, Calendar, MapPin, Phone, Mail } from 'lucide-react';
 
 const PublicDocumentDownload = () => {
   const [loading, setLoading] = useState(true);
@@ -44,11 +44,10 @@ const PublicDocumentDownload = () => {
         const data = { id: docSnap.id, ...docSnap.data() };
         setDocData(data);
 
-        // 2. Fetch sub-items (exercises, meals, etc.)
+        // 2. Fetch sub-items (exercises/meals)
         let subColName = '';
         if (data.type === 'workout') subColName = 'exercises';
         else if (data.type === 'diet') subColName = 'meals';
-        else if (data.type === 'general') subColName = 'attachments';
 
         if (subColName) {
           const subColRef = collection(db, 'memberDocuments', docId, subColName);
@@ -121,7 +120,6 @@ const PublicDocumentDownload = () => {
         details: `Member printed/saved document PDF: "${docData.title}"`
       };
       
-      // Attempt to save audit log
       try {
         const { addDoc, collection } = await import('firebase/firestore');
         await addDoc(collection(db, COLLECTIONS.AUDIT_LOGS), auditLog);
@@ -129,9 +127,7 @@ const PublicDocumentDownload = () => {
         console.warn('Failed to log download audit:', auditErr);
       }
 
-      // Trigger browser print/export PDF
       window.print();
-
     } catch (err) {
       console.error('Print trigger error:', err);
     }
@@ -212,15 +208,17 @@ const PublicDocumentDownload = () => {
 
   const getDocIcon = () => {
     if (docData.type === 'workout') return <Dumbbell size={24} style={{ color: '#10b981' }} />;
-    if (docData.type === 'diet') return <Apple size={24} style={{ color: '#f59e0b' }} />;
-    return <FileText size={24} style={{ color: '#3b82f6' }} />;
+    return <Apple size={24} style={{ color: '#f59e0b' }} />;
   };
 
-  const calculateBMI = (w, h) => {
-    if (!w || !h) return 'N/A';
-    const hm = h / 100;
-    return (w / (hm * hm)).toFixed(1);
-  };
+  // Helper calculations for Profile Bio
+  const birthDate = member?.date_of_birth ? new Date(member.date_of_birth) : null;
+  const memberAge = birthDate ? Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A';
+  const weight = member?.weight_kg || 'N/A';
+  const height = member?.height_cm || 'N/A';
+  const bmiVal = (member?.weight_kg && member?.height_cm) 
+    ? (member.weight_kg / Math.pow(member.height_cm / 100, 2)).toFixed(1) 
+    : 'N/A';
 
   return (
     <div className="printable-body" style={{
@@ -295,7 +293,9 @@ const PublicDocumentDownload = () => {
             <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.75rem' }}>Member Profile</span>
             <strong style={{ fontSize: '1rem', color: '#fff' }}>{member?.full_name || 'Valued Member'}</strong>
             <span style={{ color: '#94a3b8', display: 'block', marginTop: '0.15rem' }}>ID Code: {member?.member_code || 'N/A'}</span>
-            <span style={{ color: '#94a3b8', display: 'block' }}>BMI: {calculateBMI(member?.weight, member?.height)} (W: {member?.weight}kg, H: {member?.height}cm)</span>
+            <span style={{ color: '#cbd5e1', display: 'block', marginTop: '0.15rem' }}>
+              Age: {memberAge} &bull; W: {weight !== 'N/A' ? `${weight} kg` : 'N/A'} &bull; H: {height !== 'N/A' ? `${height} cm` : 'N/A'} &bull; BMI: {bmiVal}
+            </span>
           </div>
           <div>
             <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.75rem' }}>Assigned Coach / Trainer</span>
@@ -325,13 +325,13 @@ const PublicDocumentDownload = () => {
                 fontSize: '0.65rem',
                 fontWeight: 700,
                 textTransform: 'uppercase',
-                background: docData.type === 'workout' ? 'rgba(16, 185, 129, 0.15)' : docData.type === 'diet' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-                color: docData.type === 'workout' ? '#10b981' : docData.type === 'diet' ? '#f59e0b' : '#3b82f6',
+                background: docData.type === 'workout' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                color: docData.type === 'workout' ? '#10b981' : '#f59e0b',
                 padding: '0.2rem 0.5rem',
                 borderRadius: '4px',
                 letterSpacing: '0.05em'
               }}>
-                {docData.type === 'workout' ? 'Workout Plan' : docData.type === 'diet' ? 'Diet Plan' : 'General Document'}
+                {docData.type === 'workout' ? 'Workout Plan' : 'Diet Plan'}
               </span>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0.25rem 0 0 0', color: '#fff' }}>
                 {docData.title}
@@ -357,21 +357,41 @@ const PublicDocumentDownload = () => {
                     subItems.map((ex, idx) => (
                       <div key={ex.id} style={{
                         background: 'rgba(255, 255, 255, 0.02)',
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        border: ex.isCardio ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(255, 255, 255, 0.05)',
                         borderRadius: '8px',
                         padding: '1rem',
                         fontSize: '0.85rem'
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                           <strong style={{ color: '#fff' }}>{idx + 1}. {ex.name}</strong>
-                          <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Target: {ex.muscleGroup}</span>
+                          <span style={{ 
+                            fontSize: '0.7rem', 
+                            color: ex.isCardio ? '#10b981' : '#3b82f6', 
+                            background: ex.isCardio ? 'rgba(16,185,129,0.1)' : 'rgba(59,130,246,0.1)',
+                            padding: '1px 6px',
+                            borderRadius: '3px',
+                            fontWeight: 700,
+                            textTransform: 'uppercase'
+                          }}>
+                            {ex.isCardio ? 'Cardio' : (ex.muscleGroup || 'Strength')}
+                          </span>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                          <div>Sets: <strong>{ex.sets}</strong></div>
-                          <div>Reps: <strong>{ex.reps}</strong></div>
-                          <div>Weight: <strong>{ex.weight} kg</strong></div>
-                          <div>Rest: <strong>{ex.restTime}</strong></div>
-                        </div>
+
+                        {ex.isCardio ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                            <div>Duration: <strong>{ex.duration || 'N/A'}</strong></div>
+                            <div>Distance: <strong>{ex.distance || 'N/A'}</strong></div>
+                            <div>Speed/Intensity: <strong>{ex.speed || 'N/A'}</strong></div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                            <div>Sets: <strong>{ex.sets}</strong></div>
+                            <div>Reps: <strong>{ex.reps}</strong></div>
+                            <div>Weight: <strong>{ex.weight} kg</strong></div>
+                            <div>Rest: <strong>{ex.restTime}</strong></div>
+                          </div>
+                        )}
+
                         {ex.instructions && (
                           <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>
                             Instructions: {ex.instructions}
@@ -429,17 +449,6 @@ const PublicDocumentDownload = () => {
                   <strong>Allergens & Restrictions:</strong> {docData.restrictions}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* General Document Details */}
-          {docData.type === 'general' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', fontSize: '0.85rem' }}>
-              <div>Category Log: <strong>{docData.generalCategory}</strong></div>
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: '#fff' }}>Description Log</h3>
-                <p style={{ color: '#cbd5e1', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>{docData.generalDescription}</p>
-              </div>
             </div>
           )}
 

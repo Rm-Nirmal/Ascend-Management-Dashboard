@@ -190,6 +190,20 @@ const MemberDocuments = () => {
     }]);
   };
 
+  // Add cardio template
+  const handleAddCardio = () => {
+    setExercises(prev => [...prev, {
+      id: Date.now().toString() + Math.random().toString(),
+      name: '',
+      isCardio: true,
+      duration: '20 mins',
+      distance: '3 km',
+      speed: '8 km/h',
+      instructions: '',
+      notes: ''
+    }]);
+  };
+
   const handleDuplicateExercise = (idx) => {
     setExercises(prev => {
       const copy = [...prev];
@@ -684,22 +698,50 @@ const MemberDocuments = () => {
               <span class="profile-label">Member Profile</span>
               <span class="profile-value">${memberObj?.full_name || 'N/A'}</span>
               <span style="font-size:10px; color:#6b7280; margin-top:2px;">ID Code: ${memberObj?.member_code || 'N/A'}</span>
-              <span style="font-size:10px; color:#6b7280;">W: ${memberObj?.weight || 'N/A'}kg, H: ${memberObj?.height || 'N/A'}cm</span>
+              ${(() => {
+                const birthDate = memberObj?.date_of_birth ? new Date(memberObj.date_of_birth) : null;
+                const age = birthDate ? Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A';
+                const weight = memberObj?.weight_kg || 'N/A';
+                const height = memberObj?.height_cm || 'N/A';
+                const bmi = (memberObj?.weight_kg && memberObj?.height_cm) 
+                  ? (memberObj.weight_kg / Math.pow(memberObj.height_cm / 100, 2)).toFixed(1) 
+                  : 'N/A';
+                return `
+                  <span style="font-size:10px; color:#6b7280; display:block;">Age: ${age}</span>
+                  <span style="font-size:10px; color:#6b7280; display:block;">W: ${weight !== 'N/A' ? `${weight} kg` : 'N/A'} &bull; H: ${height !== 'N/A' ? `${height} cm` : 'N/A'} &bull; BMI: ${bmi}</span>
+                `;
+              })()}
             </div>
             <div class="profile-col">
               <span class="profile-label">Assigned Coach</span>
               <span class="profile-value">${trainerObj?.full_name || 'Unassigned'}</span>
-              <span style="font-size:10px; color:#6b7280; margin-top:2px;">Goal: ${docObj.goal || 'General Health'}</span>
-              <span style="font-size:10px; color:#6b7280;">Duration: ${docObj.duration || 'N/A'}</span>
+              <span style="font-size:10px; color:#6b7280; margin-top:2px; display:block;">Goal: ${docObj.goal || 'General Health'}</span>
+              <span style="font-size:10px; color:#6b7280; display:block;">Duration: ${docObj.duration || 'N/A'}</span>
             </div>
           </div>
 
           ${docType === 'workout' ? `
             <div class="section-title">Workout Schedule Exercises</div>
             ${subItems.length === 0 ? '<p style="color:#6b7280; font-style:italic;">No exercises defined in this workout schedule.</p>' : 
-              subItems.map((ex, idx) => `
-                <div class="card">
-                  <div class="card-title">${idx + 1}. ${ex.name} (${ex.muscleGroup})</div>
+              subItems.map((ex, idx) => ex.isCardio ? `
+                <div class="card" style="border-left: 4px solid #10b981; background: #f0fdf4;">
+                  <div class="card-title" style="color: #0f766e; display: flex; justify-content: space-between;">
+                    <span>${idx + 1}. ${ex.name}</span>
+                    <span style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; background: #10b981; color: #fff; padding: 2px 6px; border-radius: 3px;">Cardio</span>
+                  </div>
+                  <div class="grid-4" style="grid-template-columns: repeat(3, 1fr);">
+                    <div><span class="grid-item-label">Duration</span><div class="grid-item-val">${ex.duration || 'N/A'}</div></div>
+                    <div><span class="grid-item-label">Distance</span><div class="grid-item-val">${ex.distance || 'N/A'}</div></div>
+                    <div><span class="grid-item-label">Speed/Intensity</span><div class="grid-item-val">${ex.speed || 'N/A'}</div></div>
+                  </div>
+                  ${ex.instructions ? `<div class="instruction-text"><strong>Instructions:</strong> ${ex.instructions}</div>` : ''}
+                </div>
+              ` : `
+                <div class="card" style="border-left: 4px solid #3b82f6;">
+                  <div class="card-title" style="color: #1e3a8a; display: flex; justify-content: space-between;">
+                    <span>${idx + 1}. ${ex.name}</span>
+                    <span style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; background: #3b82f6; color: #fff; padding: 2px 6px; border-radius: 3px;">${ex.muscleGroup || 'Strength'}</span>
+                  </div>
                   <div class="grid-4">
                     <div><span class="grid-item-label">Sets</span><div class="grid-item-val">${ex.sets}</div></div>
                     <div><span class="grid-item-label">Reps</span><div class="grid-item-val">${ex.reps}</div></div>
@@ -710,7 +752,7 @@ const MemberDocuments = () => {
                 </div>
               `).join('')
             }
-          ` : docType === 'diet' ? `
+          ` : `
             <div class="section-title">Daily Nutrition Targets</div>
             <div class="macro-grid">
               <div class="macro-box"><span class="macro-label">Calories</span><span class="macro-val">${docObj.dailyCalories || 'N/A'} kcal</span></div>
@@ -740,9 +782,6 @@ const MemberDocuments = () => {
                 <strong>Allergens & Restrictions:</strong> ${docObj.restrictions}
               </div>
             ` : ''}
-          ` : `
-            <div class="section-title">Document Log Category: ${docObj.generalCategory || 'N/A'}</div>
-            <div class="card" style="white-space: pre-wrap; line-height: 1.6; font-size: 11px;">${docObj.generalDescription || ''}</div>
           `}
 
           <div class="footer-disclaimer">
@@ -1243,16 +1282,28 @@ const MemberDocuments = () => {
                     }}>
                       <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>Selected Member Bio</h4>
                       
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8rem' }}>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Name:</span> <strong>{selectedMember.full_name}</strong></div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Status:</span> <span style={{ color: '#10b981', fontWeight: 700 }}>Active</span></div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Age:</span> {selectedMember.age || 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Gender:</span> {selectedMember.gender || 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Height:</span> {selectedMember.height ? `${selectedMember.height} cm` : 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Weight:</span> {selectedMember.weight ? `${selectedMember.weight} kg` : 'N/A'}</div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>BMI:</span> {calculateBMI(selectedMember.weight, selectedMember.height)}</div>
-                        <div><span style={{ color: 'var(--text-muted)' }}>Assigned Trainer:</span> {trainers.find(t => t.id === selectedMember.trainer_id)?.full_name || 'Unassigned'}</div>
-                      </div>
+                      {(() => {
+                        const birthDate = selectedMember.date_of_birth ? new Date(selectedMember.date_of_birth) : null;
+                        const age = birthDate ? Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A';
+                        const weight = selectedMember.weight_kg || 'N/A';
+                        const height = selectedMember.height_cm || 'N/A';
+                        const bmi = (selectedMember.weight_kg && selectedMember.height_cm) 
+                          ? (selectedMember.weight_kg / Math.pow(selectedMember.height_cm / 100, 2)).toFixed(1) 
+                          : 'N/A';
+
+                        return (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8rem' }}>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Name:</span> <strong>{selectedMember.full_name}</strong></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Status:</span> <span style={{ color: '#10b981', fontWeight: 700 }}>Active</span></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Age:</span> {age}</div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Gender:</span> {selectedMember.gender || 'N/A'}</div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Height:</span> {height !== 'N/A' ? `${height} cm` : 'N/A'}</div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Weight:</span> {weight !== 'N/A' ? `${weight} kg` : 'N/A'}</div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>BMI:</span> {bmi}</div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Assigned Trainer:</span> {trainers.find(t => t.id === selectedMember.trainer_id)?.full_name || 'Unassigned'}</div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -1260,11 +1311,10 @@ const MemberDocuments = () => {
                   {selectedMember && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.5rem' }}>
                       <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Document Registry Category *</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                         {[
                           { id: 'workout', label: 'Workout Plan', icon: Dumbbell, desc: 'Schedules and sets' },
-                          { id: 'diet', label: 'Diet Plan', icon: Apple, desc: 'Meals and calorie targets' },
-                          { id: 'general', label: 'General Document', icon: FileText, desc: 'Agreements, assessed metrics' }
+                          { id: 'diet', label: 'Diet Plan', icon: Apple, desc: 'Meals and calorie targets' }
                         ].map(t => {
                           const isSel = docType === t.id;
                           const ItemIcon = t.icon;
@@ -1362,30 +1412,7 @@ const MemberDocuments = () => {
                     </div>
                   </div>
 
-                  {docType !== 'general' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Start Date</label>
-                        <input 
-                          type="date" 
-                          className="glass-input" 
-                          value={startDate} 
-                          onChange={e => setStartDate(e.target.value)}
-                          disabled={drawerMode === 'view'}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>End Date</label>
-                        <input 
-                          type="date" 
-                          className="glass-input" 
-                          value={endDate} 
-                          onChange={e => setEndDate(e.target.value)}
-                          disabled={drawerMode === 'view'}
-                        />
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* ─────────────────────────────────────────────────────────────
                       TYPE-SPECIFIC SECTION: WORKOUT FORM
@@ -1427,14 +1454,24 @@ const MemberDocuments = () => {
                             <Dumbbell size={14} /> Exercise Planner ({exercises.length})
                           </span>
                           {drawerMode !== 'view' && (
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={handleAddExercise}
-                              style={{ height: '30px', fontSize: '0.7rem', padding: '0 0.5rem', gap: '0.25rem' }}
-                            >
-                              <PlusCircle size={12} /> Add Exercise
-                            </button>
+                            <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={handleAddExercise}
+                                style={{ height: '30px', fontSize: '0.7rem', padding: '0 0.5rem', gap: '0.25rem' }}
+                              >
+                                <PlusCircle size={12} /> Add Exercise
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={handleAddCardio}
+                                style={{ height: '30px', fontSize: '0.7rem', padding: '0 0.5rem', gap: '0.25rem', borderColor: 'rgba(16,185,129,0.3)', color: '#10b981' }}
+                              >
+                                <PlusCircle size={12} /> Add Cardio
+                              </button>
+                            </div>
                           )}
                         </div>
 
@@ -1443,8 +1480,8 @@ const MemberDocuments = () => {
                             <div 
                               key={ex.id}
                               style={{
-                                background: 'rgba(255,255,255,0.01)',
-                                border: '1px solid var(--border-color)',
+                                background: ex.isCardio ? 'rgba(16,185,129,0.02)' : 'rgba(255,255,255,0.01)',
+                                border: ex.isCardio ? '1px solid rgba(16,185,129,0.2)' : '1px solid var(--border-color)',
                                 borderRadius: '8px',
                                 padding: '1rem',
                                 display: 'flex',
@@ -1471,73 +1508,114 @@ const MemberDocuments = () => {
                                 </div>
                               )}
 
-                              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', paddingRight: drawerMode === 'view' ? '0' : '6rem' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Exercise Name *</label>
-                                  <input 
-                                    type="text" 
-                                    required 
-                                    className="glass-input" 
-                                    style={{ height: '34px', fontSize: '0.8rem' }}
-                                    placeholder="Bench Press / Squats"
-                                    value={ex.name}
-                                    onChange={e => {
-                                      const copy = [...exercises];
-                                      copy[idx].name = e.target.value;
-                                      setExercises(copy);
-                                    }}
-                                    disabled={drawerMode === 'view'}
-                                  />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Muscle Group</label>
-                                  <select 
-                                    className="glass-select" 
-                                    style={{ height: '34px', fontSize: '0.8rem' }}
-                                    value={ex.muscleGroup}
-                                    onChange={e => {
-                                      const copy = [...exercises];
-                                      copy[idx].muscleGroup = e.target.value;
-                                      setExercises(copy);
-                                    }}
-                                    disabled={drawerMode === 'view'}
-                                  >
-                                    <option value="Chest">Chest</option>
-                                    <option value="Back">Back</option>
-                                    <option value="Legs">Legs</option>
-                                    <option value="Shoulders">Shoulders</option>
-                                    <option value="Arms">Arms</option>
-                                    <option value="Core">Core</option>
-                                    <option value="Full Body">Full Body</option>
-                                  </select>
-                                </div>
-                              </div>
+                              {ex.isCardio ? (
+                                // CARDIO LAYOUT
+                                <>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingRight: drawerMode === 'view' ? '0' : '6.rem' }}>
+                                    <label style={{ fontSize: '0.65rem', color: '#10b981', fontWeight: 600 }}>Cardio Exercise Name *</label>
+                                    <input 
+                                      type="text" 
+                                      required 
+                                      className="glass-input" 
+                                      style={{ height: '34px', fontSize: '0.8rem', borderColor: 'rgba(16,185,129,0.3)' }}
+                                      placeholder="Treadmill / Bicycle / Rowing"
+                                      value={ex.name}
+                                      onChange={e => {
+                                        const copy = [...exercises];
+                                        copy[idx].name = e.target.value;
+                                        setExercises(copy);
+                                      }}
+                                      disabled={drawerMode === 'view'}
+                                    />
+                                  </div>
 
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sets</label>
-                                  <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.sets} onChange={e => { const copy = [...exercises]; copy[idx].sets = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Reps</label>
-                                  <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.reps} onChange={e => { const copy = [...exercises]; copy[idx].reps = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Weight (kg)</label>
-                                  <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.weight} onChange={e => { const copy = [...exercises]; copy[idx].weight = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Rest Time</label>
-                                  <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.restTime} onChange={e => { const copy = [...exercises]; copy[idx].restTime = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
-                                </div>
-                              </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Duration (mins)</label>
+                                      <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.duration} onChange={e => { const copy = [...exercises]; copy[idx].duration = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Distance (km)</label>
+                                      <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.distance} onChange={e => { const copy = [...exercises]; copy[idx].distance = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Speed / Intensity</label>
+                                      <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.speed} onChange={e => { const copy = [...exercises]; copy[idx].speed = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                // STRENGTH LAYOUT
+                                <>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', paddingRight: drawerMode === 'view' ? '0' : '6rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Exercise Name *</label>
+                                      <input 
+                                        type="text" 
+                                        required 
+                                        className="glass-input" 
+                                        style={{ height: '34px', fontSize: '0.8rem' }}
+                                        placeholder="Bench Press / Squats"
+                                        value={ex.name}
+                                        onChange={e => {
+                                          const copy = [...exercises];
+                                          copy[idx].name = e.target.value;
+                                          setExercises(copy);
+                                        }}
+                                        disabled={drawerMode === 'view'}
+                                      />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Muscle Group</label>
+                                      <select 
+                                        className="glass-select" 
+                                        style={{ height: '34px', fontSize: '0.8rem' }}
+                                        value={ex.muscleGroup}
+                                        onChange={e => {
+                                          const copy = [...exercises];
+                                          copy[idx].muscleGroup = e.target.value;
+                                          setExercises(copy);
+                                        }}
+                                        disabled={drawerMode === 'view'}
+                                      >
+                                        <option value="Chest">Chest</option>
+                                        <option value="Back">Back</option>
+                                        <option value="Legs">Legs</option>
+                                        <option value="Shoulders">Shoulders</option>
+                                        <option value="Arms">Arms</option>
+                                        <option value="Core">Core</option>
+                                        <option value="Full Body">Full Body</option>
+                                      </select>
+                                    </div>
+                                  </div>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sets</label>
+                                      <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.sets} onChange={e => { const copy = [...exercises]; copy[idx].sets = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Reps</label>
+                                      <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.reps} onChange={e => { const copy = [...exercises]; copy[idx].reps = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Weight (kg)</label>
+                                      <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.weight} onChange={e => { const copy = [...exercises]; copy[idx].weight = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                      <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Rest Time</label>
+                                      <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.restTime} onChange={e => { const copy = [...exercises]; copy[idx].restTime = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                    </div>
+                                  </div>
+                                </>
+                              )}
 
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                 <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Execution Instructions</label>
                                 <textarea 
                                   className="glass-input" 
                                   style={{ height: '50px', fontSize: '0.75rem', padding: '6px 8px', resize: 'none' }}
-                                  placeholder="e.g. Keep elbows tucked in, control the negative motion..."
+                                  placeholder={ex.isCardio ? "e.g. Keep pace steady, adjust resistance as comfortable..." : "e.g. Keep elbows tucked in, control the negative motion..."}
                                   value={ex.instructions}
                                   onChange={e => {
                                     const copy = [...exercises];
