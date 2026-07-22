@@ -13,9 +13,10 @@ const SignaturePad = ({ value, onChange, disabled }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#06b6d4'; // Glowing modern cyan signature ink
+    ctx.lineWidth = 3;            // Slightly thicker stroke for better legibility
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
     if (value) {
       const img = new Image();
@@ -29,15 +30,32 @@ const SignaturePad = ({ value, onChange, disabled }) => {
     }
   }, [value]);
 
+  // Scaled coordinates mapper supporting various container constraints and responsive page views
+  const getCoordinates = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    // Scale coordinate outputs relative to internal canvas dimensions
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
+    return { x, y };
+  };
+
   const startDrawing = (e) => {
     if (disabled) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
+    const { x, y } = getCoordinates(e);
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -48,15 +66,12 @@ const SignaturePad = ({ value, onChange, disabled }) => {
     if (!isDrawing || disabled) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
+    const { x, y } = getCoordinates(e);
 
     ctx.lineTo(x, y);
     ctx.stroke();
-    if (e.touches) {
+    
+    if (e.cancelable) {
       e.preventDefault();
     }
   };
