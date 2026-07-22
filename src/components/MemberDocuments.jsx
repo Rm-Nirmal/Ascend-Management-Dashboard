@@ -432,32 +432,344 @@ const MemberDocuments = () => {
     await deleteMemberDocument(doc.id);
   };
 
-  // 4. Compiles the document to HTML viewer URL (matches other PDF/print mechanisms)
-  const handleGeneratePDF = async (docObj) => {
+  // 4. Compiles the document and opens a print-friendly preview window (matches employee/finance reports)
+  const handlePrintDocument = async (docObj) => {
     if (!canGeneratePdf) {
-      showToast('You do not have permission to generate PDFs.', 'warning');
+      showToast('You do not have permission to print documents.', 'warning');
       return;
     }
 
-    showToast('Compiling document...', 'info');
+    showToast('Preparing document layout...', 'info');
 
     try {
-      const viewerUrl = `${window.location.origin}${window.location.pathname}?view=download_document&docId=${docObj.id}`;
+      const docRefId = docObj.id;
+      const docType = docObj.type;
+      
+      // Fetch sub-items
+      const subItems = await getMemberDocumentSubItems(docRefId, docType);
+      const memberObj = members.find(m => m.id === docObj.memberId);
+      const trainerObj = trainers.find(t => t.id === docObj.trainerId);
+      
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        showToast('Pop-up blocker is enabled. Please allow pop-ups to print the plan.', 'error');
+        return;
+      }
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${docObj.title.toUpperCase()}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Oswald:wght@500;700&display=swap');
+            body {
+              font-family: 'Montserrat', Arial, sans-serif;
+              color: #0b0f19;
+              background: #ffffff;
+              padding: 40px;
+              font-size: 12px;
+              line-height: 1.5;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              border-bottom: 2px solid #0b0f19;
+              padding-bottom: 15px;
+              margin-bottom: 25px;
+            }
+            .gym-name {
+              font-family: 'Oswald', sans-serif;
+              font-size: 24px;
+              font-weight: 700;
+              letter-spacing: 1.5px;
+              text-transform: uppercase;
+              margin: 0;
+              color: #0b0f19;
+            }
+            .gym-info {
+              font-size: 11px;
+              color: #6b7280;
+              margin-top: 3px;
+            }
+            .report-info {
+              text-align: right;
+            }
+            .report-title {
+              font-family: 'Oswald', sans-serif;
+              font-size: 16px;
+              font-weight: 700;
+              letter-spacing: 1px;
+              margin: 0;
+              text-transform: uppercase;
+            }
+            .report-subtitle {
+              font-size: 11px;
+              color: #6b7280;
+              margin-top: 2px;
+            }
+            .profile-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 15px;
+              margin-bottom: 30px;
+              background: #fafafa;
+              border: 1px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 15px;
+            }
+            .profile-col {
+              display: flex;
+              flex-direction: column;
+            }
+            .profile-label {
+              font-size: 9px;
+              text-transform: uppercase;
+              font-weight: 700;
+              color: #6b7280;
+              letter-spacing: 0.5px;
+              margin-bottom: 4px;
+            }
+            .profile-value {
+              font-size: 12px;
+              font-weight: 600;
+              color: #0b0f19;
+            }
+            .section-title {
+              font-family: 'Oswald', sans-serif;
+              font-size: 14px;
+              font-weight: 700;
+              margin-top: 20px;
+              margin-bottom: 15px;
+              border-bottom: 1px solid #e5e7eb;
+              padding-bottom: 5px;
+              color: #0b0f19;
+            }
+            .card {
+              border: 1px solid #e5e7eb;
+              border-radius: 6px;
+              padding: 12px;
+              margin-bottom: 12px;
+              background: #fafafa;
+            }
+            .card-title {
+              font-weight: bold;
+              font-size: 13px;
+              margin-bottom: 6px;
+              color: #0b0f19;
+            }
+            .grid-4 {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+              background: #ffffff;
+              border: 1px solid #e5e7eb;
+              padding: 8px;
+              border-radius: 4px;
+              margin-bottom: 6px;
+              text-align: center;
+            }
+            .grid-item-label {
+              font-size: 8px;
+              text-transform: uppercase;
+              color: #6b7280;
+            }
+            .grid-item-val {
+              font-weight: 600;
+              font-size: 11px;
+            }
+            .instruction-text {
+              font-size: 10px;
+              color: #4b5563;
+              margin-top: 4px;
+            }
+            .macro-grid {
+              display: grid;
+              grid-template-columns: repeat(5, 1fr);
+              gap: 10px;
+              background: #f9fafb;
+              border: 1px solid #e5e7eb;
+              border-radius: 6px;
+              padding: 12px;
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            .macro-box {
+              display: flex;
+              flex-direction: column;
+            }
+            .macro-label {
+              font-size: 9px;
+              text-transform: uppercase;
+              color: #6b7280;
+            }
+            .macro-val {
+              font-size: 14px;
+              font-weight: 700;
+              color: #0b0f19;
+            }
+            .meal-box {
+              border-bottom: 1px solid #f3f4f6;
+              padding: 10px 0;
+            }
+            .meal-label {
+              font-weight: 700;
+              font-size: 11px;
+              color: #0b0f19;
+              margin-bottom: 4px;
+            }
+            .meal-text {
+              font-size: 11px;
+              color: #4b5563;
+            }
+            .footer-disclaimer {
+              margin-top: 40px;
+              font-size: 9px;
+              color: #9ca3af;
+              text-align: center;
+              border-top: 1px solid #e5e7eb;
+              padding-top: 10px;
+            }
+            @media print {
+              @page {
+                margin: 0;
+              }
+              body {
+                padding: 1.5cm;
+              }
+              .no-print-btn {
+                display: none !important;
+              }
+            }
+            .no-print-btn {
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              background: #0b0f19;
+              color: #ffffff;
+              border: none;
+              padding: 10px 20px;
+              font-family: 'Oswald', sans-serif;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              cursor: pointer;
+              border-radius: 4px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              transition: 0.2s;
+            }
+            .no-print-btn:hover {
+              background: #1f2937;
+            }
+          </style>
+        </head>
+        <body>
+          <button class="no-print-btn" onclick="window.print()">Print / Export PDF</button>
+
+          <div class="header">
+            <div>
+              <h1 class="gym-name">${gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS HQ'}</h1>
+              <div class="gym-info">${gymSettings?.address || 'HQ Operations Colombo'}</div>
+              <div class="gym-info">Email: ${gymSettings?.email || ''} | Tel: ${gymSettings?.phone || ''}</div>
+            </div>
+            <div class="report-info">
+              <h2 class="report-title">${docObj.title.toUpperCase()}</h2>
+              <div class="report-subtitle">Member Plan Document</div>
+            </div>
+          </div>
+
+          <div class="profile-grid">
+            <div class="profile-col">
+              <span class="profile-label">Member Profile</span>
+              <span class="profile-value">${memberObj?.full_name || 'N/A'}</span>
+              <span style="font-size:10px; color:#6b7280; margin-top:2px;">ID Code: ${memberObj?.member_code || 'N/A'}</span>
+              <span style="font-size:10px; color:#6b7280;">W: ${memberObj?.weight || 'N/A'}kg, H: ${memberObj?.height || 'N/A'}cm</span>
+            </div>
+            <div class="profile-col">
+              <span class="profile-label">Assigned Coach</span>
+              <span class="profile-value">${trainerObj?.full_name || 'Unassigned'}</span>
+              <span style="font-size:10px; color:#6b7280; margin-top:2px;">Goal: ${docObj.goal || 'General Health'}</span>
+              <span style="font-size:10px; color:#6b7280;">Duration: ${docObj.duration || 'N/A'}</span>
+            </div>
+          </div>
+
+          ${docType === 'workout' ? `
+            <div class="section-title">Workout Schedule Exercises</div>
+            ${subItems.length === 0 ? '<p style="color:#6b7280; font-style:italic;">No exercises defined in this workout schedule.</p>' : 
+              subItems.map((ex, idx) => `
+                <div class="card">
+                  <div class="card-title">${idx + 1}. ${ex.name} (${ex.muscleGroup})</div>
+                  <div class="grid-4">
+                    <div><span class="grid-item-label">Sets</span><div class="grid-item-val">${ex.sets}</div></div>
+                    <div><span class="grid-item-label">Reps</span><div class="grid-item-val">${ex.reps}</div></div>
+                    <div><span class="grid-item-label">Weight</span><div class="grid-item-val">${ex.weight} kg</div></div>
+                    <div><span class="grid-item-label">Rest</span><div class="grid-item-val">${ex.restTime}</div></div>
+                  </div>
+                  ${ex.instructions ? `<div class="instruction-text"><strong>Instructions:</strong> ${ex.instructions}</div>` : ''}
+                </div>
+              `).join('')
+            }
+          ` : docType === 'diet' ? `
+            <div class="section-title">Daily Nutrition Targets</div>
+            <div class="macro-grid">
+              <div class="macro-box"><span class="macro-label">Calories</span><span class="macro-val">${docObj.dailyCalories || 'N/A'} kcal</span></div>
+              <div class="macro-box"><span class="macro-label">Protein</span><span class="macro-val">${docObj.protein || 'N/A'} g</span></div>
+              <div class="macro-box"><span class="macro-label">Carbs</span><span class="macro-val">${docObj.carbs || 'N/A'} g</span></div>
+              <div class="macro-box"><span class="macro-label">Fat</span><span class="macro-val">${docObj.fat || 'N/A'} g</span></div>
+              <div class="macro-box"><span class="macro-label">Water</span><span class="macro-val">${docObj.waterIntake || 'N/A'} L</span></div>
+            </div>
+
+            <div class="section-title">Daily Meal Schedule</div>
+            ${[
+              { label: 'Breakfast', val: docObj.meals?.breakfast },
+              { label: 'Morning Snack', val: docObj.meals?.morningSnack },
+              { label: 'Lunch', val: docObj.meals?.lunch },
+              { label: 'Evening Snack', val: docObj.meals?.eveningSnack },
+              { label: 'Dinner', val: docObj.meals?.dinner },
+              { label: 'Supplements / Vitamins', val: docObj.meals?.supplements }
+            ].map(m => m.val ? `
+              <div class="meal-box">
+                <div class="meal-label">${m.label}</div>
+                <div class="meal-text">${m.val}</div>
+              </div>
+            ` : '').join('')}
+
+            ${docObj.restrictions ? `
+              <div style="margin-top:20px; background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:10px; border-radius:4px; font-size:11px;">
+                <strong>Allergens & Restrictions:</strong> ${docObj.restrictions}
+              </div>
+            ` : ''}
+          ` : `
+            <div class="section-title">Document Log Category: ${docObj.generalCategory || 'N/A'}</div>
+            <div class="card" style="white-space: pre-wrap; line-height: 1.6; font-size: 11px;">${docObj.generalDescription || ''}</div>
+          `}
+
+          <div class="footer-disclaimer">
+            Disclaimer: Please consult with your trainer before starting any plans. Powered by ${gymSettings?.gymName || 'Fitgencore'}.
+          </div>
+        </body>
+        </html>
+      `;
+      
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
       
       // Update in Firestore
       const { updateDoc, doc } = await import('firebase/firestore');
       const docRef = doc(db, 'memberDocuments', docObj.id);
+      const viewerUrl = `${window.location.origin}${window.location.pathname}?view=download_document&docId=${docObj.id}`;
       await updateDoc(docRef, {
         pdfUrl: viewerUrl,
         status: 'PDF Ready',
         generatedAt: new Date().toISOString()
       });
 
-      await logAudit('document.pdf_generate', 'member', null, `Compiled document PDF viewer link for ID ${docObj.id}`, currentUser?.name);
-      showToast('Branded document compiled successfully!', 'success');
+      await logAudit('document.pdf_generate', 'member', null, `Printed and compiled document PDF for ID ${docObj.id}`, currentUser?.name);
+      showToast('Document print layout generated!', 'success');
     } catch (err) {
       console.error(err);
-      showToast('Failed to compile document.', 'error');
+      showToast('Print failed to generate.', 'error');
     }
   };
 
@@ -745,8 +1057,8 @@ const MemberDocuments = () => {
                             <button 
                               className="btn btn-secondary" 
                               style={{ padding: '0.35rem', color: doc.pdfUrl ? '#10b981' : '#fff' }} 
-                              title={doc.pdfUrl ? "Open PDF Document" : "Compile PDF Document"} 
-                              onClick={() => doc.pdfUrl ? window.open(doc.pdfUrl, '_blank') : handleGeneratePDF(doc)}
+                              title="Print / Export PDF" 
+                              onClick={() => handlePrintDocument(doc)}
                             >
                               <Download size={12} />
                             </button>
