@@ -22,6 +22,8 @@ import PublicReceipt from './components/PublicReceipt';
 import PublicPayslip from './components/PublicPayslip';
 import PublicFinanceLog from './components/PublicFinanceLog';
 import ToastContainer from './components/Toast';
+import MemberDocuments from './components/MemberDocuments';
+import PublicDocumentDownload from './components/PublicDocumentDownload';
 
 // Inventory Management components
 import InventoryDashboard from './components/Inventory/InventoryDashboard';
@@ -341,19 +343,22 @@ const DashboardContentShell = () => {
       currentUser.role === 'owner'
     ) {
       return [
-        'overview', 'members', 'trainers', 'registrations', 'employees', 'access',
+        'overview', 'members', 'trainers', 'member_documents', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
         'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'inventory_reports', 'chat'
       ].includes(tab);
     }
     if (currentUser.role === 'admin') {
       return [
-        'overview', 'members', 'trainers', 'registrations', 'employees', 'access',
+        'overview', 'members', 'trainers', 'member_documents', 'registrations', 'employees', 'access',
         'finance', 'ai', 'audit', 'admin_management', 'client_settings', 'support_tickets',
         'inventory_dashboard', 'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock', 'inventory_suppliers', 'chat'
       ].includes(tab);
     }
     if (currentUser.role === 'standard_admin' || currentUser.role === 'gym_assistant') {
+      if (tab === 'member_documents') {
+        return currentUser.role === 'standard_admin' && currentUser.permissions?.viewDocs !== false;
+      }
       return [
         'members', 'trainers', 'registrations', 'access',
         'inventory_products', 'inventory_sell', 'inventory_categories', 'inventory_stock',
@@ -442,7 +447,17 @@ const DashboardContentShell = () => {
     }
   }, [gymSettings, currentUser]);
 
-  // Check if we are simulating the standalone public registration form
+  const isPublicDocumentDownload = window.location.search.includes('view=download_document') || window.location.hash.startsWith('#download_document');
+
+  if (isPublicDocumentDownload) {
+    return (
+      <>
+        <PublicDocumentDownload />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
+      </>
+    );
+  }
+
   const isPublicRegister = window.location.hash === '#register' || window.location.search.includes('view=register');
   const isPublicReceipt = window.location.search.includes('view=receipt') || window.location.hash.startsWith('#receipt');
   const isPublicFinanceLog = window.location.search.includes('view=income_log') || window.location.search.includes('view=expenses_log') || window.location.hash.startsWith('#income_log') || window.location.hash.startsWith('#expenses_log');
@@ -540,6 +555,8 @@ const DashboardContentShell = () => {
         return <Members />;
       case 'trainers':
         return <Trainers />;
+      case 'member_documents':
+        return <MemberDocuments />;
       case 'registrations':
         return <Registrations />;
       case 'employees':

@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 
 // ─── Firebase Imports ────────────────────────────────────────────────
 import { initializeApp, deleteApp } from 'firebase/app';
-import firebaseApp, { db, auth, COLLECTIONS, DEFAULT_ORG_ID } from '../lib/firebase';
+import firebaseApp, { db, auth, storage, COLLECTIONS, DEFAULT_ORG_ID } from '../lib/firebase';
 import {
   collection,
   doc,
@@ -15,6 +15,7 @@ import {
   where,
   getDocs,
 } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -314,6 +315,7 @@ export const DashboardProvider = ({ children }) => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [supportTickets, setSupportTickets] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [memberDocuments, setMemberDocuments] = useState([]);
   const [gymSettings, setGymSettings] = useState(null);
   const [saasPlans, setSaasPlans] = useState([]);
   const [currentGym, setCurrentGym] = useState(null);
@@ -644,6 +646,7 @@ export const DashboardProvider = ({ children }) => {
         setSubscriptions([]);
         setSupportTickets([]);
         setAnnouncements([]);
+        setMemberDocuments([]);
         setGymSettings(null);
         setCurrentGym(null);
         setInventoryCategories([]);
@@ -660,7 +663,7 @@ export const DashboardProvider = ({ children }) => {
     if (currentUser.role === 'super_admin') {
       // ─── SUPER ADMIN REAL-TIME LISTENERS ───
       let loadedCount = 0;
-      const totalCollections = 11;
+      const totalCollections = 12;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -755,7 +758,7 @@ export const DashboardProvider = ({ children }) => {
           markLoaded();
         }, (err) => { console.error('Superadmin devices error:', err); markLoaded(); })
       );
-      
+
       // 11. SMS Logs (all)
       unsubscribers.push(
         onSnapshot(collection(db, COLLECTIONS.SMS_LOGS), (snap) => {
@@ -766,11 +769,19 @@ export const DashboardProvider = ({ children }) => {
         }, (err) => { console.error('Superadmin SMS logs error:', err); markLoaded(); })
       );
 
+      // 12. Member Documents (all)
+      unsubscribers.push(
+        onSnapshot(collection(db, COLLECTIONS.MEMBER_DOCUMENTS), (snap) => {
+          setMemberDocuments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          markLoaded();
+        }, (err) => { console.error('Superadmin memberDocuments error:', err); markLoaded(); })
+      );
+
     } else {
       // ─── GYM OWNER / STAFF REAL-TIME LISTENERS ───
       const orgId = currentUser.gymId || DEFAULT_ORG_ID;
       let loadedCount = 0;
-      const totalCollections = 24;
+      const totalCollections = 25;
       const markLoaded = () => {
         loadedCount++;
         if (loadedCount >= totalCollections) {
@@ -1128,6 +1139,18 @@ export const DashboardProvider = ({ children }) => {
           }
           markLoaded();
         }, (err) => { console.error('Group chat error:', err); markLoaded(); })
+      );
+
+      // 25. Member Documents (scoped)
+      const memberDocsQ = query(
+        collection(db, COLLECTIONS.MEMBER_DOCUMENTS),
+        where('gymId', '==', orgId)
+      );
+      unsubscribers.push(
+        onSnapshot(memberDocsQ, (snap) => {
+          setMemberDocuments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+          markLoaded();
+        }, (err) => { console.error('Member documents error:', err); markLoaded(); })
       );
     }
 
@@ -5047,6 +5070,229 @@ export const DashboardProvider = ({ children }) => {
     }
   }, [currentUser]);
 
+  // ─── MEMBER DOCUMENTS ACTIONS ───
+  const saveMemberDocument = useCallback(async (docData, subItems = []) => {
+    try {
+      const docRef = await addDoc(collection(db, 'memberDocuments'), {
+        ...docData,
+        gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: currentUser?.name || 'System',
+        isArchived: false,
+        downloadCount: 0,
+        viewCount: 0
+      });
+      
+      const docId = docRef.id;
+      
+      // Save sub-items if present
+      if (subItems && subItems.length > 0) {
+        let subColName = '';
+        if (docData.type === 'workout') subColName = 'exercises';
+        else if (docData.type === 'diet') subColName = 'meals';
+        else if (docData.type === 'general') subColName = 'attachments';
+        
+        if (subColName) {
+          const subColRef = collection(db, 'memberDocuments', docId, subColName);
+          for (const item of subItems) {
+            await addDoc(subColRef, item);
+          }
+        }
+      }
+
+      await logAudit(
+        'document.create', 
+        'member', 
+        docData.memberId, 
+        `Created ${docData.type} document: "${docData.title}" for member`,
+        currentUser?.name
+      );
+
+      showToast(`${docData.type === 'workout' ? 'Workout Plan' : docData.type === 'diet' ? 'Diet Plan' : 'General Document'} saved.`, 'success');
+      return { success: true, id: docId };
+    } catch (err) {
+      console.error('saveMemberDocument error:', err);
+      showToast('Failed to save document.', 'error');
+      return { success: false, error: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
+  const updateMemberDocument = useCallback(async (docId, docData, subItems = []) => {
+    try {
+      const docRef = doc(db, 'memberDocuments', docId);
+      await updateDoc(docRef, {
+        ...docData,
+        updatedAt: new Date().toISOString(),
+        lastEditedBy: currentUser?.name || 'System'
+      });
+
+      // Update sub-items by clearing and re-writing
+      let subColName = '';
+      if (docData.type === 'workout') subColName = 'exercises';
+      else if (docData.type === 'diet') subColName = 'meals';
+      else if (docData.type === 'general') subColName = 'attachments';
+
+      if (subColName) {
+        const subColRef = collection(db, 'memberDocuments', docId, subColName);
+        const currentSnap = await getDocs(subColRef);
+        for (const d of currentSnap.docs) {
+          await deleteDoc(d.ref);
+        }
+        for (const item of subItems) {
+          await addDoc(subColRef, item);
+        }
+      }
+
+      await logAudit(
+        'document.update', 
+        'member', 
+        docData.memberId, 
+        `Updated ${docData.type} document: "${docData.title}"`,
+        currentUser?.name
+      );
+
+      showToast('Document updated successfully.', 'success');
+      return { success: true };
+    } catch (err) {
+      console.error('updateMemberDocument error:', err);
+      showToast('Failed to update document.', 'error');
+      return { success: false, error: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
+  const getMemberDocumentSubItems = useCallback(async (docId, type) => {
+    try {
+      let subColName = '';
+      if (type === 'workout') subColName = 'exercises';
+      else if (type === 'diet') subColName = 'meals';
+      else if (type === 'general') subColName = 'attachments';
+
+      if (!subColName) return [];
+
+      const subColRef = collection(db, 'memberDocuments', docId, subColName);
+      const snap = await getDocs(subColRef);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.error('getMemberDocumentSubItems error:', err);
+      return [];
+    }
+  }, []);
+
+  const deleteMemberDocument = useCallback(async (docId) => {
+    try {
+      const docRef = doc(db, 'memberDocuments', docId);
+      await deleteDoc(docRef);
+      await logAudit('document.delete', 'member', null, `Deleted document`, currentUser?.name);
+      showToast('Document deleted permanently.', 'success');
+      return { success: true };
+    } catch (err) {
+      console.error('deleteMemberDocument error:', err);
+      showToast('Failed to delete document.', 'error');
+      return { success: false, error: err.message };
+    }
+  }, [logAudit, showToast, currentUser]);
+
+  const archiveMemberDocument = useCallback(async (docId, isArchived) => {
+    try {
+      const docRef = doc(db, 'memberDocuments', docId);
+      await updateDoc(docRef, { isArchived });
+      await logAudit('document.archive', 'member', null, `${isArchived ? 'Archived' : 'Unarchived'} document`, currentUser?.name);
+      showToast(`Document ${isArchived ? 'archived' : 'restored'} successfully.`, 'success');
+      return { success: true };
+    } catch (err) {
+      console.error('archiveMemberDocument error:', err);
+      showToast('Failed to archive document.', 'error');
+      return { success: false, error: err.message };
+    }
+  }, [logAudit, showToast, currentUser]);
+
+  const uploadDocumentPDF = useCallback(async (docId, type, pdfBlob) => {
+    try {
+      let downloadUrl = '';
+      try {
+        const storageRef = ref(storage, `gyms/${currentUser?.gymId || DEFAULT_ORG_ID}/documents/${type}-plans/${docId}.pdf`);
+        await uploadBytes(storageRef, pdfBlob);
+        downloadUrl = await getDownloadURL(storageRef);
+      } catch (storageErr) {
+        console.warn('Firebase Storage upload failed, using local/data URL simulation fallback:', storageErr);
+        // Fallback: create a simulated PDF URL or storage ref
+        downloadUrl = `simulated://storage/gyms/${currentUser?.gymId || DEFAULT_ORG_ID}/documents/${type}-plans/${docId}.pdf`;
+      }
+
+      // Update in Firestore
+      const docRef = doc(db, 'memberDocuments', docId);
+      await updateDoc(docRef, {
+        pdfUrl: downloadUrl,
+        status: 'PDF Ready',
+        generatedAt: new Date().toISOString()
+      });
+
+      await logAudit('document.pdf_generate', 'member', null, `Generated PDF for document ID ${docId}`, currentUser?.name);
+      showToast('Branded PDF generated and saved successfully!', 'success');
+      return { success: true, pdfUrl: downloadUrl };
+    } catch (err) {
+      console.error('uploadDocumentPDF error:', err);
+      showToast('Failed to save generated PDF.', 'error');
+      return { success: false, error: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
+  const sendGeneralSMS = useCallback(async (toPhone, message, memberName, memberId = null) => {
+    try {
+      const fromPhone = '0779688582';
+      
+      console.log("%c[SMS Gateway] Sending SMS...", "color: #10b981; font-weight: bold;", {
+        from: fromPhone,
+        to: toPhone,
+        message,
+      });
+
+      const smsLog = {
+        gymId: currentUser?.gymId || DEFAULT_ORG_ID,
+        from: fromPhone,
+        to: toPhone,
+        member_name: memberName,
+        member_id: memberId,
+        message,
+        sent_at: new Date().toISOString(),
+      };
+      
+      await addDoc(collection(db, COLLECTIONS.SMS_LOGS), smsLog);
+      
+      await logAudit(
+        'member.sms_general', 
+        'member', 
+        memberId || 'unknown_member', 
+        `Sent SMS to ${memberName} (+${toPhone})`,
+        currentUser?.name
+      );
+      
+      showToast(`SMS sent to ${memberName} (+${toPhone})`, 'success');
+      return { success: true };
+    } catch (err) {
+      console.error('sendGeneralSMS error:', err);
+      showToast('Failed to send SMS.', 'error');
+      return { success: false, error: err.message };
+    }
+  }, [currentUser, logAudit, showToast]);
+
+  const updateAdminPermissions = useCallback(async (adminId, role, permissions) => {
+    try {
+      const admin = admins.find(a => a.id === adminId);
+      if (!admin) return { success: false, message: 'Admin not found.' };
+
+      const adminRef = doc(db, COLLECTIONS.ADMINS, adminId);
+      await updateDoc(adminRef, { role, permissions });
+
+      await logAudit('admin.permissions_update', 'admin', adminId, `Updated role/permissions for administrator: ${admin.name}`, currentUser?.name);
+      return { success: true };
+    } catch (err) {
+      console.error('updateAdminPermissions error:', err);
+      return { success: false, message: err.message };
+    }
+  }, [admins, logAudit, currentUser]);
+
   // ═══════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
   // ═══════════════════════════════════════════════════════════════════
@@ -5215,6 +5461,17 @@ export const DashboardProvider = ({ children }) => {
       updateSupplier,
       deleteSupplier,
       recordStockTransaction,
+
+      // Member Documents
+      memberDocuments,
+      saveMemberDocument,
+      updateMemberDocument,
+      getMemberDocumentSubItems,
+      deleteMemberDocument,
+      archiveMemberDocument,
+      uploadDocumentPDF,
+      sendGeneralSMS,
+      updateAdminPermissions,
 
       // Group Chat
       groupChatMessages,

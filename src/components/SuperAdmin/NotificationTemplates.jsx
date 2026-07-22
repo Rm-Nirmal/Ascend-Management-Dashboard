@@ -9,10 +9,11 @@ const NotificationTemplates = () => {
   const [templateName, setTemplateName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Filter out any templates that are not welcome or pay
+  // Filter out any templates that are not welcome, pay or document
   const templatesList = [
     { id: 't_welcome', name: 'New Registration Welcome', defaultBody: 'Welcome to {{gym_name}}, {{name}}! Your membership code is {{code}}. Scan your QR code at the entrance gate to check in.' },
-    { id: 't_pay', name: 'Payment Reminder Alert', defaultBody: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} was due on {{date}} at {{gym_name}}.' }
+    { id: 't_pay', name: 'Payment Reminder Alert', defaultBody: 'Hello {{name}}, this is a friendly reminder that invoice {{invoice}} for LKR {{amount}} was due on {{date}} at {{gym_name}}.' },
+    { id: 't_document', name: 'Document Ready Notification', defaultBody: 'Hello {{MemberName}}\n\nYour {{DocumentType}} is ready.\n\nDownload it here:\n{{DownloadLink}}\n\nRegards,\n{{GymName}}' }
   ];
 
   // Retrieve current active template from database or fall back to default
@@ -52,7 +53,13 @@ const NotificationTemplates = () => {
     if (activeTemplateId === 't_welcome') {
       return ['{{name}}', '{{code}}', '{{gym_name}}'];
     }
-    return ['{{name}}', '{{invoice}}', '{{amount}}', '{{date}}', '{{gym_name}}'];
+    if (activeTemplateId === 't_pay') {
+      return ['{{name}}', '{{invoice}}', '{{amount}}', '{{date}}', '{{gym_name}}'];
+    }
+    if (activeTemplateId === 't_document') {
+      return ['{{MemberName}}', '{{DocumentType}}', '{{DownloadLink}}', '{{GymName}}'];
+    }
+    return [];
   };
 
   return (

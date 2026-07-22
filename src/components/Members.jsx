@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Plus, Search, Trash2, Eye, X, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign
+  Plus, Search, Trash2, Eye, X, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign, Download
 } from 'lucide-react';
 
 const Members = () => {
@@ -20,15 +20,15 @@ const Members = () => {
     showToast,
     gymSettings,
     undoPayment,
-    helperCalculateUndoCountdownEnd
+    helperCalculateUndoCountdownEnd,
+    memberDocuments
   } = useDashboard();
 
   // Component States
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedMember, setSelectedMember] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showMedical, setShowMedical] = useState(false);
+  const [profileTab, setProfileTab] = useState('info'); // 'info', 'documents'
   const [activeSubTab, setActiveSubTab] = useState('directory');
   const [currentFinancialsPage, setCurrentFinancialsPage] = useState(1);
   const financialItemsPerPage = 10;
@@ -1011,7 +1011,7 @@ const Members = () => {
                             className="btn btn-secondary" 
                             style={{ padding: '0.4rem' }}
                             title="View Profile Details"
-                            onClick={() => { setSelectedMember(member); setShowMedical(false); setShowFreezeForm(false); }}
+                            onClick={() => { setSelectedMember(member); setProfileTab('info'); setShowMedical(false); setShowFreezeForm(false); }}
                           >
                             <Eye size={14} />
                           </button>
@@ -1236,7 +1236,7 @@ const Members = () => {
                                 className="btn btn-secondary" 
                                 style={{ padding: '0.4rem' }}
                                 title="View Profile Details"
-                                onClick={() => { setSelectedMember(member); setShowMedical(false); setShowFreezeForm(false); }}
+                                onClick={() => { setSelectedMember(member); setProfileTab('info'); setShowMedical(false); setShowFreezeForm(false); }}
                               >
                                 <Eye size={14} />
                               </button>
@@ -1366,8 +1366,44 @@ const Members = () => {
               </button>
             </div>
 
-            {/* Core details */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.15)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
+            {/* Tab Selector */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '1.25rem', gap: '1rem' }}>
+              <button
+                onClick={() => setProfileTab('info')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: profileTab === 'info' ? '2px solid #ffffff' : '2px solid transparent',
+                  color: profileTab === 'info' ? '#ffffff' : 'var(--text-muted)',
+                  padding: '0.5rem 0.25rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Profile Info
+              </button>
+              <button
+                onClick={() => setProfileTab('documents')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: profileTab === 'documents' ? '2px solid #ffffff' : '2px solid transparent',
+                  color: profileTab === 'documents' ? '#ffffff' : 'var(--text-muted)',
+                  padding: '0.5rem 0.25rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Documents History
+              </button>
+            </div>
+
+            {profileTab === 'info' ? (
+              <>
+                {/* Core details */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,0,0,0.15)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
               <div>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Contact info</span>
                 <div style={{ fontSize: '0.85rem', marginTop: '0.15rem' }}>Email: {selectedMember.email}</div>
@@ -1731,6 +1767,75 @@ const Members = () => {
                 </div>
               )}
             </div>
+          </>
+        ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Assigned Documents History</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {(() => {
+                    const docs = memberDocuments?.filter(d => d.memberId === selectedMember.id && !d.isArchived) || [];
+                    if (docs.length === 0) {
+                      return (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.15)', borderRadius: '10px', fontSize: '0.85rem' }}>
+                          No documents assigned to this member yet.
+                        </div>
+                      );
+                    }
+                    return docs.map(doc => {
+                      const trainerObj = trainers.find(t => t.id === doc.trainerId);
+                      return (
+                        <div 
+                          key={doc.id}
+                          style={{
+                            background: 'rgba(255,255,255,0.01)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                            padding: '1rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>{doc.title}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                              Type: <span style={{ textTransform: 'capitalize' }}>{doc.type}</span> &bull; Trainer: {trainerObj?.full_name || 'Unassigned'}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                              Created: {new Date(doc.createdAt).toLocaleDateString()} &bull; Status: <span style={{ color: doc.status === 'Sent' ? '#a855f7' : doc.status === 'PDF Ready' ? '#10b981' : 'var(--text-muted)', fontWeight: 600 }}>{doc.status}</span>
+                            </div>
+                            {doc.lastSentAt && (
+                              <div style={{ fontSize: '0.65rem', color: '#a855f7', marginTop: '0.15rem' }}>
+                                Shared via SMS on {new Date(doc.lastSentAt).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.35rem' }}>
+                            {doc.pdfUrl && (
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                style={{ padding: '0.35rem' }}
+                                title="Download PDF"
+                                onClick={() => {
+                                  if (doc.pdfUrl.startsWith('simulated://')) {
+                                    alert('Simulated URL: ' + doc.pdfUrl);
+                                  } else {
+                                    window.open(doc.pdfUrl, '_blank');
+                                  }
+                                }}
+                              >
+                                <Download size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}

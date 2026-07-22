@@ -28,7 +28,8 @@ import {
   ShoppingBag,
   Clock,
   UserCheck,
-  MessageSquare
+  MessageSquare,
+  FolderOpen
 } from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
@@ -74,6 +75,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'overview', name: 'Dashboard Overview', icon: LayoutDashboard },
     { id: 'members', name: 'Members Directory', icon: Users },
     { id: 'trainers', name: 'Personal Trainers', icon: UserCheck },
+    { id: 'member_documents', name: 'Member Documents', icon: FolderOpen },
     { id: 'registrations', name: 'Registration Queue', icon: UserPlus },
     { id: 'employees', name: 'Employees Desk', icon: Briefcase },
     { id: 'chat', name: 'Team Chat', icon: MessageSquare },
@@ -111,6 +113,9 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
     }
     
     // Regular gym staff (including standard_admin) can only access:
+    if (item.id === 'member_documents') {
+      return currentUser.role === 'standard_admin' && currentUser.permissions?.viewDocs !== false;
+    }
     return ['members', 'trainers', 'registrations', 'access', 'break_timer', 'finance'].includes(item.id);
   });
 

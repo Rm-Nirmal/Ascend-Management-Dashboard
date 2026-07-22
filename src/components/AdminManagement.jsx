@@ -18,7 +18,8 @@ const AdminManagement = () => {
     addPlan,
     updatePlan,
     deletePlan,
-    employees
+    employees,
+    updateAdminPermissions
   } = useDashboard();
 
   // Navigation Subtab State
@@ -35,6 +36,52 @@ const AdminManagement = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+
+  // Standard Admin Permissions states
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [permissionsTargetAdmin, setPermissionsTargetAdmin] = useState(null);
+  const [permissionsForm, setPermissionsForm] = useState({
+    viewDocs: true,
+    createDocs: true,
+    editDocs: true,
+    generatePdf: true,
+    sendSms: true,
+    deleteDocs: true
+  });
+  const [isUpdatingPermissions, setIsUpdatingPermissions] = useState(false);
+
+  const handleOpenPermissionsModal = (admin) => {
+    setPermissionsTargetAdmin(admin);
+    setPermissionsForm({
+      viewDocs: admin.permissions?.viewDocs !== false,
+      createDocs: admin.permissions?.createDocs !== false,
+      editDocs: admin.permissions?.editDocs !== false,
+      generatePdf: admin.permissions?.generatePdf !== false,
+      sendSms: admin.permissions?.sendSms !== false,
+      deleteDocs: admin.permissions?.deleteDocs !== false
+    });
+    setShowPermissionsModal(true);
+  };
+
+  const handlePermissionsSubmit = async (e) => {
+    e.preventDefault();
+    setIsUpdatingPermissions(true);
+    try {
+      const res = await updateAdminPermissions(permissionsTargetAdmin.id, permissionsTargetAdmin.role, permissionsForm);
+      if (res.success) {
+        setShowPermissionsModal(false);
+        setPermissionsTargetAdmin(null);
+        if (showToast) showToast('Permissions updated successfully!', 'success');
+      } else {
+        alert(res.message || 'Failed to update permissions.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setIsUpdatingPermissions(false);
+    }
+  };
 
   const availableEmployees = useMemo(() => {
     if (!employees || !admins) return [];
@@ -411,6 +458,18 @@ const AdminManagement = () => {
                           >
                             <Key size={12} />
                           </button>
+
+                          {/* Edit Permissions (only for standard admin) */}
+                          {admin.role === 'standard_admin' && (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.35rem' }} 
+                              title="Edit Permissions"
+                              onClick={() => handleOpenPermissionsModal(admin)}
+                            >
+                              <Shield size={12} />
+                            </button>
+                          )}
 
                           {/* Delete Account */}
                           <button 
@@ -790,6 +849,67 @@ const AdminManagement = () => {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   {editingPlan ? 'Save Changes' : 'Create Plan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────
+          MODAL: Edit Standard Admin Permissions
+          ───────────────────────────────────────────────────────────────── */}
+      {showPermissionsModal && permissionsTargetAdmin && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Shield size={18} style={{ color: 'var(--color-primary)' }} />
+                Manage Document Permissions
+              </h2>
+              <button 
+                onClick={() => { setShowPermissionsModal(false); setPermissionsTargetAdmin(null); }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Configure member documents access permissions for standard administrator <strong style={{ color: '#fff' }}>{permissionsTargetAdmin.name}</strong>.
+            </div>
+
+            <form onSubmit={handlePermissionsSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(0,0,0,0.15)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                {[
+                  { key: 'viewDocs', label: 'View Documents', desc: 'Allows viewing documents list and document details.' },
+                  { key: 'createDocs', label: 'Create Documents', desc: 'Allows creating new draft documents.' },
+                  { key: 'editDocs', label: 'Edit Documents', desc: 'Allows modifying existing draft/PDF documents.' },
+                  { key: 'generatePdf', label: 'Generate PDF', desc: 'Allows compiling and uploading branded document PDFs.' },
+                  { key: 'sendSms', label: 'Send SMS', desc: 'Allows sharing secure download links with members via SMS.' },
+                  { key: 'deleteDocs', label: 'Delete Documents', desc: 'Allows permanently deleting documents from the system.' }
+                ].map(p => (
+                  <label key={p.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer', padding: '0.25rem 0' }}>
+                    <input 
+                      type="checkbox" 
+                      style={{ marginTop: '0.2rem' }}
+                      checked={permissionsForm[p.key] !== false} 
+                      onChange={e => setPermissionsForm({ ...permissionsForm, [p.key]: e.target.checked })}
+                    />
+                    <div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)' }}>{p.label}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              <div className="grid-2 margin-t-1">
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowPermissionsModal(false); setPermissionsTargetAdmin(null); }}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={isUpdatingPermissions}>
+                  {isUpdatingPermissions ? 'Saving...' : 'Save Permissions'}
                 </button>
               </div>
             </form>

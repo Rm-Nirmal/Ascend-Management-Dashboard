@@ -1,0 +1,1617 @@
+import { useState, useMemo, useEffect } from 'react';
+import { useDashboard } from '../context/DashboardContext';
+import { db } from '../lib/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { jsPDF } from 'jspdf';
+import { 
+  Folder, Plus, Search, Calendar, User, FileText, Dumbbell, Apple, 
+  Trash2, Edit, Copy, Archive, Send, Download, Eye, X, PlusCircle, 
+  ChevronUp, ChevronDown, Check, Info, Settings, Loader2
+} from 'lucide-react';
+
+const MemberDocuments = () => {
+  const { 
+    memberDocuments, 
+    members, 
+    trainers, 
+    currentUser, 
+    plans,
+    saveMemberDocument,
+    updateMemberDocument,
+    getMemberDocumentSubItems,
+    deleteMemberDocument,
+    archiveMemberDocument,
+    uploadDocumentPDF,
+    sendGeneralSMS,
+    showToast
+  } = useDashboard();
+
+  // Fine-grained Standard Admin Permission checks
+  const canView = currentUser?.role !== 'standard_admin' || currentUser.permissions?.viewDocs !== false;
+  const canCreate = currentUser?.role !== 'standard_admin' || currentUser.permissions?.createDocs !== false;
+  const canEdit = currentUser?.role !== 'standard_admin' || currentUser.permissions?.editDocs !== false;
+  const canGeneratePdf = currentUser?.role !== 'standard_admin' || currentUser.permissions?.generatePdf !== false;
+  const canSendSms = currentUser?.role !== 'standard_admin' || currentUser.permissions?.sendSms !== false;
+  const canDelete = currentUser?.role !== 'standard_admin' || currentUser.permissions?.deleteDocs !== false;
+
+  // Tabs & Filters
+  const [activeTab, setActiveTab] = useState('workout'); // 'workout', 'diet', 'general'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [trainerFilter, setTrainerFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+
+  // Drawer States
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState('create'); // 'create', 'edit', 'view'
+  const [selectedDocId, setSelectedDocId] = useState(null);
+
+  // Drawer Step & Form States
+  const [drawerStep, setDrawerStep] = useState(1);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [docType, setDocType] = useState('workout'); // 'workout', 'diet', 'general'
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form Fields
+  const [docTitle, setDocTitle] = useState('');
+  const [docGoal, setDocGoal] = useState('');
+  const [docDifficulty, setDocDifficulty] = useState('Beginner');
+  const [docDuration, setDocDuration] = useState('4 Weeks');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [docTrainerId, setDocTrainerId] = useState('');
+  const [docNotes, setDocNotes] = useState('');
+  const [docAttachments, setDocAttachments] = useState('');
+
+  // Workout specific
+  const [exercises, setExercises] = useState([]);
+
+  // Diet specific
+  const [dailyCalories, setDailyCalories] = useState('');
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fat, setFat] = useState('');
+  const [waterIntake, setWaterIntake] = useState('');
+  const [meals, setMeals] = useState({
+    breakfast: '',
+    morningSnack: '',
+    lunch: '',
+    eveningSnack: '',
+    dinner: '',
+    supplements: ''
+  });
+  const [nutritionNotes, setNutritionNotes] = useState('');
+  const [restrictions, setRestrictions] = useState('');
+
+  // General specific
+  const [generalCategory, setGeneralCategory] = useState('Progress Report');
+  const [generalDescription, setGeneralDescription] = useState('');
+  const [generalNotes, setGeneralNotes] = useState('');
+
+  // SMS Modal State
+  const [showSMSModal, setShowSMSModal] = useState(false);
+  const [smsTargetDoc, setSmsTargetDoc] = useState(null);
+  const [smsPreviewText, setSmsPreviewText] = useState('');
+  const [isSendingSMS, setIsSendingSMS] = useState(false);
+
+  // 1. Calculate Statistics
+  const stats = useMemo(() => {
+    const activeDocs = memberDocuments.filter(d => !d.isArchived);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    return {
+      total: activeDocs.length,
+      workout: activeDocs.filter(d => d.type === 'workout').length,
+      diet: activeDocs.filter(d => d.type === 'diet').length,
+      general: activeDocs.filter(d => d.type === 'general').length,
+      sentToday: activeDocs.filter(d => d.lastSentAt?.startsWith(todayStr)).length,
+      drafts: activeDocs.filter(d => d.status === 'Draft').length,
+      pendingSMS: activeDocs.filter(d => d.status === 'PDF Ready').length,
+      recentlyUpdated: activeDocs.filter(d => new Date(d.updatedAt) > sevenDaysAgo).length
+    };
+  }, [memberDocuments]);
+
+  // 2. Filter & Sort Documents
+  const filteredDocuments = useMemo(() => {
+    return memberDocuments
+      .filter(doc => {
+        // Tab Filter
+        if (doc.type !== activeTab) return false;
+        // Archive check
+        if (doc.isArchived) return false;
+
+        // Search Query
+        const memberObj = members.find(m => m.id === doc.memberId);
+        const trainerObj = trainers.find(t => t.id === doc.trainerId);
+        
+        const matchesSearch = 
+          doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          memberObj?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          trainerObj?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        if (!matchesSearch) return false;
+
+        // Status Filter
+        if (statusFilter !== 'all' && doc.status !== statusFilter) return false;
+
+        // Trainer Filter
+        if (trainerFilter !== 'all' && doc.trainerId !== trainerFilter) return false;
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
+        if (sortBy === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+        if (sortBy === 'recently_sent') {
+          if (!a.lastSentAt) return 1;
+          if (!b.lastSentAt) return -1;
+          return new Date(b.lastSentAt) - new Date(a.lastSentAt);
+        }
+        if (sortBy === 'alphabetical') return a.title.localeCompare(b.title);
+        return 0;
+      });
+  }, [memberDocuments, activeTab, searchQuery, statusFilter, trainerFilter, sortBy, members, trainers]);
+
+  // 3. BMI Helper
+  const calculateBMI = (weight, height) => {
+    if (!weight || !height) return 'N/A';
+    const hMeter = height / 100;
+    const bmiVal = weight / (hMeter * hMeter);
+    return bmiVal.toFixed(1);
+  };
+
+  // Member options filtering for Autocomplete
+  const activeMembersList = useMemo(() => {
+    return members.filter(m => {
+      const isSearchMatch = m.full_name?.toLowerCase().includes(memberSearchQuery.toLowerCase()) || m.member_code?.toLowerCase().includes(memberSearchQuery.toLowerCase());
+      const isActive = m.status === 'active';
+      return isSearchMatch && isActive;
+    });
+  }, [members, memberSearchQuery]);
+
+  // Add exercise template
+  const handleAddExercise = () => {
+    setExercises(prev => [...prev, {
+      id: Date.now().toString() + Math.random().toString(),
+      name: '',
+      muscleGroup: 'Chest',
+      sets: '3',
+      reps: '12',
+      weight: '15',
+      restTime: '60s',
+      duration: 'N/A',
+      instructions: '',
+      notes: ''
+    }]);
+  };
+
+  const handleDuplicateExercise = (idx) => {
+    setExercises(prev => {
+      const copy = [...prev];
+      const dup = { ...copy[idx], id: Date.now().toString() + Math.random().toString() };
+      copy.splice(idx + 1, 0, dup);
+      return copy;
+    });
+  };
+
+  const handleDeleteExercise = (idx) => {
+    setExercises(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleMoveExercise = (idx, direction) => {
+    setExercises(prev => {
+      const copy = [...prev];
+      if (direction === 'up' && idx > 0) {
+        const temp = copy[idx];
+        copy[idx] = copy[idx - 1];
+        copy[idx - 1] = temp;
+      } else if (direction === 'down' && idx < copy.length - 1) {
+        const temp = copy[idx];
+        copy[idx] = copy[idx + 1];
+        copy[idx + 1] = temp;
+      }
+      return copy;
+    });
+  };
+
+  const resetForm = () => {
+    setSelectedMember(null);
+    setMemberSearchQuery('');
+    setDocTitle('');
+    setDocGoal('');
+    setDocDifficulty('Beginner');
+    setDocDuration('4 Weeks');
+    setStartDate('');
+    setEndDate('');
+    setDocTrainerId('');
+    setDocNotes('');
+    setDocAttachments('');
+    setExercises([]);
+    setDailyCalories('');
+    setProtein('');
+    setCarbs('');
+    setFat('');
+    setWaterIntake('');
+    setMeals({
+      breakfast: '',
+      morningSnack: '',
+      lunch: '',
+      eveningSnack: '',
+      dinner: '',
+      supplements: ''
+    });
+    setNutritionNotes('');
+    setRestrictions('');
+    setGeneralCategory('Progress Report');
+    setGeneralDescription('');
+    setGeneralNotes('');
+    setDrawerStep(1);
+    setSelectedDocId(null);
+  };
+
+  const handleOpenCreate = () => {
+    if (!canCreate) {
+      showToast('You do not have permission to create documents.', 'warning');
+      return;
+    }
+    resetForm();
+    setDrawerMode('create');
+    setIsDrawerOpen(true);
+  };
+
+  const handleOpenEdit = async (doc) => {
+    if (!canEdit) {
+      showToast('You do not have permission to edit documents.', 'warning');
+      return;
+    }
+    resetForm();
+    setDrawerMode('edit');
+    setSelectedDocId(doc.id);
+    setDocType(doc.type);
+    
+    // Set member
+    const mem = members.find(m => m.id === doc.memberId);
+    setSelectedMember(mem || null);
+
+    setDocTitle(doc.title || '');
+    setDocGoal(doc.goal || '');
+    setDocDifficulty(doc.difficulty || 'Beginner');
+    setDocDuration(doc.duration || '4 Weeks');
+    setStartDate(doc.startDate || '');
+    setEndDate(doc.endDate || '');
+    setDocTrainerId(doc.trainerId || '');
+    setDocNotes(doc.notes || '');
+    setDocAttachments(doc.attachments || '');
+
+    if (doc.type === 'workout') {
+      const subItems = await getMemberDocumentSubItems(doc.id, 'workout');
+      setExercises(subItems);
+    } else if (doc.type === 'diet') {
+      setDailyCalories(doc.dailyCalories || '');
+      setProtein(doc.protein || '');
+      setCarbs(doc.carbs || '');
+      setFat(doc.fat || '');
+      setWaterIntake(doc.waterIntake || '');
+      setMeals({
+        breakfast: doc.meals?.breakfast || '',
+        morningSnack: doc.meals?.morningSnack || '',
+        lunch: doc.meals?.lunch || '',
+        eveningSnack: doc.meals?.eveningSnack || '',
+        dinner: doc.meals?.dinner || '',
+        supplements: doc.meals?.supplements || ''
+      });
+      setNutritionNotes(doc.nutritionNotes || '');
+      setRestrictions(doc.restrictions || '');
+    } else {
+      setGeneralCategory(doc.generalCategory || 'Progress Report');
+      setGeneralDescription(doc.generalDescription || '');
+      setGeneralNotes(doc.generalNotes || '');
+    }
+
+    setDrawerStep(2);
+    setIsDrawerOpen(true);
+  };
+
+  const handleOpenView = async (doc) => {
+    await handleOpenEdit(doc);
+    setDrawerMode('view');
+  };
+
+  const handleSave = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedMember) {
+      showToast('Please select a member first.', 'warning');
+      return;
+    }
+    if (!docTitle.trim()) {
+      showToast('Please enter a document title.', 'warning');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const docData = {
+      memberId: selectedMember.id,
+      trainerId: docTrainerId || selectedMember.trainer_id || '',
+      type: docType,
+      title: docTitle.trim(),
+      goal: docGoal,
+      difficulty: docDifficulty,
+      duration: docDuration,
+      startDate,
+      endDate,
+      notes: docNotes,
+      attachments: docAttachments,
+      status: 'Draft',
+      // Diet specific
+      dailyCalories,
+      protein,
+      carbs,
+      fat,
+      waterIntake,
+      meals,
+      nutritionNotes,
+      restrictions,
+      // General specific
+      generalCategory,
+      generalDescription,
+      generalNotes
+    };
+
+    let subItems = [];
+    if (docType === 'workout') {
+      subItems = exercises;
+    }
+
+    try {
+      if (drawerMode === 'create') {
+        const res = await saveMemberDocument(docData, subItems);
+        if (res.success) {
+          setIsDrawerOpen(false);
+          resetForm();
+        }
+      } else {
+        const res = await updateMemberDocument(selectedDocId, docData, subItems);
+        if (res.success) {
+          setIsDrawerOpen(false);
+          resetForm();
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDuplicate = async (doc) => {
+    if (!canCreate) {
+      showToast('You do not have permission to duplicate documents.', 'warning');
+      return;
+    }
+    const confirm = window.confirm(`Duplicate "${doc.title}" document?`);
+    if (!confirm) return;
+
+    try {
+      const subItems = await getMemberDocumentSubItems(doc.id, doc.type);
+      const dupData = {
+        ...doc,
+        title: `${doc.title} (Copy)`,
+        status: 'Draft',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: currentUser?.name || 'System'
+      };
+      delete dupData.id;
+      delete dupData.pdfUrl;
+      delete dupData.generatedAt;
+      delete dupData.lastSentAt;
+
+      await saveMemberDocument(dupData, subItems);
+    } catch (err) {
+      showToast('Failed to duplicate document.', 'error');
+    }
+  };
+
+  const handleArchiveToggle = async (doc) => {
+    await archiveMemberDocument(doc.id, !doc.isArchived);
+  };
+
+  const handleDelete = async (doc) => {
+    if (!canDelete) {
+      showToast('You do not have permission to delete documents.', 'warning');
+      return;
+    }
+    const confirm = window.confirm(`Permanently delete "${doc.title}"? This cannot be undone.`);
+    if (!confirm) return;
+    await deleteMemberDocument(doc.id);
+  };
+
+  // 4. professional branded PDF generation using jsPDF
+  const handleGeneratePDF = async (docObj) => {
+    if (!canGeneratePdf) {
+      showToast('You do not have permission to generate PDFs.', 'warning');
+      return;
+    }
+
+    showToast('Compiling document styles...', 'info');
+
+    try {
+      const docRefId = docObj.id;
+      const docType = docObj.type;
+      
+      // Fetch sub-items
+      const subItems = await getMemberDocumentSubItems(docRefId, docType);
+      const memberObj = members.find(m => m.id === docObj.memberId);
+      const trainerObj = trainers.find(t => t.id === docObj.trainerId);
+
+      const pdf = new jsPDF();
+      let y = 20;
+
+      // Branded Gym Header
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(22);
+      pdf.setTextColor(15, 23, 42); // dark slate primary
+      pdf.text("ASCEND FITNESS CLUB", 20, y);
+      
+      y += 8;
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(100, 116, 139);
+      pdf.text("200 Temple Road, Colombo 07, Sri Lanka | support@ascend.lk", 20, y);
+      
+      pdf.setLineWidth(0.5);
+      pdf.setDrawColor(200, 200, 200);
+      y += 5;
+      pdf.line(20, y, 190, y);
+
+      // Document details
+      y += 12;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(14);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text(`${docObj.title.toUpperCase()}`, 20, y);
+
+      y += 6;
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "italic");
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Type: ${docType === 'workout' ? 'Workout Schedule' : docType === 'diet' ? 'Nutrition Meal Plan' : 'General Document Log'}`, 20, y);
+
+      // Member & Trainer Details Grid
+      y += 10;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text("MEMBER PROFILE", 20, y);
+      pdf.text("TRAINER / COACH", 110, y);
+
+      y += 5;
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(70, 70, 70);
+      pdf.text(`Name: ${memberObj?.full_name || 'N/A'}`, 20, y);
+      pdf.text(`Trainer: ${trainerObj?.full_name || 'N/A'}`, 110, y);
+      
+      y += 5;
+      pdf.text(`Code: ${memberObj?.member_code || 'N/A'}`, 20, y);
+      pdf.text(`Goal: ${docObj.goal || 'General Health'}`, 110, y);
+
+      y += 5;
+      pdf.text(`BMI: ${calculateBMI(memberObj?.weight, memberObj?.height)}`, 20, y);
+      pdf.text(`Duration: ${docObj.duration || 'N/A'}`, 110, y);
+
+      y += 7;
+      pdf.line(20, y, 190, y);
+
+      // Render content based on type
+      if (docType === 'workout') {
+        y += 12;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.setTextColor(15, 23, 42);
+        pdf.text("EXERCISE BUILDER", 20, y);
+
+        if (subItems.length === 0) {
+          y += 8;
+          pdf.setFont("helvetica", "italic");
+          pdf.text("No exercises listed inside plan.", 20, y);
+        } else {
+          subItems.forEach((ex, idx) => {
+            if (y > 250) {
+              pdf.addPage();
+              y = 20;
+            }
+            y += 10;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(10);
+            pdf.setTextColor(15, 23, 42);
+            pdf.text(`${idx + 1}. ${ex.name} (${ex.muscleGroup})`, 20, y);
+
+            y += 5;
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(9);
+            pdf.setTextColor(80, 80, 80);
+            pdf.text(`Sets: ${ex.sets} | Reps: ${ex.reps} | Weight: ${ex.weight}kg | Rest: ${ex.restTime}`, 25, y);
+
+            if (ex.instructions) {
+              y += 5;
+              pdf.text(`Instructions: ${ex.instructions}`, 25, y);
+            }
+          });
+        }
+      } else if (docType === 'diet') {
+        y += 12;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.setTextColor(15, 23, 42);
+        pdf.text("DAILY MACRONUTRITION TARGETS", 20, y);
+
+        y += 8;
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor(80, 80, 80);
+        pdf.text(`Daily Target Calories: ${docObj.dailyCalories || 'N/A'} kcal`, 20, y);
+        pdf.text(`Protein Target: ${docObj.protein || 'N/A'}g`, 110, y);
+        
+        y += 5;
+        pdf.text(`Carbohydrates: ${docObj.carbs || 'N/A'}g`, 20, y);
+        pdf.text(`Fat Target: ${docObj.fat || 'N/A'}g`, 110, y);
+
+        y += 5;
+        pdf.text(`Water Intake: ${docObj.waterIntake || 'N/A'} Liters`, 20, y);
+
+        // Meals Table
+        y += 12;
+        pdf.setFont("helvetica", "bold");
+        pdf.text("DAILY MEAL SCHEDULE", 20, y);
+
+        const mealSchedule = [
+          { name: 'Breakfast', val: docObj.meals?.breakfast },
+          { name: 'Morning Snack', val: docObj.meals?.morningSnack },
+          { name: 'Lunch', val: docObj.meals?.lunch },
+          { name: 'Evening Snack', val: docObj.meals?.eveningSnack },
+          { name: 'Dinner', val: docObj.meals?.dinner },
+          { name: 'Supplements', val: docObj.meals?.supplements }
+        ];
+
+        mealSchedule.forEach(m => {
+          if (m.val) {
+            if (y > 250) {
+              pdf.addPage();
+              y = 20;
+            }
+            y += 10;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(9);
+            pdf.text(m.name, 20, y);
+            
+            y += 4;
+            pdf.setFont("helvetica", "normal");
+            pdf.text(m.val, 25, y);
+          }
+        });
+      } else {
+        // General Document
+        y += 12;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.text("DOCUMENT DETAILS", 20, y);
+
+        y += 8;
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.text(`Category: ${docObj.generalCategory || 'N/A'}`, 20, y);
+
+        y += 8;
+        pdf.text("Description:", 20, y);
+        y += 5;
+        const splitDesc = pdf.splitTextToSize(docObj.generalDescription || '', 170);
+        pdf.text(splitDesc, 20, y);
+      }
+
+      // Footer disclaimer
+      pdf.setFontSize(8);
+      pdf.setTextColor(150, 150, 150);
+      pdf.text("Disclaimer: Please consult with your trainer before starting any plans. Formulated by Ascend Fit Management Suite.", 20, 280);
+
+      const pdfBlob = pdf.output('blob');
+      
+      // Upload PDF to storage
+      await uploadDocumentPDF(docObj.id, docType, pdfBlob);
+
+    } catch (err) {
+      console.error(err);
+      showToast('PDF Generation Failed.', 'error');
+    }
+  };
+
+  // 5. SMS sharing template preview
+  const handleOpenSMSModal = (docObj) => {
+    if (!canSendSms) {
+      showToast('You do not have permission to send SMS.', 'warning');
+      return;
+    }
+    if (!docObj.pdfUrl) {
+      showToast('Please generate the PDF document first.', 'warning');
+      return;
+    }
+
+    const memberObj = members.find(m => m.id === docObj.memberId);
+    if (!memberObj) return;
+
+    // Secure Link format
+    const link = `${window.location.origin}/?view=download_document&docId=${docObj.id}`;
+    
+    // Construct SMS body template
+    const text = `Hello ${memberObj.full_name}\n\nYour ${docObj.type === 'workout' ? 'Workout Plan' : docObj.type === 'diet' ? 'Diet Plan' : 'General Document'} is ready.\n\nDownload it here:\n${link}\n\nRegards,\nAscend Fitness Club`;
+
+    setSmsTargetDoc(docObj);
+    setSmsPreviewText(text);
+    setShowSMSModal(true);
+  };
+
+  const handleConfirmSendSMS = async () => {
+    if (!smsTargetDoc) return;
+    const memberObj = members.find(m => m.id === smsTargetDoc.memberId);
+    if (!memberObj?.phone) {
+      showToast('Member has no phone number configured.', 'error');
+      return;
+    }
+
+    setIsSendingSMS(true);
+    try {
+      const res = await sendGeneralSMS(memberObj.phone, smsPreviewText, memberObj.full_name, memberObj.id);
+      if (res.success) {
+        // Update document status to Sent
+        const { updateDoc, doc } = await import('firebase/firestore');
+        const docRef = doc(db, 'memberDocuments', smsTargetDoc.id);
+        await updateDoc(docRef, {
+          status: 'Sent',
+          lastSentAt: new Date().toISOString()
+        });
+        setShowSMSModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSendingSMS(false);
+    }
+  };
+
+  if (!canView) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <h3>Access Denied</h3>
+        <p>You do not have sufficient permissions to view member documents.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Folder size={24} /> Member Documents Center
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+            Manage workout plans, diet plans, assessment reports and member document registries.
+          </p>
+        </div>
+        {canCreate && (
+          <button className="btn btn-primary" onClick={handleOpenCreate} style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+            <Plus size={16} /> Create Document
+          </button>
+        )}
+      </div>
+
+      {/* Statistics Cards Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+        {[
+          { label: 'Total Documents', val: stats.total, color: 'var(--color-primary)' },
+          { label: 'Workout Plans', val: stats.workout, color: '#10b981' },
+          { label: 'Diet Plans', val: stats.diet, color: '#f59e0b' },
+          { label: 'General Documents', val: stats.general, color: '#3b82f6' },
+          { label: 'Sent Today', val: stats.sentToday, color: '#a855f7' },
+          { label: 'Draft Documents', val: stats.drafts, color: 'var(--text-muted)' },
+          { label: 'Pending SMS', val: stats.pendingSMS, color: '#fb7185' },
+          { label: 'Updated (Last 7d)', val: stats.recentlyUpdated, color: 'var(--color-warning)' }
+        ].map((s, idx) => (
+          <div key={idx} style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderLeft: `4px solid ${s.color}`,
+            borderRadius: '10px',
+            padding: '1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
+          }}>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              {s.label}
+            </span>
+            <strong style={{ fontSize: '1.5rem', color: 'var(--text-main)', marginTop: '0.25rem' }}>
+              {s.val}
+            </strong>
+          </div>
+        ))}
+      </div>
+
+      {/* Subtab Navigation (Categories) */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', gap: '1.5rem', marginBottom: '0.5rem' }}>
+        {[
+          { id: 'workout', label: 'Workout Plans', icon: Dumbbell },
+          { id: 'diet', label: 'Diet Plans', icon: Apple },
+          { id: 'general', label: 'General Documents', icon: FileText }
+        ].map(t => {
+          const isActive = activeTab === t.id;
+          const TabIcon = t.icon;
+          return (
+            <button
+              key={t.id}
+              onClick={() => { setActiveTab(t.id); setStatusFilter('all'); }}
+              style={{
+                background: 'none',
+                border: 'none',
+                borderBottom: isActive ? '2.5px solid #ffffff' : '2.5px solid transparent',
+                color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                padding: '0.5rem 0.25rem',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}
+            >
+              <TabIcon size={16} />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filters & Sorting Panel */}
+      <div className="glass-card" style={{ padding: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flexGrow: 1, minWidth: '220px' }}>
+          <Search size={14} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input 
+            type="text"
+            className="glass-input"
+            style={{ paddingLeft: '2.25rem', height: '36px', fontSize: '0.825rem' }}
+            placeholder="Search by title, member or trainer..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Status Filter */}
+        <select 
+          className="glass-select"
+          style={{ height: '36px', fontSize: '0.825rem', width: '130px', padding: '0 8px' }}
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All Statuses</option>
+          <option value="Draft">Draft</option>
+          <option value="PDF Ready">PDF Ready</option>
+          <option value="Sent">Sent</option>
+          <option value="Viewed">Viewed</option>
+          <option value="Completed">Completed</option>
+          <option value="Expired">Expired</option>
+        </select>
+
+        {/* Trainer Filter */}
+        <select
+          className="glass-select"
+          style={{ height: '36px', fontSize: '0.825rem', width: '150px', padding: '0 8px' }}
+          value={trainerFilter}
+          onChange={e => setTrainerFilter(e.target.value)}
+        >
+          <option value="all">All Trainers</option>
+          {trainers.map(t => (
+            <option key={t.id} value={t.id}>{t.full_name}</option>
+          ))}
+        </select>
+
+        {/* Sort selector */}
+        <select 
+          className="glass-select"
+          style={{ height: '36px', fontSize: '0.825rem', width: '140px', padding: '0 8px' }}
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="recently_sent">Recently Sent</option>
+          <option value="alphabetical">Alphabetical</option>
+        </select>
+      </div>
+
+      {/* Main Documents Table Grid */}
+      <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-container">
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Document Title</th>
+                <th>Category</th>
+                <th>Trainer</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Last Updated</th>
+                <th>Last Sent</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDocuments.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                    No matching member documents found.
+                  </td>
+                </tr>
+              ) : (
+                filteredDocuments.map(doc => {
+                  const memberObj = members.find(m => m.id === doc.memberId);
+                  const trainerObj = trainers.find(t => t.id === doc.trainerId);
+                  
+                  // Status Badge Colors
+                  let badgeClass = 'badge-pending';
+                  if (doc.status === 'PDF Ready') badgeClass = 'badge-active';
+                  else if (doc.status === 'Sent') badgeClass = 'badge-on_leave';
+                  else if (doc.status === 'Draft') badgeClass = 'badge-frozen';
+
+                  return (
+                    <tr key={doc.id}>
+                      <td>
+                        <strong style={{ fontSize: '0.85rem' }}>{memberObj?.full_name || 'Unknown Member'}</strong>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {memberObj?.member_code || doc.memberId}</div>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{doc.title}</td>
+                      <td>
+                        <span style={{ fontSize: '0.75rem', textTransform: 'capitalize', color: 'var(--text-muted)' }}>
+                          {doc.type}
+                        </span>
+                      </td>
+                      <td>{trainerObj?.full_name || 'Unassigned'}</td>
+                      <td>
+                        <span className={`badge ${badgeClass}`} style={{ fontSize: '0.65rem' }}>
+                          {doc.status}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.75rem' }}>{new Date(doc.createdAt).toLocaleDateString()}</td>
+                      <td style={{ fontSize: '0.75rem' }}>{new Date(doc.updatedAt).toLocaleDateString()}</td>
+                      <td style={{ fontSize: '0.75rem' }}>
+                        {doc.lastSentAt ? new Date(doc.lastSentAt).toLocaleDateString() : 'Never'}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.35rem' }}>
+                          {/* View details */}
+                          <button className="btn btn-secondary" style={{ padding: '0.35rem' }} title="View Details" onClick={() => handleOpenView(doc)}>
+                            <Eye size={12} />
+                          </button>
+
+                          {/* Edit details */}
+                          {canEdit && (
+                            <button className="btn btn-secondary" style={{ padding: '0.35rem' }} title="Edit Document" onClick={() => handleOpenEdit(doc)}>
+                              <Edit size={12} />
+                            </button>
+                          )}
+
+                          {/* Generate PDF */}
+                          {canGeneratePdf && (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.35rem', color: doc.pdfUrl ? '#10b981' : '#fff' }} 
+                              title="Generate PDF" 
+                              onClick={() => handleGeneratePDF(doc)}
+                            >
+                              <Download size={12} />
+                            </button>
+                          )}
+
+                          {/* Send SMS */}
+                          {canSendSms && (
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '0.35rem', color: doc.pdfUrl ? '#a855f7' : 'var(--text-dark)' }} 
+                              disabled={!doc.pdfUrl}
+                              title={doc.pdfUrl ? "Send SMS with link" : "Generate PDF first"} 
+                              onClick={() => handleOpenSMSModal(doc)}
+                            >
+                              <Send size={12} />
+                            </button>
+                          )}
+
+                          {/* Duplicate */}
+                          {canCreate && (
+                            <button className="btn btn-secondary" style={{ padding: '0.35rem' }} title="Duplicate Template" onClick={() => handleDuplicate(doc)}>
+                              <Copy size={12} />
+                            </button>
+                          )}
+
+                          {/* Archive */}
+                          {canEdit && (
+                            <button className="btn btn-secondary" style={{ padding: '0.35rem' }} title="Archive" onClick={() => handleArchiveToggle(doc)}>
+                              <Archive size={12} />
+                            </button>
+                          )}
+
+                          {/* Delete */}
+                          {canDelete && (
+                            <button className="btn btn-secondary" style={{ padding: '0.35rem', color: 'var(--color-danger)' }} title="Delete Document" onClick={() => handleDelete(doc)}>
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────────
+          RIGHT DRAWER: CREATE / EDIT / VIEW DOCUMENT WIZARD
+          ───────────────────────────────────────────────────────────────── */}
+      {isDrawerOpen && (
+        <>
+          <div className="modal-overlay" onClick={() => setIsDrawerOpen(false)} style={{ background: 'rgba(0,0,0,0.5)' }} />
+          <div className="drawer-content" style={{ maxWidth: '640px', width: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', flexShrink: 0 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 700 }}>
+                {drawerMode === 'view' ? 'Document Overview' : drawerMode === 'edit' ? 'Edit Document Settings' : 'Create Member Document'}
+              </h2>
+              <button 
+                onClick={() => setIsDrawerOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Wizard Steps indicator */}
+              {drawerMode === 'create' && (
+                <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px dashed var(--border-color)', paddingBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: drawerStep === 1 ? '#ffffff' : 'rgba(255,255,255,0.1)',
+                      color: drawerStep === 1 ? '#000000' : '#ffffff',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 700
+                    }}>1</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: drawerStep === 1 ? 700 : 500 }}>Select Member</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: drawerStep === 2 ? '#ffffff' : 'rgba(255,255,255,0.1)',
+                      color: drawerStep === 2 ? '#000000' : '#ffffff',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 700
+                    }}>2</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: drawerStep === 2 ? 700 : 500 }}>Formulate Content</span>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 1: SELECT MEMBER */}
+              {drawerStep === 1 && drawerMode === 'create' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Search Active Gym Member *</label>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input 
+                        type="text"
+                        className="glass-input"
+                        style={{ paddingLeft: '2.5rem' }}
+                        placeholder="Type name or code (e.g. John Silva)..."
+                        value={memberSearchQuery}
+                        onChange={e => { setMemberSearchQuery(e.target.value); setSelectedMember(null); }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Autocomplete Results Box */}
+                  {!selectedMember && memberSearchQuery.trim() && (
+                    <div style={{
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      maxHeight: '180px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}>
+                      {activeMembersList.length === 0 ? (
+                        <div style={{ padding: '1rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          No active members found. Only active members can receive documents.
+                        </div>
+                      ) : (
+                        activeMembersList.map(m => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedMember(m);
+                              setMemberSearchQuery(m.full_name);
+                              setDocTrainerId(m.trainer_id || '');
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              padding: '0.75rem 1rem',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid var(--border-color)',
+                              fontSize: '0.85rem',
+                              display: 'flex',
+                              justifyContent: 'space-between'
+                            }}
+                          >
+                            <span>{m.full_name} <strong>({m.member_code})</strong></span>
+                            <span style={{ color: 'var(--color-success)', fontSize: '0.7rem' }}>Active</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Selected Member Details */}
+                  {selectedMember && (
+                    <div style={{
+                      background: 'rgba(0,0,0,0.15)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.85rem'
+                    }}>
+                      <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>Selected Member Bio</h4>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8rem' }}>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Name:</span> <strong>{selectedMember.full_name}</strong></div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Status:</span> <span style={{ color: '#10b981', fontWeight: 700 }}>Active</span></div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Age:</span> {selectedMember.age || 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Gender:</span> {selectedMember.gender || 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Height:</span> {selectedMember.height ? `${selectedMember.height} cm` : 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Weight:</span> {selectedMember.weight ? `${selectedMember.weight} kg` : 'N/A'}</div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>BMI:</span> {calculateBMI(selectedMember.weight, selectedMember.height)}</div>
+                        <div><span style={{ color: 'var(--text-muted)' }}>Assigned Trainer:</span> {trainers.find(t => t.id === selectedMember.trainer_id)?.full_name || 'Unassigned'}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Select Document Type */}
+                  {selectedMember && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.5rem' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Document Registry Category *</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                        {[
+                          { id: 'workout', label: 'Workout Plan', icon: Dumbbell, desc: 'Schedules and sets' },
+                          { id: 'diet', label: 'Diet Plan', icon: Apple, desc: 'Meals and calorie targets' },
+                          { id: 'general', label: 'General Document', icon: FileText, desc: 'Agreements, assessed metrics' }
+                        ].map(t => {
+                          const isSel = docType === t.id;
+                          const ItemIcon = t.icon;
+                          return (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => setDocType(t.id)}
+                              style={{
+                                background: isSel ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                border: isSel ? '1px solid #ffffff' : '1px solid var(--border-color)',
+                                color: isSel ? '#ffffff' : 'var(--text-muted)',
+                                borderRadius: '8px',
+                                padding: '1rem 0.75rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                textAlign: 'center',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <ItemIcon size={20} />
+                              <strong style={{ fontSize: '0.8rem' }}>{t.label}</strong>
+                              <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>{t.desc}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedMember && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => setDrawerStep(2)}
+                      style={{ marginTop: '1rem', justifyContent: 'center' }}
+                    >
+                      Next Step: Formulate Content
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* STEP 2: FORMULATE CONTENT */}
+              {drawerStep === 2 && (
+                <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Bio badge */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
+                    <span>Target Member: <strong>{selectedMember?.full_name}</strong></span>
+                    <span>Category: <strong style={{ textTransform: 'capitalize' }}>{docType}</strong></span>
+                  </div>
+
+                  {/* Core Document Info Fields */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Document Title *</label>
+                    <input 
+                      type="text" 
+                      required 
+                      className="glass-input" 
+                      placeholder="e.g. Muscle Gain Phase 1 / Keto Meal Plan"
+                      value={docTitle} 
+                      onChange={e => setDocTitle(e.target.value)}
+                      disabled={drawerMode === 'view'}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Goal Description</label>
+                      <input 
+                        type="text" 
+                        className="glass-input" 
+                        placeholder="e.g. Fat Loss / Hypertrophy"
+                        value={docGoal} 
+                        onChange={e => setDocGoal(e.target.value)}
+                        disabled={drawerMode === 'view'}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Assigned Trainer</label>
+                      <select 
+                        className="glass-select"
+                        value={docTrainerId}
+                        onChange={e => setDocTrainerId(e.target.value)}
+                        disabled={drawerMode === 'view'}
+                      >
+                        <option value="">Select Trainer...</option>
+                        {trainers.map(t => (
+                          <option key={t.id} value={t.id}>{t.full_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {docType !== 'general' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Start Date</label>
+                        <input 
+                          type="date" 
+                          className="glass-input" 
+                          value={startDate} 
+                          onChange={e => setStartDate(e.target.value)}
+                          disabled={drawerMode === 'view'}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>End Date</label>
+                        <input 
+                          type="date" 
+                          className="glass-input" 
+                          value={endDate} 
+                          onChange={e => setEndDate(e.target.value)}
+                          disabled={drawerMode === 'view'}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─────────────────────────────────────────────────────────────
+                      TYPE-SPECIFIC SECTION: WORKOUT FORM
+                      ───────────────────────────────────────────────────────────── */}
+                  {docType === 'workout' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Difficulty Level</label>
+                          <select 
+                            className="glass-select"
+                            value={docDifficulty}
+                            onChange={e => setDocDifficulty(e.target.value)}
+                            disabled={drawerMode === 'view'}
+                          >
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                            <option value="Elite">Elite VIP</option>
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Duration Cycle</label>
+                          <input 
+                            type="text" 
+                            className="glass-input" 
+                            placeholder="e.g. 6 Weeks / 12 Weeks"
+                            value={docDuration} 
+                            onChange={e => setDocDuration(e.target.value)}
+                            disabled={drawerMode === 'view'}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Exercises Builder */}
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Dumbbell size={14} /> Exercise Planner ({exercises.length})
+                          </span>
+                          {drawerMode !== 'view' && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={handleAddExercise}
+                              style={{ height: '30px', fontSize: '0.7rem', padding: '0 0.5rem', gap: '0.25rem' }}
+                            >
+                              <PlusCircle size={12} /> Add Exercise
+                            </button>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                          {exercises.map((ex, idx) => (
+                            <div 
+                              key={ex.id}
+                              style={{
+                                background: 'rgba(255,255,255,0.01)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                                padding: '1rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.75rem',
+                                position: 'relative'
+                              }}
+                            >
+                              {/* Drag/Move & Delete Actions */}
+                              {drawerMode !== 'view' && (
+                                <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', display: 'inline-flex', gap: '0.25rem' }}>
+                                  <button type="button" className="btn btn-secondary" style={{ padding: '0.25rem', height: '24px' }} onClick={() => handleMoveExercise(idx, 'up')} disabled={idx === 0}>
+                                    <ChevronUp size={12} />
+                                  </button>
+                                  <button type="button" className="btn btn-secondary" style={{ padding: '0.25rem', height: '24px' }} onClick={() => handleMoveExercise(idx, 'down')} disabled={idx === exercises.length - 1}>
+                                    <ChevronDown size={12} />
+                                  </button>
+                                  <button type="button" className="btn btn-secondary" style={{ padding: '0.25rem', height: '24px' }} onClick={() => handleDuplicateExercise(idx)}>
+                                    <Copy size={12} />
+                                  </button>
+                                  <button type="button" className="btn btn-secondary" style={{ padding: '0.25rem', height: '24px', color: 'var(--color-danger)' }} onClick={() => handleDeleteExercise(idx)}>
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              )}
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', paddingRight: drawerMode === 'view' ? '0' : '6rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Exercise Name *</label>
+                                  <input 
+                                    type="text" 
+                                    required 
+                                    className="glass-input" 
+                                    style={{ height: '34px', fontSize: '0.8rem' }}
+                                    placeholder="Bench Press / Squats"
+                                    value={ex.name}
+                                    onChange={e => {
+                                      const copy = [...exercises];
+                                      copy[idx].name = e.target.value;
+                                      setExercises(copy);
+                                    }}
+                                    disabled={drawerMode === 'view'}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Muscle Group</label>
+                                  <select 
+                                    className="glass-select" 
+                                    style={{ height: '34px', fontSize: '0.8rem' }}
+                                    value={ex.muscleGroup}
+                                    onChange={e => {
+                                      const copy = [...exercises];
+                                      copy[idx].muscleGroup = e.target.value;
+                                      setExercises(copy);
+                                    }}
+                                    disabled={drawerMode === 'view'}
+                                  >
+                                    <option value="Chest">Chest</option>
+                                    <option value="Back">Back</option>
+                                    <option value="Legs">Legs</option>
+                                    <option value="Shoulders">Shoulders</option>
+                                    <option value="Arms">Arms</option>
+                                    <option value="Core">Core</option>
+                                    <option value="Full Body">Full Body</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Sets</label>
+                                  <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.sets} onChange={e => { const copy = [...exercises]; copy[idx].sets = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Reps</label>
+                                  <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.reps} onChange={e => { const copy = [...exercises]; copy[idx].reps = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Weight (kg)</label>
+                                  <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.weight} onChange={e => { const copy = [...exercises]; copy[idx].weight = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Rest Time</label>
+                                  <input type="text" className="glass-input" style={{ height: '32px', fontSize: '0.8rem', padding: '0 8px' }} value={ex.restTime} onChange={e => { const copy = [...exercises]; copy[idx].restTime = e.target.value; setExercises(copy); }} disabled={drawerMode === 'view'} />
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Execution Instructions</label>
+                                <textarea 
+                                  className="glass-input" 
+                                  style={{ height: '50px', fontSize: '0.75rem', padding: '6px 8px', resize: 'none' }}
+                                  placeholder="e.g. Keep elbows tucked in, control the negative motion..."
+                                  value={ex.instructions}
+                                  onChange={e => {
+                                    const copy = [...exercises];
+                                    copy[idx].instructions = e.target.value;
+                                    setExercises(copy);
+                                  }}
+                                  disabled={drawerMode === 'view'}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─────────────────────────────────────────────────────────────
+                      TYPE-SPECIFIC SECTION: DIET PLAN FORM
+                      ───────────────────────────────────────────────────────────── */}
+                  {docType === 'diet' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Daily Calories (kcal)</label>
+                          <input type="number" className="glass-input" placeholder="2200" value={dailyCalories} onChange={e => setDailyCalories(e.target.value)} disabled={drawerMode === 'view'} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Protein Target (g)</label>
+                          <input type="number" className="glass-input" placeholder="150" value={protein} onChange={e => setProtein(e.target.value)} disabled={drawerMode === 'view'} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Carbohydrates (g)</label>
+                          <input type="number" className="glass-input" placeholder="250" value={carbs} onChange={e => setCarbs(e.target.value)} disabled={drawerMode === 'view'} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fat Target (g)</label>
+                          <input type="number" className="glass-input" placeholder="70" value={fat} onChange={e => setFat(e.target.value)} disabled={drawerMode === 'view'} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Water Intake (Liters)</label>
+                          <input type="text" className="glass-input" placeholder="3.5 Liters" value={waterIntake} onChange={e => setWaterIntake(e.target.value)} disabled={drawerMode === 'view'} />
+                        </div>
+                      </div>
+
+                      {/* Meal Schedules */}
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Apple size={14} /> Daily Meal Schedule
+                        </span>
+
+                        {[
+                          { key: 'breakfast', label: 'Breakfast Schedule' },
+                          { key: 'morningSnack', label: 'Morning Snack' },
+                          { key: 'lunch', label: 'Lunch Schedule' },
+                          { key: 'eveningSnack', label: 'Evening Snack' },
+                          { key: 'dinner', label: 'Dinner Schedule' },
+                          { key: 'supplements', label: 'Supplements / Vitamins' }
+                        ].map(m => (
+                          <div key={m.key} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>{m.label}</label>
+                            <textarea 
+                              className="glass-input" 
+                              style={{ height: '60px', fontSize: '0.8rem', padding: '8px', resize: 'none' }}
+                              placeholder={`Describe options for ${m.label}...`}
+                              value={meals[m.key]}
+                              onChange={e => setMeals({ ...meals, [m.key]: e.target.value })}
+                              disabled={drawerMode === 'view'}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Allergens & Restrictions</label>
+                        <input type="text" className="glass-input" placeholder="e.g. Peanut allergy, Lactose intolerant" value={restrictions} onChange={e => setRestrictions(e.target.value)} disabled={drawerMode === 'view'} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─────────────────────────────────────────────────────────────
+                      TYPE-SPECIFIC SECTION: GENERAL DOCUMENT FORM
+                      ───────────────────────────────────────────────────────────── */}
+                  {docType === 'general' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Document Category</label>
+                        <select 
+                          className="glass-select"
+                          value={generalCategory}
+                          onChange={e => setGeneralCategory(e.target.value)}
+                          disabled={drawerMode === 'view'}
+                        >
+                          <option value="Body Composition Report">Body Composition Report</option>
+                          <option value="Progress Report">Progress Report</option>
+                          <option value="Trainer Assessment">Trainer Assessment</option>
+                          <option value="Membership Agreement">Membership Agreement</option>
+                          <option value="Medical Clearance">Medical Clearance</option>
+                          <option value="Personal Notes">Personal Notes</option>
+                          <option value="Fitness Evaluation">Fitness Evaluation</option>
+                        </select>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Description / Rich Text Log *</label>
+                        <textarea 
+                          className="glass-input" 
+                          required
+                          style={{ minHeight: '180px', padding: '10px', fontSize: '0.85rem' }}
+                          placeholder="Describe evaluation scores, metrics or custom agreement declarations..."
+                          value={generalDescription}
+                          onChange={e => setGeneralDescription(e.target.value)}
+                          disabled={drawerMode === 'view'}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Shared Attachments & Notes */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Attachments (Cloud URLs/Paths)</label>
+                    <input type="text" className="glass-input" placeholder="Insert link to assessments or checklists..." value={docAttachments} onChange={e => setDocAttachments(e.target.value)} disabled={drawerMode === 'view'} />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>General Admin Notes</label>
+                    <textarea 
+                      className="glass-input" 
+                      style={{ height: '70px', padding: '8px', resize: 'none' }}
+                      placeholder="Notes for staff or general logs..."
+                      value={docNotes}
+                      onChange={e => setDocNotes(e.target.value)}
+                      disabled={drawerMode === 'view'}
+                    />
+                  </div>
+
+                  {/* Drawer Footer Actions */}
+                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginTop: '1rem', flexShrink: 0 }}>
+                    {drawerMode === 'create' && (
+                      <button type="button" className="btn btn-secondary" onClick={() => setDrawerStep(1)}>
+                        Back
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-secondary" onClick={() => setIsDrawerOpen(false)}>
+                      Cancel
+                    </button>
+                    {drawerMode !== 'view' && (
+                      <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                        {isSubmitting ? 'Saving Draft...' : 'Save Draft Settings'}
+                      </button>
+                    )}
+                  </div>
+
+                </form>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────────
+          SMS PREVIEW MODAL
+          ───────────────────────────────────────────────────────────────── */}
+      {showSMSModal && smsTargetDoc && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '440px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Send size={18} style={{ color: 'var(--color-primary)' }} />
+                Broadcast SMS Preview
+              </h2>
+              <button 
+                onClick={() => setShowSMSModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '1.25rem', fontSize: '#85rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+              Verify the dynamic message variables before dispatching to the cellular gateway.
+            </div>
+
+            <div style={{
+              background: '#090d16',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              padding: '1rem',
+              fontFamily: 'monospace',
+              fontSize: '0.8rem',
+              color: '#34d399',
+              whiteSpace: 'pre-wrap',
+              marginBottom: '1.5rem',
+              lineHeight: '1.4'
+            }}>
+              {smsPreviewText}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--border-color)', padding: '0.75rem', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '0.7rem', lineHeight: '1.3', marginBottom: '1.25rem' }}>
+              <Info size={14} style={{ flexShrink: 0, color: 'var(--color-primary)', marginTop: '0.1rem' }} />
+              <span>The system will automatically log this transmission under member's SMS History.</span>
+            </div>
+
+            <div className="grid-2">
+              <button type="button" className="btn btn-secondary" onClick={() => setShowSMSModal(false)}>
+                Cancel
+              </button>
+              <button type="button" className="btn btn-primary" onClick={handleConfirmSendSMS} disabled={isSendingSMS}>
+                {isSendingSMS ? 'Dispatching...' : 'Confirm & Dispatch'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
+
+export default MemberDocuments;

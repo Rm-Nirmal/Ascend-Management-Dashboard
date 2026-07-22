@@ -7,6 +7,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 // Firebase project configuration (fitcore-ascend-production)
 const firebaseConfig = {
@@ -28,6 +29,9 @@ export const auth = getAuth(app);
 
 // Cloud Firestore instance
 export const db = getFirestore(app);
+
+// Firebase Storage instance
+export const storage = getStorage(app);
 
 // ─── Collection Name Constants ───────────────────────────────────────
 // Centralized collection names to prevent typo bugs across the codebase.
@@ -60,6 +64,7 @@ export const COLLECTIONS = {
   LEAVE_REQUESTS: 'leaveRequests',
   SHIFT_LOGS: 'shiftLogs',
   GROUP_CHAT: 'groupChat',
+  MEMBER_DOCUMENTS: 'memberDocuments',
 };
 
 // Default organization ID (single-tenant for now)
