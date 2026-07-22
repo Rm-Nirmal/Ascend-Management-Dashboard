@@ -4347,6 +4347,7 @@ export const DashboardProvider = ({ children }) => {
         gymId: currentUser?.gymId || DEFAULT_ORG_ID,
         name: trainerData.name,
         role: 'Personal Trainer',
+        is_personal_trainer: true,
         specialization: trainerData.specialization,
         bio: trainerData.bio || '',
         hourly_rate: parseFloat(trainerData.hourly_rate),
@@ -4368,6 +4369,7 @@ export const DashboardProvider = ({ children }) => {
       const trainerRef = doc(db, COLLECTIONS.TRAINERS, id);
       const updated = {
         ...trainerFields,
+        is_personal_trainer: true,
         hourly_rate: trainerFields.hourly_rate ? parseFloat(trainerFields.hourly_rate) : undefined,
       };
       Object.keys(updated).forEach(key => updated[key] === undefined && delete updated[key]);

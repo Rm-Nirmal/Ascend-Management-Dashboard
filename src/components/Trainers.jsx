@@ -146,7 +146,7 @@ const Trainers = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-        {trainers.map((trainer) => (
+        {trainers.filter(t => t.salary === undefined || t.is_personal_trainer === true).map((trainer) => (
           <div key={trainer.id} className="glass-card" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
             <img 
               src={trainer.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
