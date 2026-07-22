@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDashboard } from '../../context/DashboardContext';
-import { MessageSquare, Save, Info, AlertTriangle } from 'lucide-react';
+import { Save, Info, AlertTriangle } from 'lucide-react';
 
 const NotificationTemplates = () => {
   const { notificationTemplates, updateNotificationTemplate, showToast } = useDashboard();
@@ -58,25 +58,11 @@ const NotificationTemplates = () => {
   return (
     <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem', boxSizing: 'border-box' }}>
       
-      {/* Header Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.05))',
-        border: '1px solid rgba(168, 85, 247, 0.2)',
-        borderRadius: '12px',
-        padding: '1.5rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <MessageSquare style={{ color: '#a855f7' }} /> Notification Templates
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>
-            Configure global SMS messages sent to gym members upon registration and payment deadlines.
-          </p>
+      {/* Page Header */}
+      <div className="page-header printable-hide" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+        <div className="page-info">
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Notification Templates</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>Configure global SMS messages sent to gym members upon registration and payment deadlines.</p>
         </div>
       </div>
 
@@ -110,8 +96,8 @@ const NotificationTemplates = () => {
                   padding: '0.75rem 1rem',
                   borderRadius: '8px',
                   border: '1px solid transparent',
-                  background: isActive ? 'rgba(168, 85, 247, 0.12)' : 'transparent',
-                  borderColor: isActive ? 'rgba(168, 85, 247, 0.25)' : 'transparent',
+                  background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  borderColor: isActive ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
                   color: isActive ? '#fff' : 'var(--text-muted)',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -125,7 +111,7 @@ const NotificationTemplates = () => {
                   if (!isActive) e.currentTarget.style.background = 'transparent';
                 }}
               >
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: isActive ? '#c084fc' : 'var(--text-main)' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: isActive ? '#ffffff' : 'var(--text-main)' }}>
                   {t.name}
                 </span>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -171,15 +157,15 @@ const NotificationTemplates = () => {
               
               {/* Dynamic Variables helper banner */}
               <div style={{
-                background: 'rgba(168, 85, 247, 0.04)',
-                border: '1px solid rgba(168, 85, 247, 0.15)',
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '8px',
                 padding: '1rem',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.5rem'
               }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                   <Info size={14} /> Available Template Variables:
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -268,7 +254,8 @@ const NotificationTemplates = () => {
                 type="submit"
                 className="btn btn-primary"
                 style={{
-                  background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                  background: '#ffffff',
+                  color: '#000000',
                   borderColor: 'transparent',
                   padding: '0.75rem 1.5rem',
                   fontSize: '0.85rem',
@@ -286,8 +273,8 @@ const NotificationTemplates = () => {
                     <span className="loading-spinner" style={{
                       width: '14px',
                       height: '14px',
-                      border: '2px solid rgba(255,255,255,0.3)',
-                      borderTopColor: '#fff',
+                      border: '2px solid rgba(0,0,0,0.3)',
+                      borderTopColor: '#000',
                       borderRadius: '50%',
                       animation: 'spin 0.6s linear infinite',
                       display: 'inline-block'

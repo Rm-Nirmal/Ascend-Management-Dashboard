@@ -624,25 +624,11 @@ const SaaSFinance = () => {
         }
       `}</style>
 
-      {/* Header Banner */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.05))',
-        border: '1px solid rgba(168, 85, 247, 0.2)',
-        borderRadius: '12px',
-        padding: '1.5rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-            SaaS Finance Control Panel
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>
-            Multi-tenant revenue metrics, subscription billing details, and platform operations profit ledger.
-          </p>
+      {/* Page Header */}
+      <div className="page-header printable-hide" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+        <div className="page-info">
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>SaaS Finance Control Panel</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', margin: '0.25rem 0 0 0' }}>Multi-tenant revenue metrics, subscription billing details, and platform operations profit ledger.</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button 
@@ -655,7 +641,7 @@ const SaaSFinance = () => {
           <button 
             className="btn btn-primary" 
             onClick={() => setIsRecordModalOpen(true)}
-            style={{ background: 'linear-gradient(135deg, #a855f7, #3b82f6)', borderColor: 'transparent', gap: '0.5rem', fontSize: '0.85rem' }}
+            style={{ background: '#ffffff', color: '#000000', borderColor: 'transparent', gap: '0.5rem', fontSize: '0.85rem' }}
           >
             <Plus size={16} /> Record Transaction
           </button>

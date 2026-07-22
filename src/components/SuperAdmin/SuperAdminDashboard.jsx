@@ -218,11 +218,20 @@ const SuperAdminDashboard = () => {
       <style>{`
         /* Monochromatic Dark Theme overrides for Super Admin Panel */
         
-        /* 1. Override text & icon colors containing purple hex/rgb */
+        /* 1. Override text & icon colors containing purple/blue hex/rgb */
         .app-container [style*="a855f7"],
         .app-container [style*="168, 85, 247"],
-        .app-container [style*="168,85,247"] {
+        .app-container [style*="168,85,247"],
+        .app-container [style*="3b82f6"],
+        .app-container [style*="59, 130, 246"],
+        .app-container [style*="59,130,246"] {
           color: #ffffff !important;
+        }
+
+        /* Webkit text fill and clip gradient overrides (like audit logs title) */
+        .app-container [style*="-webkit-text-fill-color"] {
+          -webkit-text-fill-color: #ffffff !important;
+          background: none !important;
         }
 
         /* Sidebar active border */
@@ -237,61 +246,62 @@ const SuperAdminDashboard = () => {
           border-bottom-color: #ffffff !important;
         }
 
-        /* Purple background opacities */
-        .app-container [style*="background: 'rgba(168, 85, 247"],
-        .app-container [style*="background:rgba(168, 85, 247"],
-        .app-container [style*="background-color:rgba(168, 85, 247"],
-        .app-container [style*="background-color: 'rgba(168, 85, 247"],
-        .app-container [style*="rgba(168, 85, 247"],
-        .app-container [style*="rgba(168,85,247"] {
+        /* Purple & Blue background opacities */
+        .app-container [style*="background"][style*="rgba(168, 85, 247"],
+        .app-container [style*="background"][style*="rgba(168,85,247"],
+        .app-container [style*="background"][style*="rgba(59, 130, 246"],
+        .app-container [style*="background"][style*="rgba(59,130,246"],
+        .app-container [style*="background-color"][style*="rgba(168, 85, 247"],
+        .app-container [style*="background-color"][style*="rgba(168,85,247"],
+        .app-container [style*="background-color"][style*="rgba(59, 130, 246"],
+        .app-container [style*="background-color"][style*="rgba(59,130,246"] {
           background-color: rgba(255, 255, 255, 0.05) !important;
           background: rgba(255, 255, 255, 0.05) !important;
         }
 
-        /* Purple border lines */
-        .app-container [style*="border: '1px solid rgba(168, 85, 247"],
-        .app-container [style*="border: 1px solid rgba(168, 85, 247"],
-        .app-container [style*="border-color: rgba(168, 85, 247"],
-        .app-container [style*="border-color:rgba(168,85,247"] {
+        /* Purple/Blue border lines */
+        .app-container [style*="border"][style*="rgba(168, 85, 247"],
+        .app-container [style*="border"][style*="rgba(168,85,247"],
+        .app-container [style*="border"][style*="rgba(59, 130, 246"],
+        .app-container [style*="border"][style*="rgba(59,130,246"],
+        .app-container [style*="border-color"][style*="rgba(168, 85, 247"],
+        .app-container [style*="border-color"][style*="rgba(168,85,247"],
+        .app-container [style*="border-color"][style*="rgba(59, 130, 246"],
+        .app-container [style*="border-color"][style*="rgba(59,130,246"] {
           border-color: var(--border-color) !important;
         }
 
-        /* 2. Overwrite buttons and headers using purple gradients */
-        .app-container [style*="linear-gradient("][style*="a855f7"],
-        .app-container [style*="linear-gradient("][style*="168, 85, 247"],
-        .app-container [style*="linear-gradient("][style*="168,85,247"] {
+        /* 2. Overwrite buttons and headers using gradients */
+        .app-container [style*="linear-gradient("] {
           background: #ffffff !important;
           color: #000000 !important;
           border-color: transparent !important;
-          box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1) !important;
+          box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05) !important;
         }
         
-        .app-container [style*="linear-gradient("][style*="a855f7"] *,
-        .app-container [style*="linear-gradient("][style*="168, 85, 247"] *,
-        .app-container [style*="linear-gradient("][style*="168,85,247"] * {
+        .app-container [style*="linear-gradient("] * {
           color: #000000 !important;
         }
 
-        .app-container [style*="linear-gradient("][style*="a855f7"]:hover,
-        .app-container [style*="linear-gradient("][style*="168, 85, 247"]:hover,
-        .app-container [style*="linear-gradient("][style*="168,85,247"]:hover {
+        .app-container [style*="linear-gradient("]:hover {
           background: #e5e7eb !important;
           box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15) !important;
         }
 
         /* Progress bars quota */
-        .app-container [style*="background: percentQuotaUsed"],
-        .app-container [style*="background: '#a855f7'"],
-        .app-container [style*="background:#a855f7"],
-        .app-container [style*="background: rgb(168, 85, 247)"],
-        .app-container [style*="background:rgb(168, 85, 247)"] {
+        .app-container [style*="background"][style*="percentQuotaUsed"],
+        .app-container [style*="background"][style*="#a855f7"],
+        .app-container [style*="background"][style*="#3b82f6"],
+        .app-container [style*="background"][style*="rgb(168, 85, 247)"],
+        .app-container [style*="background"][style*="rgb(59, 130, 246)"] {
           background: #ffffff !important;
         }
 
         /* CheckCircle and success badges */
-        .app-container svg[style*="color: rgb(168, 85, 247)"],
-        .app-container svg[style*="color:rgb(168, 85, 247)"],
-        .app-container svg[style*="color:#a855f7"] {
+        .app-container svg[style*="color"][style*="168"],
+        .app-container svg[style*="color"][style*="59"],
+        .app-container svg[style*="color"][style*="#a855f7"],
+        .app-container svg[style*="color"][style*="#3b82f6"] {
           color: #ffffff !important;
         }
       `}</style>
