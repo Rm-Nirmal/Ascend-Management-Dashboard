@@ -430,201 +430,32 @@ const MemberDocuments = () => {
     await deleteMemberDocument(doc.id);
   };
 
-  // 4. professional branded PDF generation using jsPDF
+  // 4. Compiles the document to HTML viewer URL (matches other PDF/print mechanisms)
   const handleGeneratePDF = async (docObj) => {
     if (!canGeneratePdf) {
       showToast('You do not have permission to generate PDFs.', 'warning');
       return;
     }
 
-    showToast('Compiling document styles...', 'info');
+    showToast('Compiling document...', 'info');
 
     try {
-      const docRefId = docObj.id;
-      const docType = docObj.type;
+      const viewerUrl = `${window.location.origin}/?view=download_document&docId=${docObj.id}`;
       
-      // Fetch sub-items
-      const subItems = await getMemberDocumentSubItems(docRefId, docType);
-      const memberObj = members.find(m => m.id === docObj.memberId);
-      const trainerObj = trainers.find(t => t.id === docObj.trainerId);
+      // Update in Firestore
+      const { updateDoc, doc } = await import('firebase/firestore');
+      const docRef = doc(db, 'memberDocuments', docObj.id);
+      await updateDoc(docRef, {
+        pdfUrl: viewerUrl,
+        status: 'PDF Ready',
+        generatedAt: new Date().toISOString()
+      });
 
-      const pdf = new jsPDF();
-      let y = 20;
-
-      // Branded Gym Header
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(22);
-      pdf.setTextColor(15, 23, 42); // dark slate primary
-      pdf.text("ASCEND FITNESS CLUB", 20, y);
-      
-      y += 8;
-      pdf.setFontSize(9);
-      pdf.setFont("helvetica", "normal");
-      pdf.setTextColor(100, 116, 139);
-      pdf.text("200 Temple Road, Colombo 07, Sri Lanka | support@ascend.lk", 20, y);
-      
-      pdf.setLineWidth(0.5);
-      pdf.setDrawColor(200, 200, 200);
-      y += 5;
-      pdf.line(20, y, 190, y);
-
-      // Document details
-      y += 12;
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(14);
-      pdf.setTextColor(15, 23, 42);
-      pdf.text(`${docObj.title.toUpperCase()}`, 20, y);
-
-      y += 6;
-      pdf.setFontSize(10);
-      pdf.setFont("helvetica", "italic");
-      pdf.setTextColor(100, 116, 139);
-      pdf.text(`Type: ${docType === 'workout' ? 'Workout Schedule' : docType === 'diet' ? 'Nutrition Meal Plan' : 'General Document Log'}`, 20, y);
-
-      // Member & Trainer Details Grid
-      y += 10;
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.setTextColor(15, 23, 42);
-      pdf.text("MEMBER PROFILE", 20, y);
-      pdf.text("TRAINER / COACH", 110, y);
-
-      y += 5;
-      pdf.setFont("helvetica", "normal");
-      pdf.setTextColor(70, 70, 70);
-      pdf.text(`Name: ${memberObj?.full_name || 'N/A'}`, 20, y);
-      pdf.text(`Trainer: ${trainerObj?.full_name || 'N/A'}`, 110, y);
-      
-      y += 5;
-      pdf.text(`Code: ${memberObj?.member_code || 'N/A'}`, 20, y);
-      pdf.text(`Goal: ${docObj.goal || 'General Health'}`, 110, y);
-
-      y += 5;
-      pdf.text(`BMI: ${calculateBMI(memberObj?.weight, memberObj?.height)}`, 20, y);
-      pdf.text(`Duration: ${docObj.duration || 'N/A'}`, 110, y);
-
-      y += 7;
-      pdf.line(20, y, 190, y);
-
-      // Render content based on type
-      if (docType === 'workout') {
-        y += 12;
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.setTextColor(15, 23, 42);
-        pdf.text("EXERCISE BUILDER", 20, y);
-
-        if (subItems.length === 0) {
-          y += 8;
-          pdf.setFont("helvetica", "italic");
-          pdf.text("No exercises listed inside plan.", 20, y);
-        } else {
-          subItems.forEach((ex, idx) => {
-            if (y > 250) {
-              pdf.addPage();
-              y = 20;
-            }
-            y += 10;
-            pdf.setFont("helvetica", "bold");
-            pdf.setFontSize(10);
-            pdf.setTextColor(15, 23, 42);
-            pdf.text(`${idx + 1}. ${ex.name} (${ex.muscleGroup})`, 20, y);
-
-            y += 5;
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(9);
-            pdf.setTextColor(80, 80, 80);
-            pdf.text(`Sets: ${ex.sets} | Reps: ${ex.reps} | Weight: ${ex.weight}kg | Rest: ${ex.restTime}`, 25, y);
-
-            if (ex.instructions) {
-              y += 5;
-              pdf.text(`Instructions: ${ex.instructions}`, 25, y);
-            }
-          });
-        }
-      } else if (docType === 'diet') {
-        y += 12;
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.setTextColor(15, 23, 42);
-        pdf.text("DAILY MACRONUTRITION TARGETS", 20, y);
-
-        y += 8;
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        pdf.setTextColor(80, 80, 80);
-        pdf.text(`Daily Target Calories: ${docObj.dailyCalories || 'N/A'} kcal`, 20, y);
-        pdf.text(`Protein Target: ${docObj.protein || 'N/A'}g`, 110, y);
-        
-        y += 5;
-        pdf.text(`Carbohydrates: ${docObj.carbs || 'N/A'}g`, 20, y);
-        pdf.text(`Fat Target: ${docObj.fat || 'N/A'}g`, 110, y);
-
-        y += 5;
-        pdf.text(`Water Intake: ${docObj.waterIntake || 'N/A'} Liters`, 20, y);
-
-        // Meals Table
-        y += 12;
-        pdf.setFont("helvetica", "bold");
-        pdf.text("DAILY MEAL SCHEDULE", 20, y);
-
-        const mealSchedule = [
-          { name: 'Breakfast', val: docObj.meals?.breakfast },
-          { name: 'Morning Snack', val: docObj.meals?.morningSnack },
-          { name: 'Lunch', val: docObj.meals?.lunch },
-          { name: 'Evening Snack', val: docObj.meals?.eveningSnack },
-          { name: 'Dinner', val: docObj.meals?.dinner },
-          { name: 'Supplements', val: docObj.meals?.supplements }
-        ];
-
-        mealSchedule.forEach(m => {
-          if (m.val) {
-            if (y > 250) {
-              pdf.addPage();
-              y = 20;
-            }
-            y += 10;
-            pdf.setFont("helvetica", "bold");
-            pdf.setFontSize(9);
-            pdf.text(m.name, 20, y);
-            
-            y += 4;
-            pdf.setFont("helvetica", "normal");
-            pdf.text(m.val, 25, y);
-          }
-        });
-      } else {
-        // General Document
-        y += 12;
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(12);
-        pdf.text("DOCUMENT DETAILS", 20, y);
-
-        y += 8;
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(10);
-        pdf.text(`Category: ${docObj.generalCategory || 'N/A'}`, 20, y);
-
-        y += 8;
-        pdf.text("Description:", 20, y);
-        y += 5;
-        const splitDesc = pdf.splitTextToSize(docObj.generalDescription || '', 170);
-        pdf.text(splitDesc, 20, y);
-      }
-
-      // Footer disclaimer
-      pdf.setFontSize(8);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text("Disclaimer: Please consult with your trainer before starting any plans. Formulated by Ascend Fit Management Suite.", 20, 280);
-
-      const pdfBlob = pdf.output('blob');
-      
-      // Upload PDF to storage
-      await uploadDocumentPDF(docObj.id, docType, pdfBlob);
-
+      await logAudit('document.pdf_generate', 'member', null, `Compiled document PDF viewer link for ID ${docObj.id}`, currentUser?.name);
+      showToast('Branded document compiled successfully!', 'success');
     } catch (err) {
       console.error(err);
-      showToast('PDF Generation Failed.', 'error');
+      showToast('Failed to compile document.', 'error');
     }
   };
 
@@ -907,13 +738,13 @@ const MemberDocuments = () => {
                             </button>
                           )}
 
-                          {/* Generate PDF */}
+                          {/* Generate or Open PDF */}
                           {canGeneratePdf && (
                             <button 
                               className="btn btn-secondary" 
                               style={{ padding: '0.35rem', color: doc.pdfUrl ? '#10b981' : '#fff' }} 
-                              title="Generate PDF" 
-                              onClick={() => handleGeneratePDF(doc)}
+                              title={doc.pdfUrl ? "Open PDF Document" : "Compile PDF Document"} 
+                              onClick={() => doc.pdfUrl ? window.open(doc.pdfUrl, '_blank') : handleGeneratePDF(doc)}
                             >
                               <Download size={12} />
                             </button>
@@ -1513,11 +1344,7 @@ const MemberDocuments = () => {
                     </div>
                   )}
 
-                  {/* Shared Attachments & Notes */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Attachments (Cloud URLs/Paths)</label>
-                    <input type="text" className="glass-input" placeholder="Insert link to assessments or checklists..." value={docAttachments} onChange={e => setDocAttachments(e.target.value)} disabled={drawerMode === 'view'} />
-                  </div>
+
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>General Admin Notes</label>
