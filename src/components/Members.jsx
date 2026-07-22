@@ -24,9 +24,10 @@ const Members = () => {
     memberDocuments
   } = useDashboard();
 
-  // Component States
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [showMedical, setShowMedical] = useState(false);
   const [profileTab, setProfileTab] = useState('info'); // 'info', 'documents'
   const [activeSubTab, setActiveSubTab] = useState('directory');
