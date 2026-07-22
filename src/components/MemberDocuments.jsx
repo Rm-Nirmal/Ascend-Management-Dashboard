@@ -24,6 +24,7 @@ const MemberDocuments = () => {
     archiveMemberDocument,
     uploadDocumentPDF,
     sendGeneralSMS,
+    logAudit,
     showToast
   } = useDashboard();
 
