@@ -259,6 +259,594 @@ const InventoryReports = () => {
     document.body.removeChild(link);
   };
 
+  // EXPORT PDF (New Window / Professional Theme)
+  const handleExportPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Pop-up blocker is enabled. Please allow pop-ups to generate reports.');
+      return;
+    }
+
+    let reportTitle = '';
+    let summaryCardsHTML = '';
+    let tableHTML = '';
+
+    if (activeReportTab === 'value') {
+      reportTitle = 'Inventory Valuation Report';
+      summaryCardsHTML = `
+        <div class="summary-card">
+          <div class="summary-label">Total Current Stock</div>
+          <div class="summary-val">${valueTotals.stock} Units</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Asset Valuation (Cost)</div>
+          <div class="summary-val">LKR ${valueTotals.cost.toLocaleString()}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Retail Valuation</div>
+          <div class="summary-val">LKR ${valueTotals.retail.toLocaleString()}</div>
+        </div>
+        <div class="summary-card accent">
+          <div class="summary-label">Potential Profit</div>
+          <div class="summary-val" style="color: #10b981;">LKR ${valueTotals.profit.toLocaleString()}</div>
+        </div>
+      `;
+      tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th>Stock</th>
+              <th>Buying Price</th>
+              <th>Selling Price</th>
+              <th>Asset Valuation (Cost)</th>
+              <th>Retail Valuation</th>
+              <th>Potential Profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${valueReportData.map(item => `
+              <tr>
+                <td style="font-family: monospace; font-size: 11px;">${item.sku}</td>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.category}</td>
+                <td>${item.stock} ${item.unit}</td>
+                <td>LKR ${item.buyPrice.toLocaleString()}</td>
+                <td>LKR ${item.sellPrice.toLocaleString()}</td>
+                <td style="font-weight: 600;">LKR ${item.costValue.toLocaleString()}</td>
+                <td>LKR ${item.retailValue.toLocaleString()}</td>
+                <td style="color: #10b981; font-weight: 600;">LKR ${item.potentialProfit.toLocaleString()}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="3">TOTAL ESTIMATED VALUATION</td>
+              <td>${valueTotals.stock} units</td>
+              <td>-</td>
+              <td>-</td>
+              <td>LKR ${valueTotals.cost.toLocaleString()}</td>
+              <td>LKR ${valueTotals.retail.toLocaleString()}</td>
+              <td style="color: #10b981;">LKR ${valueTotals.profit.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+    } else if (activeReportTab === 'low_stock') {
+      reportTitle = 'Inventory Stock Warnings & Reorder Sheet';
+      const outOfStockCount = lowStockReportData.filter(i => i.stock === 0).length;
+      summaryCardsHTML = `
+        <div class="summary-card">
+          <div class="summary-label">Total Low Stock Items</div>
+          <div class="summary-val">${lowStockReportData.length} Items</div>
+        </div>
+        <div class="summary-card accent" style="background: #ef4444; border-color: #ef4444;">
+          <div class="summary-label">Out of Stock Items</div>
+          <div class="summary-val">${outOfStockCount} Items</div>
+        </div>
+      `;
+      tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Current Stock</th>
+              <th>Reorder Level</th>
+              <th>Suggested Order Qty</th>
+              <th>Supplier Partner</th>
+              <th>Urgency Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lowStockReportData.length === 0 ? `
+              <tr>
+                <td colspan="8" style="text-align: center; color: #6b7280; padding: 20px;">
+                  No stock warnings. All inventory products are in safe quantities.
+                </td>
+              </tr>
+            ` : lowStockReportData.map(item => {
+              const isOutOfStock = item.stock === 0;
+              return `
+                <tr>
+                  <td style="font-family: monospace; font-size: 11px;">${item.sku}</td>
+                  <td><strong>${item.name}</strong></td>
+                  <td>${item.category}</td>
+                  <td style="color: ${isOutOfStock ? '#ef4444' : '#f59e0b'}; font-weight: 700;">
+                    ${item.stock} ${item.unit}
+                  </td>
+                  <td>${item.reorderLevel} ${item.unit}</td>
+                  <td style="color: #10b981; font-weight: 700;">
+                    +${item.suggestedReorder} ${item.unit}
+                  </td>
+                  <td>${item.supplier}</td>
+                  <td>
+                    <span class="badge ${isOutOfStock ? 'badge-danger' : 'badge-warning'}">
+                      ${isOutOfStock ? 'CRITICAL (OUT)' : 'LOW STOCK'}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    } else if (activeReportTab === 'profit') {
+      reportTitle = 'Product Profit Margins Sheet';
+      const avgMargin = profitReportData.length > 0 ? (profitReportData.reduce((sum, item) => sum + item.margin, 0) / profitReportData.length) : 0;
+      summaryCardsHTML = `
+        <div class="summary-card">
+          <div class="summary-label">Analyzed Products</div>
+          <div class="summary-val">${profitReportData.length} Items</div>
+        </div>
+        <div class="summary-card accent">
+          <div class="summary-label">Average Profit Margin</div>
+          <div class="summary-val">${avgMargin.toFixed(1)}%</div>
+        </div>
+      `;
+      tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Buying Price (Cost)</th>
+              <th>Selling Price (Retail)</th>
+              <th>Profit per Unit</th>
+              <th>Margin (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${profitReportData.map(item => `
+              <tr>
+                <td style="font-family: monospace; font-size: 11px;">${item.sku}</td>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.category}</td>
+                ${isOwner ? `
+                  <td>LKR ${item.buyPrice.toLocaleString()}</td>
+                  <td>LKR ${item.sellPrice.toLocaleString()}</td>
+                  <td style="color: #10b981; font-weight: 600;">LKR ${item.profit.toLocaleString()}</td>
+                  <td style="font-weight: 700;">${item.margin.toFixed(1)}%</td>
+                ` : `
+                  <td colspan="4" style="color: #6b7280; font-style: italic;">
+                    Unauthorized (Hidden for security)
+                  </td>
+                `}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else if (activeReportTab === 'movement') {
+      reportTitle = 'Stock Movement Summary & Auditing Ledger';
+      const totalMovements = movementReportData.reduce((sum, item) => sum + item.qty, 0);
+      summaryCardsHTML = `
+        <div class="summary-card">
+          <div class="summary-label">Total Transacted Units</div>
+          <div class="summary-val">${totalMovements} Units</div>
+        </div>
+      `;
+      
+      let movementBreakdownHTML = `
+        <div class="section-title">Stock Outflows & Inflows Summary</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Operation / Transaction Type</th>
+              <th class="right">Units Transacted</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${movementReportData.map(item => `
+              <tr>
+                <td><strong>${item.type}</strong></td>
+                <td class="right" style="font-weight: 700;">${item.qty} units</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      let ledgerHTML = `
+        <div class="section-title">Recent Movement Auditing Ledger (Last 50 Entries)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Product</th>
+              <th>Type</th>
+              <th>Qty</th>
+              <th>User</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${inventoryTransactions.slice(0, 50).map(tx => {
+              const prod = activeProducts.find(p => p.id === tx.productId);
+              return `
+                <tr>
+                  <td style="color: #6b7280;">${new Date(tx.createdAt).toLocaleString()}</td>
+                  <td><strong>${prod ? prod.name : 'Unknown'}</strong></td>
+                  <td style="text-transform: capitalize;">${tx.type.replace('_', ' ')}</td>
+                  <td style="font-weight: 700;">${tx.quantity}</td>
+                  <td>${tx.performedBy}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      tableHTML = movementBreakdownHTML + ledgerHTML;
+    } else if (activeReportTab === 'category') {
+      reportTitle = 'Category Density & Performance Report';
+      const totalUniqueProds = categoryReportData.reduce((sum, item) => sum + item.productCount, 0);
+      const totalUnitsSold = categoryReportData.reduce((sum, item) => sum + item.unitsSold, 0);
+      summaryCardsHTML = `
+        <div class="summary-card">
+          <div class="summary-label">Total Categories</div>
+          <div class="summary-val">${categoryReportData.length} Groups</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total Unique Products</div>
+          <div class="summary-val">${totalUniqueProds} Items</div>
+        </div>
+        <div class="summary-card accent">
+          <div class="summary-label">Total Retail Units Sold</div>
+          <div class="summary-val">${totalUnitsSold} Units</div>
+        </div>
+      `;
+      tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Category Name</th>
+              <th>Unique Products</th>
+              <th>In-Stock Quantity</th>
+              <th>Asset Valuation (Cost)</th>
+              <th>Retail Units Sold (Lifetime)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${categoryReportData.map(item => `
+              <tr>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.productCount} items</td>
+                <td>${item.stock} units</td>
+                <td style="font-weight: 600;">
+                  ${isOwner ? `LKR ${item.costValue.toLocaleString()}` : 'Hidden for security'}
+                </td>
+                <td style="color: #10b981; font-weight: 700;">
+                  ${item.unitsSold} units sold
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else if (activeReportTab === 'supplier') {
+      reportTitle = 'Supplier Procurement & Purchases Report';
+      const totalSuppliers = supplierReportData.length;
+      const totalProcuredQty = supplierReportData.reduce((sum, item) => sum + item.stockInQty, 0);
+      const totalProcuredValue = supplierReportData.reduce((sum, item) => sum + item.totalPurchaseValue, 0);
+      summaryCardsHTML = `
+        <div class="summary-card">
+          <div class="summary-label">Active Suppliers</div>
+          <div class="summary-val">${totalSuppliers} Partners</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total Procured Units</div>
+          <div class="summary-val">${totalProcuredQty} Units</div>
+        </div>
+        <div class="summary-card accent">
+          <div class="summary-label">Total Procurement Value</div>
+          <div class="summary-val">${isOwner ? `LKR ${totalProcuredValue.toLocaleString()}` : 'Hidden for security'}</div>
+        </div>
+      `;
+      tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Supplier Partner</th>
+              <th>Company</th>
+              <th>Products Supplied</th>
+              <th>Procured Quantity (Total)</th>
+              <th>Procurement Valuation (Total Cost)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${supplierReportData.map(item => `
+              <tr>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.company}</td>
+                <td>${item.productCount} items</td>
+                <td>${item.stockInQty} units</td>
+                <td style="font-weight: 700;">
+                  ${isOwner ? `LKR ${item.totalPurchaseValue.toLocaleString()}` : 'Hidden for security'}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${reportTitle} - ${gymSettings?.gymName || 'Gym'}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Oswald:wght@500;700&display=swap');
+          body {
+            font-family: 'Montserrat', Arial, sans-serif;
+            color: #0b0f19;
+            background: #ffffff;
+            padding: 40px;
+            font-size: 12px;
+            line-height: 1.5;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0b0f19;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+          .gym-name {
+            font-family: 'Oswald', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 0;
+            color: #0b0f19;
+          }
+          .gym-info {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 3px;
+          }
+          .report-info {
+            text-align: right;
+          }
+          .report-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin: 0;
+            text-transform: uppercase;
+            color: #0b0f19;
+          }
+          .report-subtitle {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+          }
+          .summary-card {
+            border: 1px solid #e5e7eb;
+            background: #fafafa;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+          }
+          .summary-card.accent {
+            background: #0b0f19;
+            color: #ffffff;
+            border: 1px solid #0b0f19;
+          }
+          .summary-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #6b7280;
+            margin-bottom: 4px;
+          }
+          .summary-card.accent .summary-label {
+            color: #94a3b8;
+          }
+          .summary-val {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Oswald', sans-serif;
+          }
+          .section-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid #0b0f19;
+            padding-bottom: 5px;
+            margin-bottom: 12px;
+            margin-top: 25px;
+            letter-spacing: 0.5px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            font-size: 11px;
+          }
+          th {
+            background: #f3f4f6;
+            color: #0b0f19;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.5px;
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          tr.total-row td {
+            font-weight: bold;
+            border-top: 2px solid #0b0f19;
+            border-bottom: 3px double #0b0f19;
+            background: #fafafa;
+            font-size: 12px;
+          }
+          .right {
+            text-align: right;
+          }
+          .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+          }
+          .badge-danger {
+            background: #fee2e2;
+            color: #ef4444;
+            border: 1px solid #fca5a5;
+          }
+          .badge-warning {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fcd34d;
+          }
+          .footer {
+            margin-top: 60px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: #6b7280;
+            letter-spacing: 0.5px;
+          }
+          .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .sig-box {
+            width: 200px;
+            border-top: 1px solid #0b0f19;
+            text-align: center;
+            padding-top: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          @media print {
+            @page {
+              margin: 0;
+            }
+            body {
+              padding: 1.5cm;
+            }
+            .no-print-btn {
+              display: none !important;
+            }
+          }
+          .no-print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0b0f19;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: 0.2s;
+          }
+          .no-print-btn:hover {
+            background: #1f2937;
+          }
+        </style>
+      </head>
+      <body>
+        <button class="no-print-btn" onclick="window.print()">Export to PDF</button>
+
+        <div class="header">
+          <div>
+            <h1 class="gym-name">${gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}</h1>
+            <div class="gym-info">${gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}</div>
+            <div class="gym-info">Email: ${gymSettings?.email || 'billing@ascend.lk'} | Tel: ${gymSettings?.phone || '+94 11 234 5678'}</div>
+          </div>
+          <div class="report-info">
+            <h2 class="report-title">${reportTitle.toUpperCase()}</h2>
+            <div class="report-subtitle">Official Inventory Record</div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          ${summaryCardsHTML}
+          <div class="summary-col" style="display: flex; flex-direction: column; justify-content: center; text-align: right; font-size: 10px; color: #4b5563;">
+            <div><strong>Date Generated:</strong> ${new Date().toLocaleDateString()}</div>
+            <div><strong>Time Generated:</strong> ${new Date().toLocaleTimeString()}</div>
+            <div><strong>Generated By:</strong> ${currentUser?.name || 'Administrator'} (${currentUser?.role})</div>
+          </div>
+        </div>
+
+        ${tableHTML}
+
+        <div class="signature-section">
+          <div>
+            <div style="height: 40px;"></div>
+            <div class="sig-box">Prepared By (Inventory Manager)</div>
+          </div>
+          <div>
+            <div style="height: 40px;"></div>
+            <div class="sig-box">Approved By Management</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div>Generated by ${gymSettings?.gymName || 'Gym'} Inventory System</div>
+          <div>Report Type: ${activeReportTab.toUpperCase().replace('_', ' ')}</div>
+          <div>Confidential Document</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   return (
     <div className="page-container" style={{ animation: 'fadeIn 0.3s ease-out' }}>
       {/* Page Header */}
@@ -271,7 +859,7 @@ const InventoryReports = () => {
           <button className="btn btn-secondary" onClick={handleExportCSV} style={{ gap: '0.35rem' }}>
             <Download size={14} /> Export CSV
           </button>
-          <button className="btn btn-secondary" onClick={() => window.print()} style={{ gap: '0.35rem' }}>
+          <button className="btn btn-secondary" onClick={handleExportPDF} style={{ gap: '0.35rem' }}>
             <Printer size={14} /> Print PDF
           </button>
         </div>
