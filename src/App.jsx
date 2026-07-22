@@ -282,6 +282,36 @@ const RestrictedGymScreen = ({ status, message, hotline, setActiveTab }) => {
   );
 };
 
+const getAnnouncementStyles = (priority) => {
+  switch (priority) {
+    case 'high':
+      return {
+        bannerBg: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.02))',
+        bannerBorder: '1px solid rgba(239, 68, 68, 0.2)',
+        badgeBg: 'rgba(239, 68, 68, 0.2)',
+        badgeColor: 'rgb(248, 113, 113)',
+        label: 'High Priority Alert'
+      };
+    case 'medium':
+      return {
+        bannerBg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.02))',
+        bannerBorder: '1px solid rgba(245, 158, 11, 0.2)',
+        badgeBg: 'rgba(245, 158, 11, 0.2)',
+        badgeColor: 'rgb(251, 191, 36)',
+        label: 'Medium Priority'
+      };
+    case 'low':
+    default:
+      return {
+        bannerBg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.02))',
+        bannerBorder: '1px solid rgba(59, 130, 246, 0.2)',
+        badgeBg: 'rgba(59, 130, 246, 0.2)',
+        badgeColor: 'rgb(96, 165, 250)',
+        label: 'Low Priority'
+      };
+  }
+};
+
 const DashboardContentShell = () => {
   const { 
     currentUser, 
@@ -578,44 +608,47 @@ const DashboardContentShell = () => {
         </header>
 
         {/* System Announcements Banner */}
-        {announcements && announcements.length > 0 && (
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.02))',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
-            borderRadius: '8px',
-            padding: '0.75rem 1.25rem',
-            margin: '1rem 1.5rem 0 1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
-              <span style={{
-                background: 'rgba(239, 68, 68, 0.2)',
-                color: 'rgb(248, 113, 113)',
-                padding: '0.2rem 0.6rem',
-                borderRadius: '4px',
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                whiteSpace: 'nowrap'
-              }}>
-                System Announcement
-              </span>
-              <span style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                {announcements[0].title}:
-              </span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                {announcements[0].content}
+        {announcements && announcements.length > 0 && announcements.map((ann, idx) => {
+          const styles = getAnnouncementStyles(ann.priority);
+          return (
+            <div key={ann.id} style={{
+              background: styles.bannerBg,
+              border: styles.bannerBorder,
+              borderRadius: '8px',
+              padding: '0.75rem 1.25rem',
+              margin: idx === 0 ? '1rem 1.5rem 0 1.5rem' : '0.5rem 1.5rem 0 1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+                <span style={{
+                  background: styles.badgeBg,
+                  color: styles.badgeColor,
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: '4px',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {styles.label}
+                </span>
+                <span style={{ color: 'var(--text-primary)', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {ann.title}:
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  {ann.content}
+                </span>
+              </div>
+              <span style={{ color: 'var(--text-dark)', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                Posted by {ann.publishedBy || 'System'}
               </span>
             </div>
-            <span style={{ color: 'var(--text-dark)', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
-              Posted by {announcements[0].publishedBy || 'System'}
-            </span>
-          </div>
-        )}
+          );
+        })}
 
         {/* Dynamic page viewport */}
         {renderView(resolvedTab)}
