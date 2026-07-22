@@ -5,6 +5,119 @@ import { Smartphone, Send, Camera, Loader2, Check } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
+const SignaturePad = ({ value, onChange, disabled }) => {
+  const canvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+
+    if (value) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = value;
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }, [value]);
+
+  const startDrawing = (e) => {
+    if (disabled) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing || disabled) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    if (e.touches) {
+      e.preventDefault();
+    }
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing || disabled) return;
+    setIsDrawing(false);
+    const canvas = canvasRef.current;
+    const dataUrl = canvas.toDataURL();
+    onChange(dataUrl);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    onChange('');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{ position: 'relative', width: '100%', height: '120px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden' }}>
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={120}
+          style={{ width: '100%', height: '100%', cursor: disabled ? 'not-allowed' : 'crosshair', touchAction: 'none' }}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
+        {value && !disabled && (
+          <button
+            type="button"
+            onClick={clearCanvas}
+            style={{
+              position: 'absolute',
+              bottom: '0.25rem',
+              right: '0.25rem',
+              background: 'rgba(239, 68, 68, 0.8)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '0.15rem 0.4rem',
+              fontSize: '0.6rem',
+              cursor: 'pointer',
+              zIndex: 10
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const PublicRegistrationForm = ({ isStandalone = true }) => {
   const { plans, addRegistrationRequest, showToast } = useDashboard();
 
@@ -22,6 +135,8 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
     phone: '',
     gender: 'male',
     date_of_birth: '',
+    age: '',
+    signature: '',
     branch_id: 'org_fitgencore_hq',
     plan_id: '',
     installment_plan: '1 time',
@@ -118,6 +233,8 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
         phone: '',
         gender: 'male',
         date_of_birth: '',
+        age: '',
+        signature: '',
         branch_id: 'org_fitgencore_hq',
         plan_id: '',
         installment_plan: '1 time',
@@ -290,7 +407,8 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
               />
               {formErrors.phone && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.phone}</span>}
             </div>
-            <div className="pub-form-nested-grid">
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '0.5rem' }}>
               <div>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gender</label>
                 <select 
@@ -310,11 +428,36 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
                   type="date" 
                   required
                   value={publicForm.date_of_birth}
-                  onChange={(e) => setPublicForm({...publicForm, date_of_birth: e.target.value})}
+                  onChange={(e) => {
+                    const dob = e.target.value;
+                    let computedAge = '';
+                    if (dob) {
+                      const birthDate = new Date(dob);
+                      const today = new Date();
+                      let age = today.getFullYear() - birthDate.getFullYear();
+                      const m = today.getMonth() - birthDate.getMonth();
+                      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
+                      }
+                      computedAge = age;
+                    }
+                    setPublicForm({...publicForm, date_of_birth: dob, age: computedAge});
+                  }}
                   className="glass-input"
                   style={{ marginTop: '0.25rem', padding: '0.5rem' }}
                 />
                 {formErrors.date_of_birth && <span style={{ fontSize: '0.7rem', color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{formErrors.date_of_birth}</span>}
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Age</label>
+                <input 
+                  type="number"
+                  placeholder="Age"
+                  value={publicForm.age || ''}
+                  onChange={(e) => setPublicForm({...publicForm, age: e.target.value})}
+                  className="glass-input"
+                  style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+                />
               </div>
             </div>
           </div>
@@ -485,6 +628,14 @@ const PublicRegistrationForm = ({ isStandalone = true }) => {
                 <strong>Membership & Conduct:</strong> I understand that my membership is non-transferable, unauthorized access is prohibited, and violation of gym rules may result in suspension or termination of my membership without refund.
               </span>
             </label>
+
+            <div style={{ marginTop: '0.5rem', borderTop: '1px dashed var(--border-color)', paddingTop: '0.75rem' }}>
+              <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem', textTransform: 'uppercase', fontWeight: 700 }}>Member Digital Signature</label>
+              <SignaturePad 
+                value={publicForm.signature}
+                onChange={(sig) => setPublicForm({...publicForm, signature: sig})}
+              />
+            </div>
           </div>
         </div>
 

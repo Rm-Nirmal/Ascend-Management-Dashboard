@@ -2533,6 +2533,8 @@ export const DashboardProvider = ({ children }) => {
           phone: req.phone,
           gender: req.gender,
           date_of_birth: req.date_of_birth,
+          age: req.age || '',
+          signature: req.signature || '',
           plan_id: req.plan_id,
           installment_plan: req.installment_plan || '1 time',
           medical_notes: req.medical_conditions || 'None.',

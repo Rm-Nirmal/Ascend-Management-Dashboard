@@ -1,8 +1,121 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
   Plus, Search, Trash2, Eye, X, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign, Download
 } from 'lucide-react';
+
+const SignaturePad = ({ value, onChange, disabled }) => {
+  const canvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+
+    if (value) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = value;
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }, [value]);
+
+  const startDrawing = (e) => {
+    if (disabled) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing || disabled) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    if (e.touches) {
+      e.preventDefault();
+    }
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing || disabled) return;
+    setIsDrawing(false);
+    const canvas = canvasRef.current;
+    const dataUrl = canvas.toDataURL();
+    onChange(dataUrl);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    onChange('');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{ position: 'relative', width: '100%', height: '120px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden' }}>
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={120}
+          style={{ width: '100%', height: '100%', cursor: disabled ? 'not-allowed' : 'crosshair', touchAction: 'none' }}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
+        {value && !disabled && (
+          <button
+            type="button"
+            onClick={clearCanvas}
+            style={{
+              position: 'absolute',
+              bottom: '0.25rem',
+              right: '0.25rem',
+              background: 'rgba(239, 68, 68, 0.8)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '0.15rem 0.4rem',
+              fontSize: '0.6rem',
+              cursor: 'pointer',
+              zIndex: 10
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const Members = () => {
   const {
@@ -33,6 +146,7 @@ const Members = () => {
   const [activeSubTab, setActiveSubTab] = useState('directory');
   const [currentFinancialsPage, setCurrentFinancialsPage] = useState(1);
   const financialItemsPerPage = 10;
+  const [viewingMemberDetailsPrint, setViewingMemberDetailsPrint] = useState(null);
 
   // Edit Member States
   const [showEditModal, setShowEditModal] = useState(false);
@@ -43,6 +157,8 @@ const Members = () => {
     phone: '',
     gender: 'male',
     date_of_birth: '',
+    age: '',
+    signature: '',
     plan_id: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
@@ -176,6 +292,8 @@ const Members = () => {
       phone: member.phone || '',
       gender: member.gender || 'male',
       date_of_birth: member.date_of_birth || '',
+      age: member.age || '',
+      signature: member.signature || '',
       plan_id: member.plan_id || '',
       emergency_contact_name: member.emergency_contact_name || '',
       emergency_contact_phone: member.emergency_contact_phone || '',
@@ -288,13 +406,14 @@ const Members = () => {
   const [freezeUntil, setFreezeUntil] = useState('');
   const [showFreezeForm, setShowFreezeForm] = useState(false);
 
-  // New member form states
   const [newMemberForm, setNewMemberForm] = useState({
     full_name: '',
     email: '',
     phone: '',
     gender: 'male',
     date_of_birth: '',
+    age: '',
+    signature: '',
     plan_id: '',
     emergency_contact_name: '',
     emergency_contact_phone: '',
@@ -478,6 +597,8 @@ const Members = () => {
         phone: '',
         gender: 'male',
         date_of_birth: '',
+        age: '',
+        signature: '',
         plan_id: '',
         emergency_contact_name: '',
         emergency_contact_phone: '',
@@ -542,6 +663,382 @@ const Members = () => {
       frozen_until: null,
       freeze_reason: null
     }));
+  };
+
+  const handlePrintMemberDetails = (member) => {
+    const plan = plans.find(p => p.id === member.plan_id);
+    const trainer = trainers.find(t => t.id === member.trainer_id);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Pop-up blocker is enabled. Please allow pop-ups to print the member profile.', 'error');
+      return;
+    }
+
+    const birthDate = member.date_of_birth ? new Date(member.date_of_birth) : null;
+    let age = 'N/A';
+    if (birthDate) {
+      const today = new Date();
+      age = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+    }
+
+    const bmi = (member.weight_kg && member.height_cm)
+      ? (member.weight_kg / Math.pow(member.height_cm / 100, 2)).toFixed(1)
+      : 'N/A';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Member Profile Report - ${member.full_name}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Oswald:wght@500;700&display=swap');
+          body {
+            font-family: 'Montserrat', Arial, sans-serif;
+            color: #0b0f19;
+            background: #ffffff;
+            padding: 40px;
+            font-size: 12px;
+            line-height: 1.5;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0b0f19;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+          }
+          .gym-name {
+            font-family: 'Oswald', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 0;
+            color: #0b0f19;
+          }
+          .gym-info {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 3px;
+          }
+          .report-info {
+            text-align: right;
+          }
+          .report-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin: 0;
+            text-transform: uppercase;
+          }
+          .report-subtitle {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+          }
+          .summary-col {
+            display: flex;
+            flex-direction: column;
+          }
+          .summary-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6b7280;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+          }
+          .summary-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #0b0f19;
+          }
+          .summary-subtext {
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+          }
+          .section-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 25px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 4px;
+            color: #0b0f19;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .info-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 11px;
+          }
+          .info-table td.label {
+            font-weight: 700;
+            color: #6b7280;
+            width: 30%;
+          }
+          .info-table td.value {
+            color: #0b0f19;
+            font-weight: 600;
+          }
+          .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+          }
+          .stat-box {
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            background: #fafafa;
+            text-align: center;
+          }
+          .stat-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6b7280;
+            margin-bottom: 4px;
+          }
+          .stat-val {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0b0f19;
+          }
+          .agreement-box {
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+          }
+          .agreement-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 11px;
+            margin-bottom: 10px;
+            color: #374151;
+          }
+          .agreement-item:last-child {
+            margin-bottom: 0;
+          }
+          .check-icon {
+            color: #10b981;
+            font-weight: bold;
+          }
+          .signature-box-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 30px;
+          }
+          .signature-box {
+            text-align: center;
+            width: 250px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 15px;
+            background: #fafafa;
+          }
+          .signature-img {
+            max-height: 70px;
+            max-width: 100%;
+            object-fit: contain;
+          }
+          .signature-label {
+            border-top: 1px solid #ccc;
+            margin-top: 8px;
+            padding-top: 5px;
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #6b7280;
+            font-weight: 700;
+          }
+          @media print {
+            @page {
+              margin: 0;
+            }
+            body {
+              padding: 1.5cm;
+            }
+            .no-print-btn {
+              display: none !important;
+            }
+          }
+          .no-print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0b0f19;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Oswald', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: 0.2s;
+          }
+          .no-print-btn:hover {
+            background: #1f2937;
+          }
+        </style>
+      </head>
+      <body>
+        <button class="no-print-btn" onclick="window.print()">Print / Export PDF</button>
+
+        <div class="header">
+          <div>
+            <h1 class="gym-name">${gymSettings?.gymName ? gymSettings.gymName.toUpperCase() : 'ASCEND FITNESS CENTER'}</h1>
+            <div class="gym-info">${gymSettings?.address || 'HQ Operations - Colombo, Sri Lanka'}</div>
+            <div class="gym-info">Email: ${gymSettings?.email || 'billing@ascend.lk'} | Tel: ${gymSettings?.phone || '+94 11 234 5678'}</div>
+          </div>
+          <div class="report-info">
+            <h2 class="report-title">MEMBER PROFILE REPORT</h2>
+            <div class="report-subtitle">Official Member File</div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-col">
+            <div class="summary-label">Member Name</div>
+            <div class="summary-value">${member.full_name}</div>
+            <div class="summary-subtext">Code: ${member.member_code || 'N/A'}</div>
+          </div>
+          <div class="summary-col">
+            <div class="summary-label">Membership Status</div>
+            <div class="summary-value" style="color: #10b981; text-transform: uppercase;">${member.status || 'Active'}</div>
+            <div class="summary-subtext">Plan: ${plan?.name || 'N/A'}</div>
+          </div>
+          <div class="summary-col">
+            <div class="summary-label">Report Date</div>
+            <div class="summary-value">${new Date().toLocaleDateString()}</div>
+            <div class="summary-subtext">${new Date().toLocaleTimeString()}</div>
+          </div>
+        </div>
+
+        <div class="section-title">Personal Details</div>
+        <table class="info-table">
+          <tr>
+            <td class="label">Email Address</td>
+            <td class="value">${member.email || 'N/A'}</td>
+            <td class="label">Phone Number</td>
+            <td class="value">${member.phone || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td class="label">Date of Birth</td>
+            <td class="value">${member.date_of_birth || 'N/A'}</td>
+            <td class="label">Age</td>
+            <td class="value">${age} Years</td>
+          </tr>
+          <tr>
+            <td class="label">Gender</td>
+            <td class="value" style="text-transform: capitalize;">${member.gender || 'N/A'}</td>
+            <td class="label">Assigned Coach</td>
+            <td class="value">${trainer?.name || 'Unassigned'}</td>
+          </tr>
+        </table>
+
+        <div class="section-title">Health Metrics & Body Profile</div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Weight</div>
+            <div class="stat-val">${member.weight_kg ? `${member.weight_kg} kg` : 'N/A'}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Height</div>
+            <div class="stat-val">${member.height_cm ? `${member.height_cm} cm` : 'N/A'}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Body Mass Index (BMI)</div>
+            <div class="stat-val">${bmi}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Body Fat %</div>
+            <div class="stat-val">${member.body_fat_pct ? `${member.body_fat_pct}%` : 'N/A'}</div>
+          </div>
+        </div>
+
+        <table class="info-table">
+          <tr>
+            <td class="label">Emergency Contact</td>
+            <td class="value">
+              ${member.emergency_contact_name || 'N/A'} 
+              ${member.emergency_contact_phone ? `(${member.emergency_contact_phone})` : ''}
+            </td>
+          </tr>
+          <tr>
+            <td class="label">Fitness Goals</td>
+            <td class="value">${member.fitness_goals || 'No specific goals recorded.'}</td>
+          </tr>
+          <tr>
+            <td class="label">Confidential Medical Notes</td>
+            <td class="value">${member.medical_notes || 'No medical conditions reported.'}</td>
+          </tr>
+        </table>
+
+        <div class="section-title">Gym Agreements & Signed Consent</div>
+        <div class="agreement-box">
+          <div class="agreement-item">
+            <span class="check-icon">&#10003;</span>
+            <span><strong>Health Declaration:</strong> Confirmed health declaration stating the member is fit for strenuous physical activities and workouts.</span>
+          </div>
+          <div class="agreement-item">
+            <span class="check-icon">&#10003;</span>
+            <span><strong>Follow Gym Rules:</strong> Agreed to obey all rules, equipment instructions, and trainer directions during gym access.</span>
+          </div>
+          <div class="agreement-item">
+            <span class="check-icon">&#10003;</span>
+            <span><strong>Membership Conduct:</strong> Acknowledged that memberships are non-transferable and that violations will terminate access.</span>
+          </div>
+        </div>
+
+        ${member.signature ? `
+          <div class="signature-box-container">
+            <div class="signature-box">
+              <img src="${member.signature}" class="signature-img" />
+              <div class="signature-label">Member Digital Signature</div>
+            </div>
+          </div>
+        ` : ''}
+
+        <div style="text-align: center; font-size: 8px; color: #9ca3af; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 10px;">
+          Disclaimer: This is a secure digital document containing confidential member details. Access is restricted.
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   const handlePrintReceipt = (receipt) => {
@@ -1358,13 +1855,22 @@ const Members = () => {
                   </div>
                 </div>
               </div>
-              <button 
-                className="btn btn-secondary" 
-                style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
-                onClick={() => handleEditClick(selectedMember)}
-              >
-                <Edit2 size={12} /> Edit Details
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
+                  onClick={() => handlePrintMemberDetails(selectedMember)}
+                >
+                  <Printer size={12} /> Download PDF
+                </button>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ padding: '0.5rem 0.85rem', fontSize: '0.75rem', gap: '0.35rem', borderColor: 'var(--border-color)' }}
+                  onClick={() => handleEditClick(selectedMember)}
+                >
+                  <Edit2 size={12} /> Edit Details
+                </button>
+              </div>
             </div>
 
             {/* Tab Selector */}
@@ -1409,7 +1915,21 @@ const Members = () => {
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Contact info</span>
                 <div style={{ fontSize: '0.85rem', marginTop: '0.15rem' }}>Email: {selectedMember.email}</div>
                 <div style={{ fontSize: '0.85rem' }}>Phone: {selectedMember.phone || 'N/A'}</div>
-                <div style={{ fontSize: '0.85rem' }}>DOB: {selectedMember.date_of_birth || 'N/A'}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <div>DOB: {selectedMember.date_of_birth || 'N/A'}</div>
+                  <div>Age: {(() => {
+                    if (selectedMember.age) return selectedMember.age;
+                    if (!selectedMember.date_of_birth) return 'N/A';
+                    const birthDate = new Date(selectedMember.date_of_birth);
+                    const today = new Date();
+                    let age = today.getFullYear() - birthDate.getFullYear();
+                    const m = today.getMonth() - birthDate.getMonth();
+                    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                      age--;
+                    }
+                    return age;
+                  })()}</div>
+                </div>
               </div>
 
               <div>
@@ -1546,6 +2066,21 @@ const Members = () => {
                 </div>
               </div>
             </div>
+
+            {/* Agreements & Signature Box */}
+            {selectedMember.signature && (
+              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block', marginBottom: '0.5rem' }}>Member Digital Signature</span>
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--border-color)' }}>
+                  <img 
+                    src={selectedMember.signature} 
+                    alt="Digital Signature" 
+                    style={{ maxHeight: '80px', maxWidth: '100%', objectFit: 'contain', filter: 'brightness(1.2)' }} 
+                  />
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Digitally Certified & Secured</div>
+                </div>
+              </div>
+            )}
 
             {/* Payment History & Receipts Section */}
             <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
@@ -1899,7 +2434,7 @@ const Members = () => {
                       style={{ marginTop: '0.25rem' }}
                     />
                   </div>
-                  <div className="grid-2">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                     <div>
                       <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gender</label>
                       <select 
@@ -1918,7 +2453,32 @@ const Members = () => {
                       <input 
                         type="date" 
                         value={newMemberForm.date_of_birth}
-                        onChange={(e) => setNewMemberForm({...newMemberForm, date_of_birth: e.target.value})}
+                        onChange={(e) => {
+                          const dob = e.target.value;
+                          let computedAge = '';
+                          if (dob) {
+                            const birthDate = new Date(dob);
+                            const today = new Date();
+                            let age = today.getFullYear() - birthDate.getFullYear();
+                            const m = today.getMonth() - birthDate.getMonth();
+                            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                              age--;
+                            }
+                            computedAge = age;
+                          }
+                          setNewMemberForm({...newMemberForm, date_of_birth: dob, age: computedAge});
+                        }}
+                        className="glass-input"
+                        style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Age</label>
+                      <input 
+                        type="number"
+                        placeholder="Age"
+                        value={newMemberForm.age || ''}
+                        onChange={(e) => setNewMemberForm({...newMemberForm, age: e.target.value})}
                         className="glass-input"
                         style={{ marginTop: '0.25rem', padding: '0.5rem' }}
                       />
@@ -2092,6 +2652,14 @@ const Members = () => {
                       <strong>Membership & Conduct:</strong> I understand that my membership is non-transferable, unauthorized access is prohibited, and violation of gym rules may result in suspension or termination of my membership without refund.
                     </span>
                   </label>
+
+                  <div style={{ marginTop: '0.5rem', borderTop: '1px dashed var(--border-color)', paddingTop: '0.75rem' }}>
+                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem', textTransform: 'uppercase', fontWeight: 700 }}>Member Digital Signature</label>
+                    <SignaturePad 
+                      value={newMemberForm.signature}
+                      onChange={(sig) => setNewMemberForm({...newMemberForm, signature: sig})}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2392,7 +2960,7 @@ const Members = () => {
                       style={{ marginTop: '0.25rem' }}
                     />
                   </div>
-                  <div className="grid-2">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                     <div>
                       <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Gender</label>
                       <select 
@@ -2411,7 +2979,32 @@ const Members = () => {
                       <input 
                         type="date" 
                         value={editMemberForm.date_of_birth}
-                        onChange={(e) => setEditMemberForm({...editMemberForm, date_of_birth: e.target.value})}
+                        onChange={(e) => {
+                          const dob = e.target.value;
+                          let computedAge = '';
+                          if (dob) {
+                            const birthDate = new Date(dob);
+                            const today = new Date();
+                            let age = today.getFullYear() - birthDate.getFullYear();
+                            const m = today.getMonth() - birthDate.getMonth();
+                            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                              age--;
+                            }
+                            computedAge = age;
+                          }
+                          setEditMemberForm({...editMemberForm, date_of_birth: dob, age: computedAge});
+                        }}
+                        className="glass-input"
+                        style={{ marginTop: '0.25rem', padding: '0.5rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Age</label>
+                      <input 
+                        type="number"
+                        placeholder="Age"
+                        value={editMemberForm.age || ''}
+                        onChange={(e) => setEditMemberForm({...editMemberForm, age: e.target.value})}
                         className="glass-input"
                         style={{ marginTop: '0.25rem', padding: '0.5rem' }}
                       />
@@ -2544,6 +3137,14 @@ const Members = () => {
                     onChange={(e) => setEditMemberForm({...editMemberForm, fitness_goals: e.target.value})}
                     className="glass-input"
                     style={{ marginTop: '0.25rem' }}
+                  />
+                </div>
+
+                <div style={{ marginTop: '0.75rem', background: 'rgba(255, 255, 255, 0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem', textTransform: 'uppercase', fontWeight: 700 }}>Member Digital Signature</label>
+                  <SignaturePad 
+                    value={editMemberForm.signature}
+                    onChange={(sig) => setEditMemberForm({...editMemberForm, signature: sig})}
                   />
                 </div>
               </div>
