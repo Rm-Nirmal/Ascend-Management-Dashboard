@@ -118,7 +118,7 @@ const SaaSSubscriptionConsole = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sparkles size={20} style={{ color: '#a855f7' }} /> SaaS Plan Console
+              <Sparkles size={20} style={{ color: '#ffffff' }} /> SaaS Plan Console
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
               Define default pricing tiers, member limits, staff quotas, and access permissions for onboarded gyms.
@@ -131,7 +131,8 @@ const SaaSSubscriptionConsole = () => {
               display: 'flex', 
               alignItems: 'center', 
               gap: '0.35rem', 
-              background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+              background: '#ffffff',
+              color: '#000000',
               borderColor: 'transparent',
               fontSize: '0.8rem',
               fontWeight: 600,
@@ -153,7 +154,7 @@ const SaaSSubscriptionConsole = () => {
                 flexDirection: 'column', 
                 justifyContent: 'space-between', 
                 border: '1px solid var(--border-color)',
-                borderLeft: '4px solid #a855f7', 
+                borderLeft: '4px solid #ffffff', 
                 borderRadius: '10px',
                 background: 'var(--bg-secondary)',
                 position: 'relative', 
@@ -189,10 +190,10 @@ const SaaSSubscriptionConsole = () => {
                     </button>
                   </div>
                 </div>
-
+ 
                 {/* Price Tag */}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginBottom: '1.25rem' }}>
-                  <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#a855f7' }}>
+                  <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#ffffff' }}>
                     LKR {plan.price?.toLocaleString()}
                   </span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -234,7 +235,7 @@ const SaaSSubscriptionConsole = () => {
                     {plan.features && plan.features.length > 0 ? (
                       plan.features.map((feature, idx) => (
                         <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-main)' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '13px', height: '13px', borderRadius: '50%', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', color: '#a855f7' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '13px', height: '13px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-color)', color: '#ffffff' }}>
                             <Check size={8} />
                           </span>
                           {feature}
@@ -248,13 +249,13 @@ const SaaSSubscriptionConsole = () => {
                   </ul>
                 </div>
               </div>
-
+ 
               {/* Bottom detail */}
               <div style={{ display: 'flex', justifyBetween: true, justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.15)', padding: '0.5rem 0.75rem', borderRadius: '8px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <Clock size={12} /> {plan.duration_days || 30} Days cycle
                 </div>
-                <span style={{ color: '#a855f7', fontWeight: 600 }}>SaaS tier</span>
+                <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>SaaS tier</span>
               </div>
 
             </div>
@@ -380,7 +381,7 @@ const SaaSSubscriptionConsole = () => {
                 <button 
                   type="submit" 
                   className="btn btn-primary"
-                  style={{ background: 'linear-gradient(135deg, #a855f7, #3b82f6)', borderColor: 'transparent' }}
+                  style={{ background: '#ffffff', color: '#000000', borderColor: 'transparent' }}
                 >
                   {modalMode === 'add' ? 'Create SaaS Plan' : 'Save Changes'}
                 </button>

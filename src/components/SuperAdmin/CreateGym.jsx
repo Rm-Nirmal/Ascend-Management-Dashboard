@@ -15,7 +15,6 @@ import {
   ShieldAlert,
   CheckCircle,
   Loader2,
-  HelpCircle,
   Sparkles,
   Info,
   Calendar
@@ -152,21 +151,21 @@ const CreateGym = () => {
             transform: 'translateX(-50%)',
             width: '150px',
             height: '2px',
-            background: 'linear-gradient(to right, transparent, #a855f7, transparent)',
-            boxShadow: '0 0 20px 2px rgba(168, 85, 247, 0.4)'
+            background: 'linear-gradient(to right, transparent, #ffffff, transparent)',
+            boxShadow: '0 0 20px 2px rgba(255, 255, 255, 0.4)'
           }} />
 
           <div style={{
-            background: 'rgba(168, 85, 247, 0.05)',
-            border: '1px solid rgba(168, 85, 247, 0.2)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '50%',
             padding: '1rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(168, 85, 247, 0.15)'
+            boxShadow: '0 0 15px rgba(255, 255, 255, 0.15)'
           }}>
-            <CheckCircle size={36} style={{ color: '#a855f7' }} />
+            <CheckCircle size={36} style={{ color: '#ffffff' }} />
           </div>
           
           <div style={{ textAlign: 'center' }}>
@@ -313,11 +312,11 @@ const CreateGym = () => {
                 display: 'flex', 
                 justifyContent: 'center', 
                 alignItems: 'center', 
-                background: 'linear-gradient(135deg, #a855f7, #3b82f6)', 
-                color: '#ffffff',
+                background: '#ffffff', 
+                color: '#000000',
                 border: 'none',
                 height: '42px',
-                boxShadow: '0 4px 12px rgba(168, 85, 247, 0.2)'
+                boxShadow: '0 4px 12px rgba(255, 255, 255, 0.05)'
               }}
             >
               Test Login URL
@@ -371,7 +370,7 @@ const CreateGym = () => {
             gap: '1.25rem',
             padding: '1.75rem'
           }}>
-            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               1. Workspace Profile
             </h5>
             
@@ -448,7 +447,7 @@ const CreateGym = () => {
             gap: '1.25rem',
             padding: '1.75rem'
           }}>
-            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               2. Workspace Owner Credentials
             </h5>
 
@@ -525,7 +524,7 @@ const CreateGym = () => {
             gap: '1.25rem',
             padding: '1.75rem'
           }}>
-            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: '#a855f7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h5 style={{ fontSize: '0.85rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               3. Plan & Installment Selection
             </h5>
 
@@ -575,18 +574,18 @@ const CreateGym = () => {
             style={{ 
               marginTop: '0.75rem', 
               justifyContent: 'center', 
-              background: 'linear-gradient(135deg, #a855f7, #3b82f6)', 
-              color: '#ffffff',
+              background: '#ffffff', 
+              color: '#000000',
               borderColor: 'transparent',
               padding: '0.9rem',
               fontWeight: 700,
               fontSize: '0.9rem',
               borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(168, 85, 247, 0.25)',
+              boxShadow: '0 4px 12px rgba(255, 255, 255, 0.05)',
               transition: 'all 0.2s ease-in-out'
             }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 16px rgba(168, 85, 247, 0.35)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.25)'}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 255, 255, 0.1)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 255, 255, 0.05)'}
           >
             {isSubmitting ? (
               <>
@@ -606,8 +605,8 @@ const CreateGym = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: '1.5rem',
-          border: '1px solid rgba(168, 85, 247, 0.2)',
-          boxShadow: '0 8px 32px 0 rgba(168, 85, 247, 0.05)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 8px 32px 0 rgba(255, 255, 255, 0.02)',
           padding: '1.75rem',
           overflow: 'hidden'
         }}>
@@ -618,12 +617,12 @@ const CreateGym = () => {
             left: 0,
             width: '100%',
             height: '3px',
-            background: 'linear-gradient(to right, #a855f7, #3b82f6)'
+            background: 'linear-gradient(to right, #ffffff, var(--border-color))'
           }} />
 
           <div>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}>
-              <Sparkles size={16} style={{ color: '#a855f7' }} /> Onboarding Summary
+              <Sparkles size={16} style={{ color: '#ffffff' }} /> Onboarding Summary
             </h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Real-time quote & workspace limits.</span>
           </div>
@@ -635,8 +634,8 @@ const CreateGym = () => {
               <>
                 {/* Workspace Tier Badge */}
                 <div style={{
-                  background: 'rgba(168, 85, 247, 0.05)',
-                  border: '1px solid rgba(168, 85, 247, 0.1)',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '8px',
                   padding: '0.75rem 1rem',
                   display: 'flex',
@@ -647,10 +646,10 @@ const CreateGym = () => {
                   <span style={{ 
                     fontSize: '0.8rem', 
                     fontWeight: 700, 
-                    color: '#a855f7', 
+                    color: '#ffffff', 
                     textTransform: 'uppercase', 
                     letterSpacing: '0.05em',
-                    background: 'rgba(168, 85, 247, 0.1)',
+                    background: 'rgba(255, 255, 255, 0.08)',
                     padding: '0.25rem 0.5rem',
                     borderRadius: '4px'
                   }}>
@@ -748,7 +747,7 @@ const CreateGym = () => {
 
           {/* Trust badge */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
-            <Info size={14} style={{ color: '#a855f7', flexShrink: 0, marginTop: '1px' }} />
+            <Info size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: '1px' }} />
             <span>Onboarding will instantly provision a dedicated database partition and generate the client's initial billing invoice.</span>
           </div>
         </div>

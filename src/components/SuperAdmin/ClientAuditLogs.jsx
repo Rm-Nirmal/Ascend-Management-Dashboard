@@ -53,7 +53,7 @@ const ClientAuditLogs = () => {
       {/* Header section */}
       <div className="page-header" style={{ marginBottom: '2rem' }}>
         <div className="page-info">
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, background: 'linear-gradient(to right, #a855f7, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
             Client Settings Audit logs
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>

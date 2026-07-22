@@ -638,7 +638,7 @@ const ClientsList = ({ setActiveTab }) => {
             style={{
               background: 'none',
               border: 'none',
-              borderBottom: currentDirTab === 'all' ? '2px solid #a855f7' : '2px solid transparent',
+              borderBottom: currentDirTab === 'all' ? '2px solid #ffffff' : '2px solid transparent',
               color: currentDirTab === 'all' ? 'var(--text-main)' : 'var(--text-muted)',
               fontSize: '0.85rem',
               fontWeight: 600,
@@ -655,7 +655,7 @@ const ClientsList = ({ setActiveTab }) => {
             style={{
               background: 'none',
               border: 'none',
-              borderBottom: currentDirTab === 'installments' ? '2px solid #a855f7' : '2px solid transparent',
+              borderBottom: currentDirTab === 'installments' ? '2px solid #ffffff' : '2px solid transparent',
               color: currentDirTab === 'installments' ? 'var(--text-main)' : 'var(--text-muted)',
               fontSize: '0.85rem',
               fontWeight: 600,
@@ -1253,8 +1253,8 @@ const ClientsList = ({ setActiveTab }) => {
                       padding: '1rem 0.75rem',
                       background: 'none',
                       border: 'none',
-                      borderBottom: isActive ? '2px solid #a855f7' : '2px solid transparent',
-                      color: isActive ? '#a855f7' : 'var(--text-muted)',
+                      borderBottom: isActive ? '2px solid #ffffff' : '2px solid transparent',
+                      color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
                       fontWeight: isActive ? 600 : 500,
                       fontSize: '0.8rem',
                       cursor: 'pointer',

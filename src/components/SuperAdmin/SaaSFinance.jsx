@@ -655,8 +655,8 @@ const SaaSFinance = () => {
           style={{
             background: 'none',
             border: 'none',
-            borderBottom: activeSubTab === 'overview' ? '2.5px solid #a855f7' : '2.5px solid transparent',
-            color: activeSubTab === 'overview' ? '#a855f7' : 'var(--text-muted)',
+            borderBottom: activeSubTab === 'overview' ? '2.5px solid #ffffff' : '2.5px solid transparent',
+            color: activeSubTab === 'overview' ? 'var(--text-main)' : 'var(--text-muted)',
             padding: '0.5rem 0.25rem',
             fontSize: '0.9rem',
             fontWeight: 600,
@@ -671,8 +671,8 @@ const SaaSFinance = () => {
           style={{
             background: 'none',
             border: 'none',
-            borderBottom: activeSubTab === 'transactions' ? '2.5px solid #a855f7' : '2.5px solid transparent',
-            color: activeSubTab === 'transactions' ? '#a855f7' : 'var(--text-muted)',
+            borderBottom: activeSubTab === 'transactions' ? '2.5px solid #ffffff' : '2.5px solid transparent',
+            color: activeSubTab === 'transactions' ? 'var(--text-main)' : 'var(--text-muted)',
             padding: '0.5rem 0.25rem',
             fontSize: '0.9rem',
             fontWeight: 600,
