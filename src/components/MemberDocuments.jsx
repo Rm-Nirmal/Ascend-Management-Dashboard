@@ -99,7 +99,7 @@ const MemberDocuments = () => {
 
   // 1. Calculate Statistics
   const stats = useMemo(() => {
-    const activeDocs = memberDocuments.filter(d => !d.isArchived);
+    const activeDocs = memberDocuments.filter(d => !d.isArchived && d.type !== 'general');
     const todayStr = new Date().toISOString().split('T')[0];
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -108,7 +108,6 @@ const MemberDocuments = () => {
       total: activeDocs.length,
       workout: activeDocs.filter(d => d.type === 'workout').length,
       diet: activeDocs.filter(d => d.type === 'diet').length,
-      general: activeDocs.filter(d => d.type === 'general').length,
       sentToday: activeDocs.filter(d => d.lastSentAt?.startsWith(todayStr)).length,
       drafts: activeDocs.filter(d => d.status === 'Draft').length,
       pendingSMS: activeDocs.filter(d => d.status === 'PDF Ready').length,
@@ -884,7 +883,7 @@ const MemberDocuments = () => {
             <Folder size={24} /> Member Documents Center
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-            Manage workout plans, diet plans, assessment reports and member document registries.
+            Manage workout plans and diet plans for active members.
           </p>
         </div>
         {canCreate && (
@@ -900,7 +899,6 @@ const MemberDocuments = () => {
           { label: 'Total Documents', val: stats.total, color: 'var(--color-primary)' },
           { label: 'Workout Plans', val: stats.workout, color: '#10b981' },
           { label: 'Diet Plans', val: stats.diet, color: '#f59e0b' },
-          { label: 'General Documents', val: stats.general, color: '#3b82f6' },
           { label: 'Sent Today', val: stats.sentToday, color: '#a855f7' },
           { label: 'Draft Documents', val: stats.drafts, color: 'var(--text-muted)' },
           { label: 'Pending SMS', val: stats.pendingSMS, color: '#fb7185' },
@@ -930,8 +928,7 @@ const MemberDocuments = () => {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', gap: '1.5rem', marginBottom: '0.5rem' }}>
         {[
           { id: 'workout', label: 'Workout Plans', icon: Dumbbell },
-          { id: 'diet', label: 'Diet Plans', icon: Apple },
-          { id: 'general', label: 'General Documents', icon: FileText }
+          { id: 'diet', label: 'Diet Plans', icon: Apple }
         ].map(t => {
           const isActive = activeTab === t.id;
           const TabIcon = t.icon;
@@ -1284,7 +1281,15 @@ const MemberDocuments = () => {
                       
                       {(() => {
                         const birthDate = selectedMember.date_of_birth ? new Date(selectedMember.date_of_birth) : null;
-                        const age = birthDate ? Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A';
+                        let age = 'N/A';
+                        if (birthDate) {
+                          const today = new Date();
+                          age = today.getFullYear() - birthDate.getFullYear();
+                          const m = today.getMonth() - birthDate.getMonth();
+                          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                            age--;
+                          }
+                        }
                         const weight = selectedMember.weight_kg || 'N/A';
                         const height = selectedMember.height_cm || 'N/A';
                         const bmi = (selectedMember.weight_kg && selectedMember.height_cm) 
