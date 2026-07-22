@@ -715,21 +715,21 @@ const Members = () => {
             font-family: 'Montserrat', Arial, sans-serif;
             color: #0b0f19;
             background: #ffffff;
-            padding: 40px;
-            font-size: 12px;
-            line-height: 1.5;
+            padding: 20px;
+            font-size: 11px;
+            line-height: 1.4;
           }
           .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             border-bottom: 2px solid #0b0f19;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
           }
           .gym-name {
             font-family: 'Oswald', sans-serif;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
             letter-spacing: 1.5px;
             text-transform: uppercase;
@@ -737,66 +737,66 @@ const Members = () => {
             color: #0b0f19;
           }
           .gym-info {
-            font-size: 11px;
+            font-size: 10px;
             color: #6b7280;
-            margin-top: 3px;
+            margin-top: 2px;
           }
           .report-info {
             text-align: right;
           }
           .report-title {
             font-family: 'Oswald', sans-serif;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             letter-spacing: 1px;
             margin: 0;
             text-transform: uppercase;
           }
           .report-subtitle {
-            font-size: 11px;
+            font-size: 10px;
             color: #6b7280;
-            margin-top: 2px;
+            margin-top: 1px;
           }
           .summary-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 10px;
+            margin-bottom: 12px;
             background: #fafafa;
             border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 15px;
+            border-radius: 6px;
+            padding: 8px 12px;
           }
           .summary-col {
             display: flex;
             flex-direction: column;
           }
           .summary-label {
-            font-size: 9px;
+            font-size: 8px;
             text-transform: uppercase;
             font-weight: 700;
             color: #6b7280;
             letter-spacing: 0.5px;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
           }
           .summary-value {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 600;
             color: #0b0f19;
           }
           .summary-subtext {
-            font-size: 11px;
+            font-size: 10px;
             color: #6b7280;
-            margin-top: 2px;
+            margin-top: 1px;
           }
           .section-title {
             font-family: 'Oswald', sans-serif;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
-            margin-top: 25px;
-            margin-bottom: 12px;
+            margin-top: 12px;
+            margin-bottom: 6px;
             border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 4px;
+            padding-bottom: 2px;
             color: #0b0f19;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -804,12 +804,12 @@ const Members = () => {
           .info-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
           }
           .info-table td {
-            padding: 8px 10px;
+            padding: 4px 6px;
             border-bottom: 1px solid #f3f4f6;
-            font-size: 11px;
+            font-size: 10px;
           }
           .info-table td.label {
             font-weight: 700;
@@ -823,25 +823,25 @@ const Members = () => {
           .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 25px;
+            gap: 10px;
+            margin-bottom: 12px;
           }
           .stat-box {
             border: 1px solid #e5e7eb;
             border-radius: 6px;
-            padding: 12px;
+            padding: 6px;
             background: #fafafa;
             text-align: center;
           }
           .stat-label {
-            font-size: 9px;
+            font-size: 8px;
             text-transform: uppercase;
             font-weight: 700;
             color: #6b7280;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
           }
           .stat-val {
-            font-size: 15px;
+            font-size: 12px;
             font-weight: 700;
             color: #0b0f19;
           }
@@ -849,15 +849,15 @@ const Members = () => {
             border: 1px solid #e5e7eb;
             background: #f9fafb;
             border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
           }
           .agreement-item {
             display: flex;
             align-items: flex-start;
-            gap: 8px;
-            font-size: 11px;
-            margin-bottom: 10px;
+            gap: 6px;
+            font-size: 10px;
+            margin-bottom: 4px;
             color: #374151;
           }
           .agreement-item:last-child {
@@ -870,26 +870,26 @@ const Members = () => {
           .signature-box-container {
             display: flex;
             justify-content: flex-end;
-            margin-top: 30px;
+            margin-top: 10px;
           }
           .signature-box {
             text-align: center;
-            width: 250px;
+            width: 160px;
             border: 1px solid #e5e7eb;
             border-radius: 6px;
-            padding: 15px;
+            padding: 8px;
             background: #fafafa;
           }
           .signature-img {
-            max-height: 70px;
+            max-height: 40px;
             max-width: 100%;
             object-fit: contain;
           }
           .signature-label {
             border-top: 1px solid #ccc;
-            margin-top: 8px;
-            padding-top: 5px;
-            font-size: 9px;
+            margin-top: 4px;
+            padding-top: 3px;
+            font-size: 8px;
             text-transform: uppercase;
             color: #6b7280;
             font-weight: 700;
@@ -899,7 +899,7 @@ const Members = () => {
               margin: 0;
             }
             body {
-              padding: 1.5cm;
+              padding: 0.8cm;
             }
             .no-print-btn {
               display: none !important;
