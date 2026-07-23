@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useDashboard } from '../context/DashboardContext';
 import { 
-  Plus, Search, Trash2, Eye, X, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign, Download
+  Plus, Search, Trash2, Eye, X, RotateCcw, Lock, Unlock, CreditCard, Clock, Edit2, Printer, DollarSign, Download, Camera, Loader2
 } from 'lucide-react';
+import { uploadToCloudinary } from '../lib/cloudinary';
 
 const SignaturePad = ({ value, onChange, disabled }) => {
   const canvasRef = useRef(null);
@@ -182,8 +183,12 @@ const Members = () => {
     weight_kg: '',
     height_cm: '',
     body_fat_pct: '',
-    trainer_id: ''
+    trainer_id: '',
+    photo_url: ''
   });
+  const [isUploadingEdit, setIsUploadingEdit] = useState(false);
+  const [uploadProgressEdit, setUploadProgressEdit] = useState(0);
+  const fileInputRefEdit = useRef(null);
   
   // Ticking state for live countdowns
   const [time, setTime] = useState(() => Date.now());
@@ -317,9 +322,50 @@ const Members = () => {
       weight_kg: member.weight_kg !== undefined && member.weight_kg !== null ? member.weight_kg.toString() : '',
       height_cm: member.height_cm !== undefined && member.height_cm !== null ? member.height_cm.toString() : '',
       body_fat_pct: member.body_fat_pct !== undefined && member.body_fat_pct !== null ? member.body_fat_pct.toString() : '',
-      trainer_id: member.trainer_id || ''
+      trainer_id: member.trainer_id || '',
+      photo_url: member.photo_url || ''
     });
     setShowEditModal(true);
+  };
+
+  const handlePhotoUploadEdit = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploadingEdit(true);
+    setUploadProgressEdit(0);
+
+    try {
+      const data = await uploadToCloudinary(file, {
+        onProgress: (pct) => setUploadProgressEdit(pct)
+      });
+      setEditMemberForm(prev => ({ ...prev, photo_url: data.secure_url }));
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      alert(`Photo upload failed: ${err.message || err}`);
+    } finally {
+      setIsUploadingEdit(false);
+    }
+  };
+
+  const handlePhotoUploadAdd = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploadingAdd(true);
+    setUploadProgressAdd(0);
+
+    try {
+      const data = await uploadToCloudinary(file, {
+        onProgress: (pct) => setUploadProgressAdd(pct)
+      });
+      setNewMemberForm(prev => ({ ...prev, photo_url: data.secure_url }));
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      alert(`Photo upload failed: ${err.message || err}`);
+    } finally {
+      setIsUploadingAdd(false);
+    }
   };
 
   const handleEditSubmit = async (e) => {
@@ -438,10 +484,14 @@ const Members = () => {
     height_cm: '',
     body_fat_pct: '',
     trainer_id: '',
+    photo_url: '',
     rules_health_declaration: false,
     rules_follow_gym_rules: false,
     rules_membership_conduct: false
   });
+  const [isUploadingAdd, setIsUploadingAdd] = useState(false);
+  const [uploadProgressAdd, setUploadProgressAdd] = useState(0);
+  const fileInputRefAdd = useRef(null);
 
   const uniqueMembers = useMemo(() => {
     const seen = new Set();
@@ -1480,7 +1530,7 @@ const Members = () => {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <img 
-                            src={member.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
+                            src={member.photo_url || (member.gender?.toLowerCase() === 'female' ? 'https://cdn-icons-png.flaticon.com/512/4140/4140047.png' : 'https://cdn-icons-png.flaticon.com/512/149/149071.png')} 
                             alt={member.full_name} 
                             style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                           />
@@ -1706,7 +1756,7 @@ const Members = () => {
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                               <img 
-                                src={member.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
+                                src={member.photo_url || (member.gender?.toLowerCase() === 'female' ? 'https://cdn-icons-png.flaticon.com/512/4140/4140047.png' : 'https://cdn-icons-png.flaticon.com/512/149/149071.png')} 
                                 alt={member.full_name} 
                                 style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
                               />
@@ -1856,7 +1906,7 @@ const Members = () => {
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                 <img 
-                  src={selectedMember.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
+                  src={selectedMember.photo_url || (selectedMember.gender?.toLowerCase() === 'female' ? 'https://cdn-icons-png.flaticon.com/512/4140/4140047.png' : 'https://cdn-icons-png.flaticon.com/512/149/149071.png')} 
                   alt={selectedMember.full_name} 
                   style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--color-primary)', objectFit: 'cover' }}
                 />
@@ -2409,6 +2459,79 @@ const Members = () => {
 
             <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               
+              {/* Profile Photo Upload */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.5rem', gap: '0.5rem' }}>
+                <div 
+                  onClick={() => !isUploadingAdd && fileInputRefAdd.current?.click()}
+                  style={{
+                    width: '90px',
+                    height: '90px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '2px dashed rgba(255,255,255,0.15)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isUploadingAdd ? 'not-allowed' : 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => { if(!isUploadingAdd) e.currentTarget.style.borderColor = 'var(--color-primary)'; }}
+                  onMouseLeave={(e) => { if(!isUploadingAdd) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                >
+                  {newMemberForm.photo_url ? (
+                    <img 
+                      src={newMemberForm.photo_url} 
+                      alt="Profile Preview" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
+                  ) : isUploadingAdd ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                      <Loader2 size={20} style={{ color: 'var(--color-primary)', animation: 'spin 1s linear infinite' }} />
+                      <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{uploadProgressAdd}%</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)' }}>
+                      <Camera size={20} />
+                      <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Upload Photo</span>
+                    </div>
+                  )}
+                </div>
+                
+                <input 
+                  type="file" 
+                  ref={fileInputRefAdd} 
+                  onChange={handlePhotoUploadAdd} 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                />
+                
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    {isUploadingAdd ? 'Uploading...' : 'PNG, JPG (Max 5MB)'}
+                  </span>
+                  {newMemberForm.photo_url && (
+                    <button
+                      type="button"
+                      onClick={() => setNewMemberForm(prev => ({ ...prev, photo_url: '' }))}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-danger)',
+                        fontSize: '0.65rem',
+                        cursor: 'pointer',
+                        padding: 0,
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Section: Credentials */}
               <div>
                 <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
@@ -2731,7 +2854,7 @@ const Members = () => {
               {/* Member Card */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', background: 'rgba(255,255,255,0.02)', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '1.25rem' }}>
                 <img 
-                  src={selectedRenewMember.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
+                  src={selectedRenewMember.photo_url || (selectedRenewMember.gender?.toLowerCase() === 'female' ? 'https://cdn-icons-png.flaticon.com/512/4140/4140047.png' : 'https://cdn-icons-png.flaticon.com/512/149/149071.png')} 
                   alt={selectedRenewMember.full_name} 
                   style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--color-primary)' }}
                 />
@@ -2935,6 +3058,79 @@ const Members = () => {
 
             <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               
+              {/* Profile Photo Upload */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '0.5rem', gap: '0.5rem' }}>
+                <div 
+                  onClick={() => !isUploadingEdit && fileInputRefEdit.current?.click()}
+                  style={{
+                    width: '90px',
+                    height: '90px',
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '2px dashed rgba(255,255,255,0.15)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isUploadingEdit ? 'not-allowed' : 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={(e) => { if(!isUploadingEdit) e.currentTarget.style.borderColor = 'var(--color-primary)'; }}
+                  onMouseLeave={(e) => { if(!isUploadingEdit) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                >
+                  {editMemberForm.photo_url ? (
+                    <img 
+                      src={editMemberForm.photo_url} 
+                      alt="Profile Preview" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
+                  ) : isUploadingEdit ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                      <Loader2 size={20} style={{ color: 'var(--color-primary)', animation: 'spin 1s linear infinite' }} />
+                      <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{uploadProgressEdit}%</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)' }}>
+                      <Camera size={20} />
+                      <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Upload Photo</span>
+                    </div>
+                  )}
+                </div>
+                
+                <input 
+                  type="file" 
+                  ref={fileInputRefEdit} 
+                  onChange={handlePhotoUploadEdit} 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                />
+                
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    {isUploadingEdit ? 'Uploading...' : 'PNG, JPG (Max 5MB)'}
+                  </span>
+                  {editMemberForm.photo_url && (
+                    <button
+                      type="button"
+                      onClick={() => setEditMemberForm(prev => ({ ...prev, photo_url: '' }))}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-danger)',
+                        fontSize: '0.65rem',
+                        cursor: 'pointer',
+                        padding: 0,
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Section: Credentials */}
               <div>
                 <h4 style={{ color: 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>

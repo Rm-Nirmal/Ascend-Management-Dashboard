@@ -351,7 +351,7 @@ const Registrations = () => {
                   flexShrink: 0
                 }}>
                   <img 
-                    src={selectedReq.photo_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'} 
+                    src={selectedReq.photo_url || (selectedReq.gender?.toLowerCase() === 'female' ? 'https://cdn-icons-png.flaticon.com/512/4140/4140047.png' : 'https://cdn-icons-png.flaticon.com/512/149/149071.png')} 
                     alt="Applicant Avatar" 
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   />
